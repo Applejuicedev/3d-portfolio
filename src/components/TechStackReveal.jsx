@@ -240,6 +240,16 @@ export default function TechStackReveal() {
       <div className="bg-[#0a0a0a] py-32">
         <div className="max-w-5xl mx-auto px-8">
 
+          <div className="mb-16">
+            <p className="section-label mb-4">Tech Stack</p>
+            <h2 className="text-[28px] md:text-[36px] font-bold text-white tracking-tight mb-4 leading-tight">
+              Verwendete Technologien
+            </h2>
+            <p className="text-[14px] text-zinc-400 max-w-md leading-relaxed">
+              Der verwendete Tech Stack für dieses Portfolio Projekt.
+            </p>
+          </div>
+
           {/* PCB board — pt-20 gives vertical room for upward decorative traces */}
           <div ref={containerRef} className="relative pt-20">
 
