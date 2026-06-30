@@ -130,6 +130,74 @@ const PROJECTS = [
     ),
   },
   {
+    title: "Creator's Journal",
+    category: 'Web Development',
+    status: 'Live',
+    desc: "Persönliches Tages-Journal mit Zeitplan, Garmin-Health-Dashboard (Schlaf, HRV, VO₂max, Body Battery), Hevy-Trainingsanalyse und Wochen-/Monatsplanung.",
+    tech: ['Next.js', 'TypeScript', 'Prisma', 'SQLite', 'Garmin API'],
+    github: 'https://github.com/Applejuicedev/creators-journal',
+    demo: null,
+    accentRgb: '16,185,129',
+    visual: (
+      <div className="w-full h-full bg-[#0d0d0d] relative overflow-hidden flex flex-col">
+        {/* Mini navbar */}
+        <div className="h-6 bg-[#111] border-b border-white/[0.06] flex items-center px-2 gap-2 shrink-0">
+          <span className="text-[8px] font-bold text-white/60">Creator&apos;s Journal</span>
+          <div className="flex gap-1 ml-auto">
+            {['Journal','Training','Garmin'].map((l) => (
+              <span key={l} className="text-[7px] px-1.5 py-0.5 rounded bg-white/[0.05] text-white/30">{l}</span>
+            ))}
+          </div>
+        </div>
+        {/* Content area */}
+        <div className="flex flex-1 gap-2 p-2 overflow-hidden">
+          {/* Zeitplan column */}
+          <div className="flex flex-col gap-1 w-1/2">
+            <div className="text-[7px] text-white/30 uppercase tracking-widest mb-0.5">Zeitplan</div>
+            {[
+              { color: '#3b82f6', w: '75%', label: 'Morgenroutine' },
+              { color: '#10b981', w: '55%', label: 'Deep Work' },
+              { color: '#8b5cf6', w: '85%', label: 'Training' },
+              { color: '#f59e0b', w: '45%', label: 'Abendcheck' },
+            ].map(({ color, w, label }) => (
+              <div key={label} className="h-5 rounded relative overflow-hidden flex items-center px-1.5"
+                style={{ background: `${color}12`, border: `1px solid ${color}28` }}>
+                <div className="absolute left-0 top-0 h-full opacity-30 rounded-l" style={{ width: w, backgroundColor: color }} />
+                <span className="relative text-[7px] text-white/50 truncate">{label}</span>
+              </div>
+            ))}
+          </div>
+          {/* Right column: Garmin stats */}
+          <div className="flex flex-col gap-1 flex-1">
+            <div className="text-[7px] text-white/30 uppercase tracking-widest mb-0.5">Garmin</div>
+            <div className="grid grid-cols-2 gap-1">
+              {[
+                { label: 'Schlaf', value: '87', unit: 'Pt', color: '#6366f1' },
+                { label: 'HRV', value: '52', unit: 'ms', color: '#10b981' },
+                { label: 'VO₂max', value: '48', unit: '', color: '#3b82f6' },
+                { label: 'Stress', value: '32', unit: '', color: '#f59e0b' },
+              ].map(({ label, value, unit, color }) => (
+                <div key={label} className="rounded p-1 flex flex-col" style={{ background: `${color}0f`, border: `1px solid ${color}20` }}>
+                  <span className="text-[6px] text-white/30">{label}</span>
+                  <span className="text-[11px] font-bold leading-none" style={{ color }}>{value}<span className="text-[7px] opacity-60">{unit}</span></span>
+                </div>
+              ))}
+            </div>
+            {/* Tagescheck bar */}
+            <div className="mt-auto pt-1 border-t border-white/[0.05]">
+              <div className="text-[6px] text-white/25 mb-0.5">Tagescheck</div>
+              <div className="flex gap-0.5">
+                {Array.from({length: 10}, (_, i) => (
+                  <div key={i} className="flex-1 h-2 rounded-sm" style={{ backgroundColor: i < 8 ? '#10b981' : '#10b98120' }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
     title: 'UX/UI Design System',
     category: 'UX/UI Design',
     status: 'In Arbeit',
