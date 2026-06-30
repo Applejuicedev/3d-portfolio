@@ -146,11 +146,12 @@ const PIN = ({ direction, count }) => {
 
 export default function TechStackReveal() {
   const containerRef  = useRef()
+  const sectionRef    = useRef()
   const chipRef       = useRef()
   const cardRefs      = useRef([])
   const pulseRefs     = useRef([])
-  const glowRefs      = useRef([])
   const decorAnimRefs = useRef([])
+  const allTweens     = useRef([])
 
   const [paths,   setPaths]   = useState([])
   const [decor,   setDecor]   = useState([])
@@ -193,27 +194,28 @@ export default function TechStackReveal() {
     return () => ro.disconnect()
   }, [])
 
-  // Animate card → chip pulses
+  // Animate card → chip pulses.
+  // Only every 3rd card (3 of 9) to reduce simultaneous tweens.
+  // No SVG blur filter — feGaussianBlur on animated paths is the primary GPU cost.
   useEffect(() => {
     if (!paths.length) return
     const tweens = []
     pulseRefs.current.forEach((el, i) => {
-      if (!el || i % 2 !== 0) return  // animate every other card only
+      if (!el || i % 3 !== 0) return
       const len = el.getTotalLength()
-      const dot = 48, gap = len + dot
-      ;[el, glowRefs.current[i]].forEach(t => {
-        if (t) gsap.set(t, { strokeDasharray: `${dot} ${gap}`, strokeDashoffset: dot })
-      })
-      tweens.push(gsap.to([el, glowRefs.current[i]].filter(Boolean), {
+      const dot = 40, gap = len + dot
+      gsap.set(el, { strokeDasharray: `${dot} ${gap}`, strokeDashoffset: dot })
+      tweens.push(gsap.to(el, {
         strokeDashoffset: -gap,
-        duration: 2.4 + (i % 4) * 0.38,
-        repeat: -1, ease: 'none', delay: i * 0.28,
+        duration: 3.2 + (i % 3) * 0.5,
+        repeat: -1, ease: 'none', delay: i * 0.4,
       }))
     })
+    allTweens.current.push(...tweens)
     return () => tweens.forEach(t => t?.kill())
   }, [paths])
 
-  // Animate decorative side pulses
+  // Animate decorative side pulses (no blur filter).
   useEffect(() => {
     if (!decor.length) return
     const tweens = []
@@ -222,22 +224,36 @@ export default function TechStackReveal() {
       const el = decorAnimRefs.current[i]
       if (!el) return
       const len = el.getTotalLength()
-      const dot = 22, gap = len + dot
+      const dot = 18, gap = len + dot
       gsap.set(el, { strokeDasharray: `${dot} ${gap}`, strokeDashoffset: dot })
       tweens.push(gsap.to(el, {
         strokeDashoffset: -gap,
-        duration: 3.8 + i * 0.2,
-        repeat: -1, ease: 'none', delay: i * 0.7,
+        duration: 4.5 + i * 0.3,
+        repeat: -1, ease: 'none', delay: i * 0.9,
       }))
     })
+    allTweens.current.push(...tweens)
     return () => tweens.forEach(t => t?.kill())
   }, [decor])
+
+  // Pause all tweens when section is scrolled out of view — biggest energy saving.
+  useEffect(() => {
+    if (!sectionRef.current) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        allTweens.current.forEach(t => entry.isIntersecting ? t.resume() : t.pause())
+      },
+      { threshold: 0.05 }
+    )
+    io.observe(sectionRef.current)
+    return () => io.disconnect()
+  }, [])
 
   return (
     <>
       <div className="h-px bg-white/[0.05]" />
 
-      <div className="bg-[#0a0a0a] py-32">
+      <div ref={sectionRef} className="bg-[#0a0a0a] py-32">
         <div className="max-w-5xl mx-auto px-8">
 
           <div className="mb-16">
@@ -260,23 +276,6 @@ export default function TechStackReveal() {
                 height={svgDims.h}
                 style={{ zIndex: 1, overflow: 'visible' }}
               >
-                <defs>
-                  <filter id="pulse-bloom" x="-60%" y="-60%" width="220%" height="220%">
-                    <feGaussianBlur stdDeviation="3.5" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                  <filter id="decor-bloom" x="-100%" y="-100%" width="300%" height="300%">
-                    <feGaussianBlur stdDeviation="4.5" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-
                 {/* ── Decorative static traces ── */}
                 {decor.map(({ d, circles, color, anim }, i) => (
                   <g key={`decor-${i}`}>
@@ -285,8 +284,8 @@ export default function TechStackReveal() {
                       <path
                         ref={el => { decorAnimRefs.current[i] = el }}
                         d={d} fill="none" stroke={anim}
-                        strokeWidth="2" strokeOpacity="0.75"
-                        strokeLinecap="round" filter="url(#decor-bloom)"
+                        strokeWidth="1.5" strokeOpacity="0.7"
+                        strokeLinecap="round"
                       />
                     )}
                     {circles.map(([cx, cy], j) => (
@@ -299,24 +298,14 @@ export default function TechStackReveal() {
                 {/* ── Card → chip animated traces ── */}
                 {paths.map(({ d, color }, i) => (
                   <g key={`path-${i}`}>
-                    {/* Static dim trace always visible */}
                     <path d={d} fill="none" stroke={color} strokeWidth="1" strokeOpacity="0.08" />
-                    {/* Animated glow + pulse only for even indices */}
-                    {i % 2 === 0 && (
-                      <>
-                        <path
-                          ref={el => { glowRefs.current[i] = el }}
-                          d={d} fill="none" stroke={color}
-                          strokeWidth="7" strokeOpacity="0.18"
-                          strokeLinecap="round" filter="url(#pulse-bloom)"
-                        />
-                        <path
-                          ref={el => { pulseRefs.current[i] = el }}
-                          d={d} fill="none" stroke={color}
-                          strokeWidth="1.5" strokeOpacity="0.85"
-                          strokeLinecap="round"
-                        />
-                      </>
+                    {i % 3 === 0 && (
+                      <path
+                        ref={el => { pulseRefs.current[i] = el }}
+                        d={d} fill="none" stroke={color}
+                        strokeWidth="2" strokeOpacity="0.9"
+                        strokeLinecap="round"
+                      />
                     )}
                   </g>
                 ))}
