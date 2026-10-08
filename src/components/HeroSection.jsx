@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, Suspense } from 'react'
+import { useRef, useEffect, useCallback, useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import NetworkOrb3D from './NetworkOrb3D'
 import HeroGrid from './HeroGrid'
@@ -18,6 +18,15 @@ const NAME_SHADOW   = '0 1px 4px rgba(0,0,0,0.35), 0 3px 14px rgba(0,0,0,0.18)'
 export default function HeroSection() {
   const mousePos    = useRef({ x: 0, y: 0 })
   const projectedRef = useRef([])
+  const heroRef      = useRef()
+  const [heroVisible, setHeroVisible] = useState(true)
+
+  // Pause the WebGL orb while the hero is scrolled out of view
+  useEffect(() => {
+    const io = new IntersectionObserver(([entry]) => setHeroVisible(entry.isIntersecting))
+    io.observe(heroRef.current)
+    return () => io.disconnect()
+  }, [])
 
   const handleMouseMove = useCallback((e) => {
     mousePos.current = { x: e.clientX, y: e.clientY }
@@ -29,7 +38,7 @@ export default function HeroSection() {
   }, [handleMouseMove])
 
   return (
-    <div className="relative bg-[#0a0a0a] overflow-hidden" style={{ minHeight: '100svh' }}>
+    <div ref={heroRef} className="relative bg-[#0a0a0a] overflow-hidden" style={{ minHeight: '100svh' }}>
 
       {/* Layer 1: Animated grid */}
       <HeroGrid />
@@ -46,7 +55,7 @@ export default function HeroSection() {
         style={{ zIndex: 3, paddingTop: '80px' }}
       >
         <Suspense fallback={null}>
-          <NetworkOrb3D mouseRef={mousePos} projectedRef={projectedRef} />
+          <NetworkOrb3D mouseRef={mousePos} projectedRef={projectedRef} active={heroVisible} />
         </Suspense>
       </div>
 
@@ -68,7 +77,7 @@ export default function HeroSection() {
                 className="w-1.5 h-1.5 rounded-full bg-emerald-400"
                 style={{ boxShadow: '0 0 6px rgba(52,211,153,0.7)' }}
               />
-              Verfügbar ab 2027
+              Verfügbar ab 2029
             </span>
           </motion.div>
 

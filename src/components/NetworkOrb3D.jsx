@@ -65,7 +65,7 @@ function BrainNet({ mouseRef, projectedRef }) {
     nodeMat.color.set(dark ? '#a5b4fc' : '#4f46e5')
     nodeMat.opacity = dark ? 0.42 : 0.35
 
-    time.current += delta
+    time.current += Math.min(delta, 0.1) // avoid a jump after resuming from pause
     if (mouseRef?.current) {
       const nx = (mouseRef.current.x / window.innerWidth) * 2 - 1
       const ny = -((mouseRef.current.y / window.innerHeight) * 2 - 1)
@@ -98,9 +98,10 @@ function BrainNet({ mouseRef, projectedRef }) {
   )
 }
 
-export default function NetworkOrb3D({ mouseRef, projectedRef }) {
+export default function NetworkOrb3D({ mouseRef, projectedRef, active = true }) {
   return (
     <Canvas
+      frameloop={active ? 'always' : 'never'}
       camera={{ position: [0, 0, 5], fov: 36 }}
       gl={{ antialias: true, alpha: true }}
       dpr={[1, 1.5]}

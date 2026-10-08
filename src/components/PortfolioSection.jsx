@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import { useInView } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -54,51 +54,7 @@ function StatusBadge({ status }) {
   )
 }
 
-function PlaceholderVisual({ accentRgb }) {
-  return (
-    <div className="w-full h-full flex items-center justify-center bg-[#090909] relative overflow-hidden">
-      <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px)', backgroundSize: '24px 24px' }} />
-      <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 60%, rgba(${accentRgb},0.06) 0%, transparent 65%)` }} />
-      <div className="relative flex flex-col items-center gap-3 opacity-40">
-        <div className="w-10 h-10 rounded-xl border flex items-center justify-center" style={{ borderColor: `rgba(${accentRgb},0.3)`, background: `rgba(${accentRgb},0.06)` }}>
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ color: `rgb(${accentRgb})` }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-        </div>
-        <span className="text-[10px] tracking-[0.2em] uppercase font-medium text-zinc-600">Bald</span>
-      </div>
-    </div>
-  )
-}
-
 const PROJECTS = [
-  {
-    title: 'iOS Fitness App',
-    category: 'Mobile Development',
-    status: 'Abgeschlossen',
-    desc: 'Native iOS Anwendung entwickelt mit SwiftUI. Fokus auf intuitive UX, native Animationen und saubere MVVM-Architektur.',
-    tech: ['SwiftUI', 'Xcode', 'MVVM', 'CoreData'],
-    github: '#', demo: null,
-    accentRgb: '245,158,11',
-    visual: (
-      <div className="flex gap-3 justify-center items-end py-4 h-full">
-        <div className="w-20 h-40 bg-[#111] rounded-[14px] overflow-hidden shadow-2xl flex flex-col border border-white/[0.07]">
-          <div className="h-4 bg-[#1a1a1a] flex items-center justify-center"><div className="w-8 h-1 bg-[#2a2a2a] rounded-full" /></div>
-          <div className="flex-1 bg-gradient-to-b from-blue-700/80 to-violet-700/80 p-2 flex flex-col gap-1.5">
-            <div className="h-1.5 bg-white/25 rounded-full w-3/4" /><div className="h-1.5 bg-white/15 rounded-full w-1/2" />
-            <div className="mt-1.5 h-12 bg-white/10 rounded-lg" /><div className="h-1.5 bg-white/15 rounded-full" /><div className="h-1.5 bg-white/15 rounded-full w-4/5" />
-          </div>
-        </div>
-        <div className="w-20 h-40 bg-[#111] rounded-[14px] overflow-hidden shadow-2xl flex flex-col border border-white/[0.07] mb-4">
-          <div className="h-4 bg-[#1a1a1a] flex items-center justify-center"><div className="w-8 h-1 bg-[#2a2a2a] rounded-full" /></div>
-          <div className="flex-1 bg-gradient-to-b from-violet-700/80 to-pink-600/80 p-2 flex flex-col gap-1.5">
-            <div className="h-9 bg-white/15 rounded-lg" /><div className="h-1.5 bg-white/25 rounded-full w-3/4 mt-1" /><div className="h-1.5 bg-white/15 rounded-full w-1/2" />
-            <div className="mt-1 flex gap-1"><div className="h-7 flex-1 bg-white/10 rounded" /><div className="h-7 flex-1 bg-white/10 rounded" /></div>
-          </div>
-        </div>
-      </div>
-    ),
-  },
   {
     title: '3D Portfolio Website',
     category: 'Web Development',
@@ -229,105 +185,91 @@ const PROJECTS = [
       </div>
     ),
   },
-  {
-    title: 'E-Commerce Platform',
-    category: 'Web Development',
-    status: 'Bald',
-    desc: 'Vollständige E-Commerce-Lösung mit modernem Frontend, Warenkorb, Checkout-Flow und Admin-Dashboard.',
-    tech: ['Next.js', 'TypeScript', 'Prisma', 'Stripe'],
-    github: null, demo: null,
-    accentRgb: '59,130,246',
-    placeholder: true,
-    visual: null,
-  },
-  {
-    title: 'AI Chat Interface',
-    category: 'Mobile Development',
-    status: 'Bald',
-    desc: 'KI-gestützte Chat-App für iOS mit SwiftUI. Natural Language Processing, Kontextgedächtnis und adaptives UI.',
-    tech: ['SwiftUI', 'OpenAI API', 'CoreML', 'CloudKit'],
-    github: null, demo: null,
-    accentRgb: '168,85,247',
-    placeholder: true,
-    visual: null,
-  },
-  {
-    title: 'Design Tokens CLI',
-    category: 'Web Development',
-    status: 'Bald',
-    desc: 'Node.js CLI-Tool zur automatischen Generierung von Design Tokens aus Figma. Export in CSS, SCSS und JS.',
-    tech: ['Node.js', 'Figma API', 'TypeScript', 'PostCSS'],
-    github: null, demo: null,
-    accentRgb: '52,211,153',
-    placeholder: true,
-    visual: null,
-  },
 ]
 
+// Hover effects avoid React state and only animate transform/opacity,
+// so mouse movement never re-renders the card or triggers layout/paint.
 function PortfolioCard({ project, onMount, index }) {
-  const wrapperRef  = useRef()
-  const tiltRef     = useRef()
-  const sweepRef    = useRef()
-  const [hovered, setHovered]   = useState(false)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const wrapperRef   = useRef()
+  const liftRef      = useRef()
+  const tiltRef      = useRef()
+  const sweepRef     = useRef()
+  const spotlightRef = useRef()
+  const quickRef     = useRef(null)
+  const frameRef     = useRef(0)
+  const pointerRef   = useRef({ x: 0, y: 0 })
 
   useEffect(() => { onMount?.(wrapperRef.current, index) }, [])
 
-  const handleMouseMove = useCallback((e) => {
-    const rect = tiltRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    setMousePos({ x, y })
-    const xN = (x / rect.width  - 0.5) * 2
-    const yN = (y / rect.height - 0.5) * 2
-    gsap.to(tiltRef.current, {
-      rotateX: -yN * 3.5,
-      rotateY:  xN * 3.5,
-      transformPerspective: 900,
-      duration: 0.22,
-      ease: 'power2.out',
-      overwrite: 'auto',
-    })
+  useEffect(() => {
+    gsap.set(tiltRef.current, { transformPerspective: 900 })
+    quickRef.current = {
+      rx: gsap.quickTo(tiltRef.current, 'rotateX', { duration: 0.22, ease: 'power2.out' }),
+      ry: gsap.quickTo(tiltRef.current, 'rotateY', { duration: 0.22, ease: 'power2.out' }),
+    }
+    return () => cancelAnimationFrame(frameRef.current)
   }, [])
 
-  const handleEnter = useCallback(() => {
-    setHovered(true)
-    gsap.to(tiltRef.current, { y: -7, duration: 0.32, ease: 'power2.out' })
+  const update = useCallback(() => {
+    frameRef.current = 0
+    const rect = wrapperRef.current?.getBoundingClientRect()
+    if (!rect || !quickRef.current) return
+    const x = pointerRef.current.x - rect.left
+    const y = pointerRef.current.y - rect.top
+    spotlightRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`
+    quickRef.current.rx(-(y / rect.height - 0.5) * 2 * 3.5)
+    quickRef.current.ry( (x / rect.width  - 0.5) * 2 * 3.5)
+  }, [])
+
+  const handleMouseMove = useCallback((e) => {
+    if (e.pointerType !== 'mouse') return
+    pointerRef.current = { x: e.clientX, y: e.clientY }
+    if (!frameRef.current) frameRef.current = requestAnimationFrame(update)
+  }, [update])
+
+  const handleEnter = useCallback((e) => {
+    if (e.pointerType !== 'mouse') return
+    handleMouseMove(e)
+    gsap.to(liftRef.current, { y: -7, duration: 0.32, ease: 'power2.out', overwrite: 'auto' })
     const el = sweepRef.current
     if (el) {
-      el.style.transition = 'none'; el.style.left = '-45%'
+      el.style.transition = 'none'; el.style.transform = 'translate3d(0, 0, 0)'
       requestAnimationFrame(() => requestAnimationFrame(() => {
         if (!sweepRef.current) return
-        sweepRef.current.style.transition = 'left 700ms cubic-bezier(0.25,0.46,0.45,0.94)'
-        sweepRef.current.style.left = '130%'
+        sweepRef.current.style.transition = 'transform 700ms cubic-bezier(0.25,0.46,0.45,0.94)'
+        sweepRef.current.style.transform = 'translate3d(390%, 0, 0)'
       }))
     }
-  }, [])
+  }, [handleMouseMove])
 
   const handleLeave = useCallback(() => {
-    setHovered(false)
-    gsap.to(tiltRef.current, { y: 0, rotateX: 0, rotateY: 0, duration: 0.45, ease: 'power2.out' })
+    cancelAnimationFrame(frameRef.current)
+    frameRef.current = 0
+    gsap.to(liftRef.current, { y: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' })
+    quickRef.current?.rx(0)
+    quickRef.current?.ry(0)
   }, [])
 
   return (
     <div ref={wrapperRef} style={{ opacity: 0 }}>
       <div
+        ref={liftRef}
+        onPointerMove={handleMouseMove}
+        onPointerEnter={handleEnter}
+        onPointerLeave={handleLeave}
+        className="relative group h-full"
+        style={{ willChange: 'transform' }}
+      >
+      {/* Hover shadow lives outside the clipped card and fades via opacity instead of animating box-shadow */}
+      <div className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{ boxShadow: `0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(${project.accentRgb},0.18)` }} />
+      <div
         ref={tiltRef}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        className={`relative group card-noise rounded-2xl border flex flex-col overflow-hidden h-full
-          border-white/[0.07] bg-[#0d0d0d]
-          ${project.placeholder ? 'opacity-70 hover:opacity-100' : ''}
+        className={`relative card-noise rounded-2xl border flex flex-col overflow-hidden h-full
+          border-white/[0.07] bg-[#0d0d0d] transition-opacity duration-300
+          ${project.placeholder ? 'opacity-70 group-hover:opacity-100' : ''}
         `}
-        style={{
-          transformStyle: 'preserve-3d',
-          boxShadow: hovered
-            ? `0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(${project.accentRgb},0.18)`
-            : '0 2px 16px rgba(0,0,0,0.3)',
-          transition: 'box-shadow 320ms ease, opacity 300ms ease',
-        }}
+        style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.3)', willChange: 'transform' }}
       >
         <div className="card-corner tl" /><div className="card-corner tr" />
         <div className="card-corner bl" /><div className="card-corner br" />
@@ -337,21 +279,21 @@ function PortfolioCard({ project, onMount, index }) {
             style={{ width: '45%', left: '-45%', background: 'linear-gradient(105deg, transparent 15%, rgba(255,255,255,0.05) 50%, transparent 85%)' }} />
         </div>
 
-        <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
-          zIndex: 9, opacity: hovered ? 1 : 0, transition: 'opacity 250ms ease',
-          background: `radial-gradient(360px at ${mousePos.x}px ${mousePos.y}px, rgba(${project.accentRgb},0.10), transparent 65%)`,
-        }} />
+        <div className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-[250ms]" style={{ zIndex: 9 }}>
+          <div ref={spotlightRef} className="absolute pointer-events-none" style={{
+            width: 720, height: 720, left: -360, top: -360,
+            background: `radial-gradient(circle closest-side, rgba(${project.accentRgb},0.10), transparent 65%)`,
+          }} />
+        </div>
 
-        <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{
-          zIndex: 9, opacity: hovered ? 1 : 0, transition: 'opacity 320ms ease',
+        <div className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+          zIndex: 9,
           boxShadow: `inset 0 0 0 1px rgba(${project.accentRgb},0.25)`,
         }} />
 
         <div className="relative h-48 overflow-hidden border-b border-white/[0.06] rounded-t-2xl bg-[#0a0a0a]">
-          <div className="w-full h-full" style={{ transition: 'transform 400ms ease', transform: hovered ? 'scale(1.02)' : 'scale(1)' }}>
-            {project.placeholder
-              ? <PlaceholderVisual accentRgb={project.accentRgb} />
-              : project.visual}
+          <div className="w-full h-full transition-transform duration-[400ms] ease-[ease] group-hover:scale-[1.02]">
+            {project.visual}
           </div>
         </div>
 
@@ -397,6 +339,7 @@ function PortfolioCard({ project, onMount, index }) {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   )

@@ -2,6 +2,8 @@
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   darkMode: 'class',
+  // iOS keeps :hover after a tap — only apply hover: variants on devices with a real pointer
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       fontFamily: {

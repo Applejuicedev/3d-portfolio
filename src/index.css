@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { overflow-x: hidden; }
+/* Dark page background so overscroll (rubber-banding) never reveals white */
+html { scroll-behavior: smooth; background-color: #0a0a0a; color-scheme: dark; }
+body { overflow-x: hidden; background-color: #0a0a0a; }
 
 /* ── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
@@ -68,6 +69,8 @@ canvas { touch-action: none; }
 .card-corner.bl { bottom: -1px; left: -1px; border-bottom: 2px solid; border-left: 2px solid; border-radius: 0 0 0 3px; }
 .card-corner.br { bottom: -1px; right: -1px; border-bottom: 2px solid; border-right: 2px solid; border-radius: 0 0 3px 0; }
 
-.group:hover .card-corner {
-  border-color: rgba(99,102,241,0.5);
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .card-corner {
+    border-color: rgba(99,102,241,0.5);
+  }
 }

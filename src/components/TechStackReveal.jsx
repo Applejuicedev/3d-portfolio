@@ -254,7 +254,7 @@ export default function TechStackReveal() {
       <div className="h-px bg-white/[0.05]" />
 
       <div ref={sectionRef} className="bg-[#0a0a0a] py-32">
-        <div className="max-w-5xl mx-auto px-8">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
 
           {/* PCB board — pt-20 gives vertical room for upward decorative traces */}
           <div ref={containerRef} className="relative pt-20">
@@ -349,18 +349,18 @@ export default function TechStackReveal() {
             </div>
 
             {/* Tech cards */}
-            <div className="grid grid-cols-3 gap-4 relative" style={{ zIndex: 10 }}>
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-4 relative" style={{ zIndex: 10 }}>
               {TECH.map(({ name, Icon, color, desc }, i) => (
                 <div
                   key={name}
                   ref={el => { cardRefs.current[i] = el }}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl border bg-[#0d0d0d] hover:bg-[#111] transition-colors duration-200"
+                  className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-2 sm:px-4 py-3 sm:py-3.5 text-center sm:text-left rounded-xl border bg-[#0d0d0d] hover:bg-[#111] transition-colors duration-200"
                   style={{ borderColor: 'rgba(255,255,255,0.07)' }}
                 >
                   <Icon style={{ width: 18, height: 18, color, flexShrink: 0, opacity: 0.85 }} />
-                  <div>
-                    <div className="text-[13px] font-medium text-white leading-tight">{name}</div>
-                    <div className="text-[10px] text-zinc-600 tracking-[0.15em] uppercase mt-0.5">{desc}</div>
+                  <div className="min-w-0">
+                    <div className="text-[12px] sm:text-[13px] font-medium text-white leading-tight">{name}</div>
+                    <div className="text-[9px] sm:text-[10px] text-zinc-600 tracking-[0.06em] sm:tracking-[0.15em] uppercase mt-0.5">{desc}</div>
                   </div>
                 </div>
               ))}

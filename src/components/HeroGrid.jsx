@@ -176,7 +176,15 @@ export default function HeroGrid() {
       animId = requestAnimationFrame(draw)
     }
     draw()
-    return () => { cancelAnimationFrame(animId); ro.disconnect() }
+
+    // Stop drawing while the hero is scrolled out of view
+    const io = new IntersectionObserver(([entry]) => {
+      cancelAnimationFrame(animId)
+      if (entry.isIntersecting) draw()
+    })
+    io.observe(canvas)
+
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); io.disconnect() }
   }, [])
 
   return (
