@@ -154,6 +154,58 @@ const PROJECTS = [
     ),
   },
   {
+    title: 'Dienstzeit',
+    category: 'Mobile Development',
+    status: 'In Arbeit',
+    desc: 'iOS- und Android-App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto und eine Monatsübersicht als PDF zum Abschreiben des Stundenzettels. Alle Daten bleiben auf dem Gerät.',
+    tech: ['React Native', 'Expo', 'TypeScript', 'SQLite'],
+    github: null, demo: null,
+    accentRgb: '61,174,114',
+    visual: (
+      <div className="w-full h-full bg-[#0d0d0d] relative overflow-hidden flex items-center justify-center gap-6">
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(rgba(61,174,114,0.10) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+        {/* App-Icon: Kalenderblatt mit Wochenreihe (Mo–Mi erledigt, Do offen, Fr halber Tag) */}
+        <div className="relative w-[72px] h-[72px] rounded-[16px] overflow-hidden shrink-0"
+          style={{ background: 'linear-gradient(#fff,#f4f4f6)', boxShadow: '0 10px 28px rgba(0,0,0,0.5)' }}>
+          <div className="h-[18px]" style={{ background: 'linear-gradient(#24875a,#1b7546)' }} />
+          <div className="grid grid-cols-7 gap-[2px] p-[2px]">
+            {Array.from({ length: 35 }, (_, i) => {
+              const reihe = Math.floor(i / 7), tag = (i % 7) - 1
+              const woche = reihe === 2 && tag >= 0 && tag <= 4
+              const farbe = woche && tag <= 2 ? '#3a3a3c' : woche && tag === 3 ? '#aeaeb2' : '#ececef'
+              return (
+                <div key={i} className="h-[8px] rounded-[2px] relative overflow-hidden" style={{ backgroundColor: woche && tag === 4 ? '#ececef' : farbe }}>
+                  {woche && tag === 4 && <div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#aeaeb2]" />}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        {/* Ausschnitt der Übersicht */}
+        <div className="relative w-[112px] h-[164px] mt-10 rounded-t-[22px] border-[3px] border-b-0 border-[#2c2c2e] bg-black px-2 pt-3 flex flex-col gap-1.5">
+          <span className="text-[6px] font-semibold tracking-wider text-white/40">FREITAG, 9. OKTOBER</span>
+          <span className="text-[12px] font-bold text-white leading-none -mt-0.5">Übersicht</span>
+          <div className="rounded-lg bg-[#1c1c1e] py-1.5 flex flex-col items-center">
+            <span className="text-[5px] font-semibold tracking-wider text-white/40">STUNDENKONTO</span>
+            <span className="text-[19px] font-bold leading-tight text-[#30d158] tabular-nums">+10:45</span>
+            <span className="text-[5.5px] text-white/40">10 Std. 45 Min. Guthaben</span>
+          </div>
+          <div className="flex gap-1">
+            {[['FVD', '4'], ['URLAUB', '23']].map(([l, w]) => (
+              <div key={l} className="flex-1 rounded-lg bg-[#1c1c1e] py-1 flex flex-col items-center">
+                <span className="text-[5px] font-semibold tracking-wider text-white/40">{l}</span>
+                <span className="text-[12px] font-bold text-white leading-tight">{w}</span>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-md py-1 text-center text-[6.5px] font-semibold text-[#1c1f1e]" style={{ backgroundColor: '#3dae72' }}>
+            Jetzt eintragen
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
     title: 'UX/UI Design System',
     category: 'UX/UI Design',
     status: 'In Arbeit',
