@@ -379,9 +379,9 @@ function Bio() {
       </ul>
 
       <div className="space-y-5 text-[13.5px] leading-[1.75] text-zinc-400">
-        <p>Ich bin 22 Jahre alt und habe Medieninformatik an der Technischen Hochschule Mittelhessen (THM) studiert, bis ich mich nach dem zweiten Semester dazu entschieden habe, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 plane ich, mein Medieninformatik-Studium neben dem Dienst als Fernstudium an der IU Internationalen Hochschule fortzuführen (Teilzeit II, 12 Semester).</p>
-        <p>Meine Leidenschaft für Technik und Gestaltung entwickelte sich bereits während meiner schulischen Ausbildung — diese legte das Fundament für meine Fähigkeiten in Design, Medienproduktion und Softwareentwicklung.</p>
-        <p>Nach einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup lernte ich moderne Technologien und agile Arbeitsmethoden kennen und in der Praxis anzuwenden. Spätestens nach diesem Praktikum war mir klar: Ich möchte mich langfristig dahin entwickeln, echte Anwendungen für echte Menschen zu entwerfen und zu kreieren, die auch wirklich einen Nutzen haben.</p>
+        <p>Ich habe Medieninformatik an der Technischen Hochschule Mittelhessen (THM) studiert. Nach dem zweiten Semester habe ich mich entschieden, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 möchte ich das Studium neben dem Dienst als Fernstudium an der IU Internationalen Hochschule fortsetzen (Teilzeit II, 12 Semester).</p>
+        <p>Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</p>
+        <p>In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die echten Menschen wirklich nützen.</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
