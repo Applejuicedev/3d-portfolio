@@ -157,6 +157,14 @@ const TRACKS = {
 }
 
 
+// Stationen aus dem Text, chronologisch, jeweils mit Link zur Einrichtung
+const STATIONEN = [
+  { label: 'Berufliche Schule Butzbach', href: 'https://berufsschule-butzbach.de/hoehere-berufsfachschule/gestaltungs-und-medientechnik/' },
+  { label: 'THM', href: 'https://www.thm.de/' },
+  { label: 'Bundeswehr', href: 'https://www.bundeswehr.de/' },
+  { label: 'IU Fernstudium', href: 'https://www.iu.de/bachelor/medieninformatik/fernstudium/' },
+]
+
 const STATS = [
   { value: '22',  label: 'Jahre alt' },
   { value: '6+',  label: 'Monate Praktikum' },
@@ -381,6 +389,21 @@ function Bio() {
         <p>Im Anschluss an mein Fachabitur und das dazugehörige Praktikum habe ich Medieninformatik an der Technischen Hochschule Mittelhessen (THM) studiert. Nach dem zweiten Semester habe ich mich entschieden, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 möchte ich das Studium neben dem Dienst als Fernstudium an der IU Internationalen Hochschule fortsetzen (Teilzeit II, 12 Semester).</p>
         <p>Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</p>
         <p>In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die echten Menschen wirklich nützen.</p>
+      </div>
+
+      <div className="mt-8 flex flex-wrap gap-2">
+        {STATIONEN.map(({ label, href }) => (
+          <a
+            key={label}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white/[0.04] border border-white/[0.07] text-zinc-400 transition-colors duration-150 hover:text-white hover:border-white/20"
+          >
+            {label}
+            <svg aria-hidden="true" viewBox="0 0 12 12" className="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h6v6M10 2 3 9" /></svg>
+          </a>
+        ))}
       </div>
 
       <div className="mt-10 grid grid-cols-2 gap-3">
