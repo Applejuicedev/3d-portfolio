@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion'
 import gsap from 'gsap'
+import { Contours } from './BackgroundPatterns'
 
 const NAME_SHADOW = '0 1px 4px rgba(0,0,0,0.45), 0 3px 12px rgba(0,0,0,0.25), 0 0 60px rgba(99,102,241,0.06)'
 
@@ -437,62 +438,12 @@ function Bio() {
   )
 }
 
-// Vereinzelte, kaum sichtbare Gitterflächen im Hintergrund: unregelmäßig große Kacheln,
-// Linien enden versetzt (wie abgeschnitten) und jede Fläche läuft über eine Maske weich aus.
-function seeded(seed) {
-  return () => {
-    seed = (seed * 16807) % 2147483647
-    return (seed - 1) / 2147483646
-  }
-}
-
-// Kachelbreiten stark gemischt: viele schmale neben wenigen sehr breiten Feldern
-function gridStep(rnd) {
-  const r = rnd()
-  if (r < 0.35) return 40 + rnd() * 60
-  if (r < 0.7)  return 120 + rnd() * 110
-  return 260 + rnd() * 220
-}
-
-function gridLines(w, h, seed) {
-  const rnd = seeded(seed)
-  const lines = []
-  for (let x = rnd() * 90; x < w; x += gridStep(rnd)) {
-    lines.push([x, h * rnd() * 0.3, x, h * (0.7 + rnd() * 0.3)])
-  }
-  for (let y = rnd() * 90; y < h; y += gridStep(rnd)) {
-    lines.push([w * rnd() * 0.3, y, w * (0.7 + rnd() * 0.3), y])
-  }
-  return lines
-}
-
-const GRID_PATCHES = [
-  { style: { top: '-6%', left: '-14%' },   w: 1250, h: 1000, seed: 7,  fade: 'ellipse 55% 50% at 45% 45%' },
-  { style: { top: '18%', right: '-18%' },  w: 1300, h: 1150, seed: 23, fade: 'ellipse 50% 48% at 55% 50%' },
-  { style: { top: '52%', left: '-20%' },   w: 1100, h: 950,  seed: 59, fade: 'ellipse 50% 50% at 50% 50%' },
-  { style: { bottom: '-12%', right: '2%' }, w: 1200, h: 900,  seed: 41, fade: 'ellipse 52% 50% at 50% 55%' },
-].map((p) => ({ ...p, lines: gridLines(p.w, p.h, p.seed) }))
-
-function AboutGridPatches() {
-  return GRID_PATCHES.map(({ style, w, h, lines, fade }, i) => {
-    const mask = `radial-gradient(${fade}, #000 0%, rgba(0,0,0,0.55) 45%, transparent 100%)`
-    return (
-      <svg
-        key={i}
-        aria-hidden="true"
-        width={w}
-        height={h}
-        viewBox={`0 0 ${w} ${h}`}
-        className="absolute pointer-events-none"
-        style={{ ...style, zIndex: 0, maskImage: mask, WebkitMaskImage: mask }}
-      >
-        {lines.map(([x1, y1, x2, y2], j) => (
-          <line key={j} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(255,255,255,0.09)" strokeWidth="1" />
-        ))}
-      </svg>
-    )
-  })
-}
+const ABOUT_HILLS = [
+  { style: { top: '-14%', left: '-22%' },  size: 1300, seed: 5,  rings: 16 },
+  { style: { top: '22%', right: '-26%' },  size: 1400, seed: 17, rings: 17 },
+  { style: { top: '58%', left: '-12%' },   size: 900,  seed: 31, rings: 11 },
+  { style: { bottom: '-20%', right: '8%' }, size: 1100, seed: 47, rings: 13 },
+]
 
 export default function AboutSection() {
   const sectionRef  = useRef()
@@ -561,7 +512,7 @@ export default function AboutSection() {
 
       <div id="uber-mich" ref={sectionRef} className="relative bg-[#0a0a0a] py-28 overflow-hidden">
 
-        <AboutGridPatches />
+        <Contours hills={ABOUT_HILLS} />
 
         {/* Cursor-following indigo spotlight */}
         <div
