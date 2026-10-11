@@ -156,7 +156,6 @@ const TRACKS = {
   service:    { rgb: '251,146,60', ring: 'rgba(251,146,60,0.7)',  tail: true  },
 }
 
-const SKILLS = ['React / Next.js', 'Three.js', 'SwiftUI', 'Python', 'Figma / UX/UI', 'GSAP', 'Tailwind CSS', 'CISCO Networking']
 
 const STATS = [
   { value: '22',  label: 'Jahre alt' },
@@ -378,18 +377,10 @@ function Bio() {
         ))}
       </ul>
 
-      <div className="space-y-5 text-[13.5px] leading-[1.75] text-zinc-400">
+      <div className="space-y-10 text-[13.5px] leading-[1.75] text-zinc-400">
         <p>Im Anschluss an mein Fachabitur und das dazugehörige Praktikum habe ich Medieninformatik an der Technischen Hochschule Mittelhessen (THM) studiert. Nach dem zweiten Semester habe ich mich entschieden, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 möchte ich das Studium neben dem Dienst als Fernstudium an der IU Internationalen Hochschule fortsetzen (Teilzeit II, 12 Semester).</p>
         <p>Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</p>
         <p>In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die echten Menschen wirklich nützen.</p>
-      </div>
-
-      <div className="mt-8 flex flex-wrap gap-2">
-        {SKILLS.map((skill) => (
-          <span key={skill} className="text-[12px] font-medium px-3 py-1.5 rounded-md bg-white/[0.04] border border-white/[0.07] text-zinc-400 transition-opacity duration-150 hover:opacity-55">
-            {skill}
-          </span>
-        ))}
       </div>
 
       <div className="mt-10 grid grid-cols-2 gap-3">
