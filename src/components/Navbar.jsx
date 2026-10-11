@@ -27,13 +27,9 @@ export default function Navbar() {
           : 'bg-transparent border-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-8 py-[14px] flex items-center justify-between">
-
-        <span className="text-[13px] font-semibold tracking-tight text-white select-none">
-          VF
-        </span>
-
-        <div className="flex items-center gap-0.5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-[14px] flex items-center justify-center">
+        {/* Abstand wächst mit der Fensterbreite: eng auf dem Handy, luftig auf großen Bildschirmen */}
+        <div className="flex items-center gap-[clamp(0.25rem,4vw,3.5rem)]">
           {navItems.map(({ id, label }) => (
             <button
               key={id}
