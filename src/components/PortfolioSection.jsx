@@ -158,8 +158,8 @@ const PROJECTS = [
     category: 'Mobile Development',
     status: 'In Arbeit',
     desc: 'App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto nach SAZV, Monatsübersicht als PDF wie die Buchungsliste und Datenblatt für den Urlaubsantrag. Alle Daten bleiben auf dem Gerät.',
-    tech: ['React Native', 'Expo', 'TypeScript', 'SQLite'],
-    github: null, demo: null,
+    tech: ['React Native', 'Expo SDK 57', 'TypeScript', 'Expo Router', 'SQLite', 'Vitest'],
+    github: null, demo: 'https://dienstzeit-app.de',
     accentRgb: '61,174,114',
     visual: (
       <div className="w-full h-full bg-[#0d0d0d] relative overflow-hidden flex items-center justify-center gap-6">
