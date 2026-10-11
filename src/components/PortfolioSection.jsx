@@ -229,38 +229,6 @@ const PROJECTS = [
       </div>
     ),
   },
-  {
-    title: 'UX/UI Design System',
-    category: 'UX/UI Design',
-    status: 'In Arbeit',
-    desc: 'Umfassendes Design-System in Figma — Komponenten-Bibliothek, Styleguide und responsive Prototypen für Web und Mobile.',
-    tech: ['Figma', 'Prototyping', 'Design Systems', 'User Research'],
-    github: null, demo: '#',
-    accentRgb: '139,92,246',
-    visual: (
-      <div className="w-full h-full bg-[#0d0d0d] p-3 flex flex-col gap-2">
-        <div className="h-5 bg-[#1a1a1a] rounded-lg flex items-center px-2 gap-1.5 border border-white/[0.05]">
-          <div className="w-2 h-2 rounded bg-violet-400/80" /><div className="h-1.5 bg-white/10 rounded w-16" />
-        </div>
-        <div className="flex gap-2 flex-1">
-          <div className="w-16 space-y-1.5 py-1">
-            {['#818cf8','#34d399','#fbbf24','#f87171','#a78bfa'].map((c, i) => (
-              <div key={i} className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm opacity-80" style={{ backgroundColor: c }} /><div className="h-1 bg-white/10 rounded flex-1" />
-              </div>
-            ))}
-          </div>
-          <div className="flex-1 grid grid-cols-2 gap-1.5">
-            {[['#DBEAFE','20'],['#D1FAE5','20'],['#FEF3C7','20'],['#FCE7F3','20']].map(([c, o], i) => (
-              <div key={i} className="rounded-lg p-1.5" style={{ backgroundColor: c + o }}>
-                <div className="h-1 rounded mb-1 w-3/4 opacity-60" style={{ backgroundColor: c }} /><div className="h-1 rounded w-1/2 opacity-40" style={{ backgroundColor: c }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-  },
 ]
 
 // Hover effects avoid React state and only animate transform/opacity,
@@ -440,7 +408,7 @@ function SectionHeader() {
         Ausgewählte Projekte
       </h2>
       <p className="text-[14px] text-zinc-400 max-w-md leading-relaxed">
-        Eine Auswahl meiner Projekte — von Mobile Apps über Web-Entwicklung bis hin zu UX/UI Design.
+        Eine Auswahl meiner Projekte — von Mobile Apps bis zur Web-Entwicklung.
       </p>
     </div>
   )
