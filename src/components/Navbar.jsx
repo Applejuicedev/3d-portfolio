@@ -27,26 +27,24 @@ export default function Navbar() {
           : 'bg-transparent border-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-[14px] flex items-center justify-center">
-        {/* Abstand wächst mit der Fensterbreite: eng auf dem Handy, luftig auf großen Bildschirmen */}
-        <div className="flex items-center gap-[clamp(0.25rem,4vw,3.5rem)]">
-          {navItems.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => scrollTo(id)}
-              className="
-                px-3 py-2.5 sm:py-1.5 rounded-md
-                text-[13px] font-medium
-                text-zinc-400
-                hover:text-white
-                hover:bg-white/[0.05]
-                transition-all duration-150
-              "
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      {/* Jeder Eintrag ist ein gleich breites Feld über die volle Breite und Höhe der Leiste */}
+      <div className="grid grid-cols-3">
+        {navItems.map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => scrollTo(id)}
+            className="
+              py-[18px]
+              text-[13px] font-medium
+              text-zinc-400
+              hover:text-white
+              hover:bg-white/[0.05]
+              transition-colors duration-150
+            "
+          >
+            {label}
+          </button>
+        ))}
       </div>
     </nav>
   )
