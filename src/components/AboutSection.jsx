@@ -5,8 +5,8 @@ import gsap from 'gsap'
 const NAME_SHADOW = '0 1px 4px rgba(0,0,0,0.45), 0 3px 12px rgba(0,0,0,0.25), 0 0 60px rgba(99,102,241,0.06)'
 
 const FRAMEWORKS = [
-  'React', 'Next.js', 'TypeScript', 'Three.js', 'Node.js',
-  'Framer Motion', 'Tailwind CSS', 'GSAP', 'SwiftUI', 'Python',
+  'React', 'Claude Code', 'Next.js', 'TypeScript', 'ChatGPT', 'Three.js', 'Node.js',
+  'Perplexity', 'Framer Motion', 'Tailwind CSS', 'Claude', 'GSAP', 'SwiftUI', 'Python',
   'Figma', 'Docker', 'MongoDB', 'Git',
 ]
 
@@ -25,6 +25,10 @@ const FRAMEWORK_COLORS = {
   'Docker':        '#2496ED',
   'MongoDB':       '#47A248',
   'Git':           '#F05032',
+  'Claude':        '#D97757',
+  'Claude Code':   '#D97757',
+  'ChatGPT':       '#10A37F',
+  'Perplexity':    '#20B8CD',
 }
 
 function FrameworkTyper() {

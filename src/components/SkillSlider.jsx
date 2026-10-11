@@ -2,11 +2,13 @@ import {
   SiReact, SiThreedotjs, SiSwift, SiPython, SiGreensock, SiTailwindcss,
   SiFigma, SiTypescript, SiCisco, SiNextdotjs, SiVite,
   SiCss, SiHtml5, SiBlender, SiGit, SiNodedotjs, SiXcode, SiApple, SiFramer,
+  SiClaude, SiAnthropic, SiOpenai, SiPerplexity,
 } from 'react-icons/si'
 
 const ROW_A = [
   { label: 'React',        Icon: SiReact       },
   { label: 'Three.js',     Icon: SiThreedotjs  },
+  { label: 'Claude',       Icon: SiClaude      },
   { label: 'SwiftUI',      Icon: SiSwift       },
   { label: 'Python',       Icon: SiPython      },
   { label: 'GSAP',         Icon: SiGreensock   },
@@ -14,6 +16,7 @@ const ROW_A = [
   { label: 'Figma',        Icon: SiFigma       },
   { label: 'TypeScript',   Icon: SiTypescript  },
   { label: 'CISCO',        Icon: SiCisco       },
+  { label: 'ChatGPT',      Icon: SiOpenai      },
   { label: 'Next.js',      Icon: SiNextdotjs   },
   { label: 'Vite',         Icon: SiVite        },
 ]
@@ -22,11 +25,13 @@ const ROW_B = [
   { label: 'CSS3',              Icon: SiCss      },
   { label: 'HTML5',             Icon: SiHtml5    },
   { label: '3D Modelling',      Icon: SiBlender  },
+  { label: 'Claude Code',       Icon: SiAnthropic },
   { label: 'Git',               Icon: SiGit      },
   { label: 'Motion Design',     Icon: SiFramer   },
   { label: 'Node.js',           Icon: SiNodedotjs },
   { label: 'Xcode',             Icon: SiXcode    },
   { label: 'CoreData',          Icon: SiApple    },
+  { label: 'Perplexity',        Icon: SiPerplexity },
   { label: 'UX/UI Design',      Icon: SiFigma    },
   { label: 'iOS Development',   Icon: SiApple    },
 ]
