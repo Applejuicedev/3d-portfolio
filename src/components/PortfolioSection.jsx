@@ -159,7 +159,7 @@ const PROJECTS = [
     status: 'In Arbeit',
     desc: 'App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto nach SAZV, Monatsübersicht als PDF wie die Buchungsliste und Datenblatt für den Urlaubsantrag. Alle Daten bleiben auf dem Gerät.',
     tech: ['React Native', 'Expo SDK 57', 'TypeScript', 'Expo Router', 'SQLite', 'Vitest'],
-    github: null, demo: 'https://dienstzeit-app.de',
+    github: null, demo: 'https://dienstzeit-app.de', demoLabel: 'Landingpage',
     accentRgb: '61,174,114',
     visual: (
       <div className="w-full h-full bg-[#0d0d0d] relative overflow-hidden flex items-center justify-center gap-6">
@@ -409,7 +409,7 @@ function PortfolioCard({ project, onMount, index }) {
                   style={{ background: `rgba(${project.accentRgb},0.15)`, border: `1px solid rgba(${project.accentRgb},0.25)` }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${project.accentRgb},0.27)` }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${project.accentRgb},0.15)` }}>
-                  <ExternalLinkIcon />Live Demo
+                  <ExternalLinkIcon />{project.demoLabel ?? 'Live Demo'}
                 </a>
               )}
             </div>
