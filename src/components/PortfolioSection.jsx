@@ -157,49 +157,73 @@ const PROJECTS = [
     title: 'Dienstzeit',
     category: 'Mobile Development',
     status: 'In Arbeit',
-    desc: 'iOS- und Android-App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto und eine Monatsübersicht als PDF zum Abschreiben des Stundenzettels. Alle Daten bleiben auf dem Gerät.',
+    desc: 'App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto nach SAZV, Monatsübersicht als PDF wie die Buchungsliste und Datenblatt für den Urlaubsantrag. Alle Daten bleiben auf dem Gerät.',
     tech: ['React Native', 'Expo', 'TypeScript', 'SQLite'],
     github: null, demo: null,
     accentRgb: '61,174,114',
     visual: (
       <div className="w-full h-full bg-[#0d0d0d] relative overflow-hidden flex items-center justify-center gap-6">
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(rgba(61,174,114,0.10) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
-        {/* App-Icon: Kalenderblatt mit Wochenreihe (Mo–Mi erledigt, Do offen, Fr halber Tag) */}
-        <div className="relative w-[72px] h-[72px] rounded-[16px] overflow-hidden shrink-0"
-          style={{ background: 'linear-gradient(#fff,#f4f4f6)', boxShadow: '0 10px 28px rgba(0,0,0,0.5)' }}>
-          <div className="h-[18px]" style={{ background: 'linear-gradient(#24875a,#1b7546)' }} />
-          <div className="grid grid-cols-7 gap-[2px] p-[2px]">
-            {Array.from({ length: 35 }, (_, i) => {
-              const reihe = Math.floor(i / 7), tag = (i % 7) - 1
-              const woche = reihe === 2 && tag >= 0 && tag <= 4
-              const farbe = woche && tag <= 2 ? '#3a3a3c' : woche && tag === 3 ? '#aeaeb2' : '#ececef'
-              return (
-                <div key={i} className="h-[8px] rounded-[2px] relative overflow-hidden" style={{ backgroundColor: woche && tag === 4 ? '#ececef' : farbe }}>
-                  {woche && tag === 4 && <div className="absolute bottom-0 inset-x-0 h-1/2 bg-[#aeaeb2]" />}
-                </div>
-              )
-            })}
+        {/* App-Icon „d1“: Kalenderblatt mit Monatsraster, letzte drei Tage offen (in der App auf Tarn, hier auf App-Grün) */}
+        <svg viewBox="0 0 100 100" className="relative w-[72px] h-[72px] shrink-0" style={{ filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.5))' }} aria-label="App-Icon Dienstzeit">
+          <defs>
+            <linearGradient id="dz-grund" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#22915A" /><stop offset="1" stopColor="#0F5C36" /></linearGradient>
+            <clipPath id="dz-ecken"><rect width="100" height="100" rx="22.4" /></clipPath>
+            <mask id="dz-zeichen" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+              <rect width="100" height="100" fill="#000" />
+              <rect x="18" y="23" width="64" height="60" rx="5" stroke="#fff" strokeWidth="5.5" fill="none" />
+              <path d="M18 31V28A5 5 0 0 1 23 23H77A5 5 0 0 1 82 28V31Z" fill="#fff" stroke="#fff" strokeWidth="5.5" strokeLinejoin="round" />
+              {[34, 50, 66].map((x) => (
+                <g key={x}>
+                  <path d={`M${x} 17.5V23.5`} stroke="#000" strokeWidth="7.7" strokeLinecap="round" />
+                  <path d={`M${x} 17.5V23.5`} stroke="#fff" strokeWidth="4.5" strokeLinecap="round" />
+                </g>
+              ))}
+              {[[43.56, 43.83], [56.44, 43.83], [69.31, 43.83], [30.69, 57], [43.56, 57], [56.44, 57], [69.31, 57], [30.69, 70.17], [43.56, 70.17], [56.44, 70.17]].map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r="4.38" fill={i < 7 ? '#fff' : '#8c8c8c'} />
+              ))}
+            </mask>
+          </defs>
+          <g clipPath="url(#dz-ecken)">
+            <rect width="100" height="100" fill="url(#dz-grund)" />
+            <rect width="100" height="100" fill="#fff" mask="url(#dz-zeichen)" />
+          </g>
+        </svg>
+        {/* Ausschnitt der Übersicht: Heute zuerst, dann Konten */}
+        <div className="relative w-[118px] h-[180px] mt-10 rounded-t-[22px] border-[3px] border-b-0 border-[#1b3025] bg-[#06110b] px-2 pt-3 flex flex-col gap-1.5 overflow-hidden">
+          <span className="text-[6px] font-semibold tracking-wider text-[#8fa99a]">MONTAG, 12. OKTOBER</span>
+          <span className="text-[12px] font-bold text-[#eaf4ee] leading-none -mt-0.5">Übersicht</span>
+          <span className="text-[5px] font-semibold tracking-wider text-[#8fa99a] mt-0.5 -mb-1">HEUTE</span>
+          <div className="rounded-lg bg-[#112019] px-1.5">
+            <div className="flex items-center gap-1 py-1 border-b border-[#294035]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#4dc285]" />
+              <div className="flex-1 leading-none">
+                <div className="text-[6.5px] text-[#eaf4ee]">Grundbetrieb</div>
+                <div className="text-[5px] text-[#8fa99a]">07:00 – 16:30</div>
+              </div>
+              <span className="text-[6px] text-[#5bd394] tabular-nums">+0:00</span>
+            </div>
+            <div className="flex items-center gap-1 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f0b341]" />
+              <span className="flex-1 text-[6.5px] text-[#eaf4ee] leading-none">2 Tage offen</span>
+              <span className="text-[6px] text-[#294035]">›</span>
+            </div>
           </div>
-        </div>
-        {/* Ausschnitt der Übersicht */}
-        <div className="relative w-[112px] h-[164px] mt-10 rounded-t-[22px] border-[3px] border-b-0 border-[#2c2c2e] bg-black px-2 pt-3 flex flex-col gap-1.5">
-          <span className="text-[6px] font-semibold tracking-wider text-white/40">FREITAG, 9. OKTOBER</span>
-          <span className="text-[12px] font-bold text-white leading-none -mt-0.5">Übersicht</span>
-          <div className="rounded-lg bg-[#1c1c1e] py-1.5 flex flex-col items-center">
-            <span className="text-[5px] font-semibold tracking-wider text-white/40">STUNDENKONTO</span>
-            <span className="text-[19px] font-bold leading-tight text-[#30d158] tabular-nums">+10:45</span>
-            <span className="text-[5.5px] text-white/40">10 Std. 45 Min. Guthaben</span>
+          <div className="rounded-lg bg-[#112019] py-1.5 flex flex-col items-center">
+            <span className="text-[5px] font-semibold tracking-wider text-[#8fa99a]">STUNDENKONTO ›</span>
+            <span className="text-[19px] font-bold leading-tight text-[#5bd394] tabular-nums">+10:45</span>
+            <span className="text-[5.5px] text-[#8fa99a]">10 Std. 45 Min. Guthaben</span>
           </div>
           <div className="flex gap-1">
-            {[['FVD', '4'], ['URLAUB', '23']].map(([l, w]) => (
-              <div key={l} className="flex-1 rounded-lg bg-[#1c1c1e] py-1 flex flex-col items-center">
-                <span className="text-[5px] font-semibold tracking-wider text-white/40">{l}</span>
-                <span className="text-[12px] font-bold text-white leading-tight">{w}</span>
+            {[['FVD ›', '4'], ['URLAUB ›', '23']].map(([l, w]) => (
+              <div key={l} className="flex-1 rounded-lg bg-[#112019] py-1 flex flex-col items-center">
+                <span className="text-[5px] font-semibold tracking-wider text-[#8fa99a]">{l}</span>
+                <span className="text-[12px] font-bold text-[#eaf4ee] leading-tight">{w}</span>
               </div>
             ))}
           </div>
-          <div className="rounded-md py-1 text-center text-[6.5px] font-semibold text-[#1c1f1e]" style={{ backgroundColor: '#3dae72' }}>
-            Jetzt eintragen
+          <div className="self-center rounded-md px-2 py-1 text-[6px] font-semibold text-[#4dc285] bg-[#14301f]">
+            Urlaubsantrag ausfüllen
           </div>
         </div>
       </div>
