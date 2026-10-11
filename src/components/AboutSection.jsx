@@ -446,22 +446,31 @@ function seeded(seed) {
   }
 }
 
+// Kachelbreiten stark gemischt: viele schmale neben wenigen sehr breiten Feldern
+function gridStep(rnd) {
+  const r = rnd()
+  if (r < 0.35) return 40 + rnd() * 60
+  if (r < 0.7)  return 120 + rnd() * 110
+  return 260 + rnd() * 220
+}
+
 function gridLines(w, h, seed) {
   const rnd = seeded(seed)
   const lines = []
-  for (let x = rnd() * 90; x < w; x += 140 + rnd() * 170) {
+  for (let x = rnd() * 90; x < w; x += gridStep(rnd)) {
     lines.push([x, h * rnd() * 0.3, x, h * (0.7 + rnd() * 0.3)])
   }
-  for (let y = rnd() * 90; y < h; y += 130 + rnd() * 160) {
+  for (let y = rnd() * 90; y < h; y += gridStep(rnd)) {
     lines.push([w * rnd() * 0.3, y, w * (0.7 + rnd() * 0.3), y])
   }
   return lines
 }
 
 const GRID_PATCHES = [
-  { style: { top: '-4%', left: '-8%' },  w: 820, h: 680, seed: 7,  fade: 'ellipse 55% 50% at 45% 45%' },
-  { style: { top: '30%', right: '-10%' }, w: 900, h: 760, seed: 23, fade: 'ellipse 50% 48% at 55% 50%' },
-  { style: { bottom: '-6%', left: '12%' }, w: 760, h: 600, seed: 41, fade: 'ellipse 52% 50% at 50% 55%' },
+  { style: { top: '-6%', left: '-14%' },   w: 1250, h: 1000, seed: 7,  fade: 'ellipse 55% 50% at 45% 45%' },
+  { style: { top: '18%', right: '-18%' },  w: 1300, h: 1150, seed: 23, fade: 'ellipse 50% 48% at 55% 50%' },
+  { style: { top: '52%', left: '-20%' },   w: 1100, h: 950,  seed: 59, fade: 'ellipse 50% 50% at 50% 50%' },
+  { style: { bottom: '-12%', right: '2%' }, w: 1200, h: 900,  seed: 41, fade: 'ellipse 52% 50% at 50% 55%' },
 ].map((p) => ({ ...p, lines: gridLines(p.w, p.h, p.seed) }))
 
 function AboutGridPatches() {
