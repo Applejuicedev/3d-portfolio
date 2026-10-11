@@ -365,10 +365,23 @@ function Bio() {
         Vincent Fidanli
       </h3>
 
+      <ul className="-mt-4 mb-8 space-y-1.5 text-[13px] text-zinc-400">
+        {[
+          '22 Jahre',
+          'Medien- und Gestaltungstechnischer Assistent',
+          <a key="mail" href="mailto:vincent@fidanli.de" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">vincent@fidanli.de</a>,
+        ].map((item, i) => (
+          <li key={i} className="flex items-center gap-2.5">
+            <span className="w-1 h-1 rounded-full bg-zinc-500 flex-shrink-0" />
+            {item}
+          </li>
+        ))}
+      </ul>
+
       <div className="space-y-5 text-[13.5px] leading-[1.75] text-zinc-400">
-        <p>Ich bin 22 Jahre alt und studiere Medieninformatik an der Technischen Hochschule Mittelhessen (THM). Nach dem zweiten Semester entschied ich mich, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 setze ich mein Medieninformatik-Studium neben dem Dienst als Fernstudium an der IU Internationalen Hochschule fort (Teilzeit II, 12 Semester).</p>
-        <p>Meine Leidenschaft für Technik und Gestaltung entwickelte sich bereits während meiner schulischen Ausbildung — diese legte das Fundament für meine Fähigkeiten in Design und Medienproduktion.</p>
-        <p>Nach einem sechsmonatigen Praktikum als Frontend-Entwickler bei einem Tech-Startup lernte ich moderne Technologien und agile Arbeitsmethoden kennen.</p>
+        <p>Ich bin 22 Jahre alt und habe Medieninformatik an der Technischen Hochschule Mittelhessen (THM) studiert, bis ich mich nach dem zweiten Semester dazu entschieden habe, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 plane ich, mein Medieninformatik-Studium neben dem Dienst als Fernstudium an der IU Internationalen Hochschule fortzuführen (Teilzeit II, 12 Semester).</p>
+        <p>Meine Leidenschaft für Technik und Gestaltung entwickelte sich bereits während meiner schulischen Ausbildung — diese legte das Fundament für meine Fähigkeiten in Design, Medienproduktion und Softwareentwicklung.</p>
+        <p>Nach einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup lernte ich moderne Technologien und agile Arbeitsmethoden kennen und in der Praxis anzuwenden. Spätestens nach diesem Praktikum war mir klar: Ich möchte mich langfristig dahin entwickeln, echte Anwendungen für echte Menschen zu entwerfen und zu kreieren, die auch wirklich einen Nutzen haben.</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
