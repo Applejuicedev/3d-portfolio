@@ -23,7 +23,7 @@ export default function Navbar() {
       // briefly flashed Tailwind's light default border color while transitioning.
       className={`fixed top-0 left-0 right-0 z-50 border-b transition-[background-color,border-color] duration-200 ${
         scrolled
-          ? 'bg-[#0a0a0a]/90 backdrop-blur-xl border-white/[0.05]'
+          ? 'bg-[#0a0a0a]/45 backdrop-blur-xl backdrop-saturate-150 border-white/[0.05]'
           : 'bg-transparent border-transparent'
       }`}
     >
@@ -34,7 +34,7 @@ export default function Navbar() {
             key={id}
             onClick={() => scrollTo(id)}
             className="
-              py-[18px]
+              py-1
               text-[13px] font-medium
               text-zinc-400
               hover:text-white
