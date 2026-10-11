@@ -437,6 +437,54 @@ function Bio() {
   )
 }
 
+// Vereinzelte, kaum sichtbare Gitterflächen im Hintergrund: unregelmäßig große Kacheln,
+// Linien enden versetzt (wie abgeschnitten) und jede Fläche läuft über eine Maske weich aus.
+function seeded(seed) {
+  return () => {
+    seed = (seed * 16807) % 2147483647
+    return (seed - 1) / 2147483646
+  }
+}
+
+function gridLines(w, h, seed) {
+  const rnd = seeded(seed)
+  const lines = []
+  for (let x = rnd() * 90; x < w; x += 140 + rnd() * 170) {
+    lines.push([x, h * rnd() * 0.3, x, h * (0.7 + rnd() * 0.3)])
+  }
+  for (let y = rnd() * 90; y < h; y += 130 + rnd() * 160) {
+    lines.push([w * rnd() * 0.3, y, w * (0.7 + rnd() * 0.3), y])
+  }
+  return lines
+}
+
+const GRID_PATCHES = [
+  { style: { top: '-4%', left: '-8%' },  w: 820, h: 680, seed: 7,  fade: 'ellipse 55% 50% at 45% 45%' },
+  { style: { top: '30%', right: '-10%' }, w: 900, h: 760, seed: 23, fade: 'ellipse 50% 48% at 55% 50%' },
+  { style: { bottom: '-6%', left: '12%' }, w: 760, h: 600, seed: 41, fade: 'ellipse 52% 50% at 50% 55%' },
+].map((p) => ({ ...p, lines: gridLines(p.w, p.h, p.seed) }))
+
+function AboutGridPatches() {
+  return GRID_PATCHES.map(({ style, w, h, lines, fade }, i) => {
+    const mask = `radial-gradient(${fade}, #000 0%, rgba(0,0,0,0.55) 45%, transparent 100%)`
+    return (
+      <svg
+        key={i}
+        aria-hidden="true"
+        width={w}
+        height={h}
+        viewBox={`0 0 ${w} ${h}`}
+        className="absolute pointer-events-none"
+        style={{ ...style, zIndex: 0, maskImage: mask, WebkitMaskImage: mask }}
+      >
+        {lines.map(([x1, y1, x2, y2], j) => (
+          <line key={j} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(255,255,255,0.09)" strokeWidth="1" />
+        ))}
+      </svg>
+    )
+  })
+}
+
 export default function AboutSection() {
   const sectionRef  = useRef()
   const glowRef     = useRef()
@@ -503,6 +551,8 @@ export default function AboutSection() {
       <div className="h-px bg-white/[0.05]" />
 
       <div id="uber-mich" ref={sectionRef} className="relative bg-[#0a0a0a] py-28 overflow-hidden">
+
+        <AboutGridPatches />
 
         {/* Cursor-following indigo spotlight */}
         <div
