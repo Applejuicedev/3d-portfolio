@@ -232,10 +232,11 @@ const PROJECTS = [
   },
 ]
 
+// Drei getrennte Flächen, die sich nicht berühren: oben rechts, unten links und kleiner unten rechts
 const PORTFOLIO_GRIDS = [
-  { style: { top: '-18%', right: '-12%' }, w: 1250, h: 1000, seed: 7,  fade: 'ellipse 55% 50% at 50% 45%' },
-  { style: { bottom: '-25%', left: '-14%' }, w: 1200, h: 950, seed: 23, fade: 'ellipse 52% 50% at 50% 55%' },
-  { style: { top: '30%', left: '38%' },     w: 900,  h: 700, seed: 41, fade: 'ellipse 50% 48% at 50% 50%' },
+  { style: { top: '-15%', right: '-8%' },  w: 760, h: 620, seed: 7,  fade: 'ellipse 55% 50% at 50% 45%' },
+  { style: { bottom: '-15%', left: '-8%' }, w: 760, h: 620, seed: 23, fade: 'ellipse 52% 50% at 50% 55%' },
+  { style: { bottom: '-10%', right: '4%' }, w: 520, h: 420, seed: 41, fade: 'ellipse 50% 48% at 50% 50%' },
 ]
 
 // Hover effects avoid React state and only animate transform/opacity,
