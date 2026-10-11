@@ -119,7 +119,7 @@ export default function HeroSection() {
           <motion.div variants={item} className="mt-9 flex items-center justify-center gap-2.5">
             <button
               onClick={() => document.getElementById('uber-mich')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-5 py-[9px] rounded-lg bg-white text-[#0a0a0a] text-[13px] font-medium tracking-tight hover:opacity-80 active:opacity-60 transition-opacity duration-150"
+              className="px-5 py-[9px] rounded-lg border border-indigo-400/25 bg-indigo-500/15 text-indigo-100 text-[13px] font-medium tracking-tight hover:bg-indigo-500/25 active:opacity-60 transition-colors duration-150"
             >
               Mehr erfahren
             </button>
