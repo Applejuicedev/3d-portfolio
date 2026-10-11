@@ -8,22 +8,17 @@ function seeded(seed) {
   }
 }
 
-// ---------- Gitter: große, ungleiche Kacheln, Linien enden versetzt ----------
-// Kachelbreiten stark gemischt: viele schmale neben wenigen sehr breiten Feldern
-function gridStep(rnd) {
-  const r = rnd()
-  if (r < 0.35) return 40 + rnd() * 60
-  if (r < 0.7)  return 120 + rnd() * 110
-  return 260 + rnd() * 220
-}
+// ---------- Gitter: große, gleich große Kacheln, Linien enden versetzt ----------
+// Gleich große, quadratische Kacheln
+const GRID_STEP = 170
 
 function gridLines(w, h, seed) {
   const rnd = seeded(seed)
   const lines = []
-  for (let x = rnd() * 90; x < w; x += gridStep(rnd)) {
+  for (let x = rnd() * 90; x < w; x += GRID_STEP) {
     lines.push([x, h * rnd() * 0.3, x, h * (0.7 + rnd() * 0.3)])
   }
-  for (let y = rnd() * 90; y < h; y += gridStep(rnd)) {
+  for (let y = rnd() * 90; y < h; y += GRID_STEP) {
     lines.push([w * rnd() * 0.3, y, w * (0.7 + rnd() * 0.3), y])
   }
   return lines
