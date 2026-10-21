@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useLayoutEffect } from 'react'
 import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion'
 import gsap from 'gsap'
 import { Contours } from './BackgroundPatterns'
@@ -32,12 +32,39 @@ const FRAMEWORK_COLORS = {
   'Perplexity':    '#20B8CD',
 }
 
+// Scroll reveal for the bio: IntersectionObserver + a CSS transition on opacity/transform only,
+// so each element fades in on its own as it scrolls into view (same feel as the timeline cards)
+const REVEAL_EASE = 'cubic-bezier(0.25,0.46,0.45,0.94)'
+function Reveal({ as: Tag = 'div', delay = 0, y = 18, extraTransition, className, style, children, ...rest }) {
+  const ref = useRef()
+  const inView = useInView(ref, { once: true, margin: '-60px' })
+  return (
+    <Tag
+      ref={ref}
+      {...rest}
+      className={className}
+      style={{
+        ...style,
+        opacity: inView ? 1 : 0,
+        transform: inView ? 'none' : `translate3d(0, ${y}px, 0)`,
+        transition: `opacity 0.6s ${REVEAL_EASE} ${delay}s, transform 0.6s ${REVEAL_EASE} ${delay}s`
+          + (extraTransition ? `, ${extraTransition}` : ''),
+      }}
+    >
+      {children}
+    </Tag>
+  )
+}
+
 function FrameworkTyper() {
   const [display, setDisplay]     = useState('')
   const [isDeleting, setDeleting] = useState(false)
   const [idx, setIdx]             = useState(0)
+  const ref = useRef()
+  const inView = useInView(ref, { once: true, margin: '-60px' })
 
   useEffect(() => {
+    if (!inView) return // start typing only once the typer has been revealed
     const target = FRAMEWORKS[idx]
 
     if (!isDeleting && display === target) {
@@ -61,14 +88,22 @@ function FrameworkTyper() {
       )
     }, base + jitter)
     return () => clearTimeout(t)
-  }, [display, isDeleting, idx])
+  }, [display, isDeleting, idx, inView])
 
   const brandColor = FRAMEWORK_COLORS[FRAMEWORKS[idx]] || '#93c5fd'
 
   return (
-    <div className="w-full border-t border-white/[0.06] pt-6">
+    <div
+      ref={ref}
+      className="w-full border-t border-white/[0.06] pt-6"
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? 'none' : 'translate3d(0, 18px, 0)',
+        transition: `opacity 0.6s ${REVEAL_EASE}, transform 0.6s ${REVEAL_EASE}`,
+      }}
+    >
       <p className="text-[10px] font-semibold text-zinc-500 tracking-[0.22em] uppercase mb-4">
-        I build with
+        Ich arbeite mit
       </p>
       <div className="flex items-end gap-0" style={{ minHeight: '4.4rem' }}>
         <span
@@ -98,10 +133,11 @@ function FrameworkTyper() {
 }
 
 const CATEGORIES = {
-  Education: { label: 'Education',  cls: 'bg-blue-500/10   border-blue-500/20   text-blue-400',   dot: 'bg-blue-400'    },
-  Work:       { label: 'Work',       cls: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', dot: 'bg-emerald-400' },
-  Military:   { label: 'Military',   cls: 'bg-orange-500/10 border-orange-500/20 text-orange-400', dot: 'bg-orange-400'  },
-  Freelance:  { label: 'Freelance',  cls: 'bg-violet-500/10 border-violet-500/20 text-violet-400', dot: 'bg-violet-400'  },
+  Education: { label: 'Education',  cls: 'bg-blue-500/10   border-blue-500/20   text-blue-400',   dot: 'bg-blue-400', org: 'text-blue-300/80' },
+  Work:       { label: 'Work',       cls: 'bg-red-500/10 border-red-500/20 text-red-400', dot: 'bg-red-400', org: 'text-red-300/80' },
+  // Military: muted olive (#a5bd84) — reads as Bundeswehr and doesn't clash with the DHL yellow
+  Military:   { label: 'Military',   cls: 'bg-[#a5bd84]/10 border-[#a5bd84]/20 text-[#a5bd84]', dot: 'bg-[#a5bd84]', org: 'text-[#a5bd84]/80' },
+  Freelance:  { label: 'Freelance',  cls: 'bg-violet-500/10 border-violet-500/20 text-violet-400', dot: 'bg-violet-400', org: 'text-violet-300/80' },
 }
 
 function IconGraduation() {
@@ -129,36 +165,50 @@ function IconShield() {
 const ICONS = { Education: <IconGraduation />, Work: <IconBriefcase />, Military: <IconShield />, Freelance: <IconBriefcase /> }
 
 const TIMELINE = [
-  { year: '2016 – 2020', title: 'Realschulabschluss', desc: 'Schulische Grundlage mit frühem Interesse an Technik und Design.', category: 'Education', side: 'right' },
+  { year: '2016 – 2020', title: 'Realschulabschluss', org: 'Schrenzerschule Butzbach', desc: 'Schulische Grundlage mit frühem Interesse an Technik und Design.', category: 'Education', side: 'right' },
   {
-    year: '2020 – 2022', title: 'Medien- & Gestaltungstechnischer Assistent', desc: 'Schulische Ausbildung im Bereich Medien- und Gestaltungstechnik.',
+    year: '2020 – 2022', title: 'Medien- & Gestaltungstechnischer Assistent', org: 'Berufliche Schule Butzbach',
+    level: { label: 'DQR-Niveau 4', detail: 'Deutscher Qualifikationsrahmen', value: 4, max: 8 },
+    desc: 'Schulische Ausbildung im Bereich Medien- und Gestaltungstechnik.',
     category: 'Education', side: 'left', track: 'fachabitur', partOf: 'Schulischer Teil des Fachabiturs',
   },
   {
-    year: '2022 – 2023', title: 'Fachabitur', desc: 'Erweiterung der schulischen Qualifikation parallel zur Ausbildung.',
+    year: '2022 – 2023', title: 'Fachabitur', org: 'Berufliche Schule Butzbach',
+    desc: 'Erweiterung der schulischen Qualifikation parallel zur Ausbildung.',
     category: 'Education', side: 'right', track: 'fachabitur', milestone: true, partOf: 'Abschluss aus Ausbildung + Praktikum',
   },
   {
-    year: '2023 – 2024', title: 'Praktikum als Webentwickler', desc: 'Sechsmonatiges Praktikum bei einem Tech-Startup. React, agile Methoden und kreative Problemlösung.',
+    year: '2023 – 2024', title: 'Praktikum als Webentwickler', org: 'Mastercode Applications',
+    desc: 'Sechsmonatiges Praktikum bei einem Tech-Startup. React, agile Methoden und kreative Problemlösung.',
     category: 'Work', side: 'left', track: 'fachabitur', partOf: 'Praktischer Teil des Fachabiturs',
   },
   {
-    year: '2024 – 2025', title: 'Medieninformatik Studium', desc: 'Studium an der Technischen Hochschule Mittelhessen (THM).',
+    year: '2024 – 2025', title: 'Medieninformatik Studium', org: 'Technische Hochschule Mittelhessen',
+    desc: 'Studium an der Technischen Hochschule Mittelhessen (THM).',
     category: 'Education', side: 'right', dropout: { semesters: 2 },
+    roomy: true, // extra space above/below, so the DHL brace beside it gets more height
+    // Y-fork: here the paused study path branches off the line (dashed) …
   },
-  { year: '2025 – mind. 2029', title: 'Soldat auf Zeit', desc: 'Dienst als Leichter Späher. Disziplin, Teamfähigkeit und mentale Stärke.', category: 'Military', side: 'left', track: 'service' },
+  { year: '2025 – mind. 2029', title: 'Soldat auf Zeit', org: 'Bundeswehr', desc: 'Dienst als Leichter Späher. Disziplin, Teamfähigkeit und mentale Stärke.', category: 'Military', side: 'left', track: 'service' },
   {
     year: 'Ab 2027', title: 'Medieninformatik Fernstudium', org: 'IU Internationale Hochschule',
     desc: 'Fortsetzung meines Studiums berufsbegleitend neben dem Dienst.',
     tags: ['Fernstudium', 'Teilzeit II', '12 Semester'],
     category: 'Education', side: 'right', track: 'service', parallelToMilitary: true, planned: true,
+    resumes: true, // … and merges back in here, where the studies continue
   },
+]
+
+// Side jobs: a yellow curly brace beside the line spanning their period, between two stations
+// (`afterRow` / `beforeRow` = the gaps it starts and ends in). Desktop only — no room on phones.
+const SIDE_JOBS = [
+  { badge: 'Nebenjob', title: 'Nachtschicht im Briefzentrum', org: 'DHL', period: 'März 2024 – Aug. 2025', rgb: '250,204,21', startAfter: 3, endAfter: 4 },
 ]
 
 // Tracks connect timeline entries that belong together (drawn as a colored rail beside the main line)
 const TRACKS = {
   fachabitur: { rgb: '96,165,250', ring: 'rgba(96,165,250,0.75)', tail: false },
-  service:    { rgb: '251,146,60', ring: 'rgba(251,146,60,0.7)',  tail: true  },
+  service:    { rgb: '165,189,132', ring: 'rgba(165,189,132,0.7)', tail: true  },
 }
 
 
@@ -174,8 +224,39 @@ const STATS = [
   { value: '22',  label: 'Jahre alt' },
   { value: '6+',  label: 'Monate Praktikum' },
   { value: '3+',  label: 'Projekte' },
-  { value: 'THM', label: 'Hochschule' },
+  { value: 'IU',  label: 'Hochschule' },
 ]
+
+// Note that pops in just below the card once it has scrolled in (level meter + text).
+// It sits in the flow, so the row grows and it never overlaps the next card.
+function LevelHint({ level, inView, delay }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6, scale: 0.96 }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: 0.4, delay: delay + 0.7, ease: [0.34, 1.56, 0.64, 1] }}
+      className="mt-2.5 flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 origin-top-left"
+    >
+      <LevelMeter value={level.value} max={level.max} />
+      <span className="leading-tight">
+        <span className="block text-[11.5px] font-medium text-zinc-300">{level.label}</span>
+        <span className="block text-[10.5px] text-zinc-500 mt-0.5">{level.detail}</span>
+      </span>
+    </motion.div>
+  )
+}
+
+// Ascending bars, the first `value` of `max` lit — e.g. DQR level 4 of 8
+function LevelMeter({ value, max }) {
+  return (
+    <svg aria-hidden viewBox={`0 0 ${max * 3 - 1} 12`} className="h-3 flex-shrink-0" style={{ width: max * 3 - 1 }}>
+      {Array.from({ length: max }, (_, i) => {
+        const h = 3 + (9 * i) / (max - 1)
+        return <rect key={i} x={i * 3} y={12 - h} width="2" height={h} rx="0.5" fill={i < value ? 'rgba(212,212,216,0.75)' : 'rgba(255,255,255,0.12)'} />
+      })}
+    </svg>
+  )
+}
 
 function TimelineCard({ item, index }) {
   const ref = useRef()
@@ -184,6 +265,7 @@ function TimelineCard({ item, index }) {
   const fromLeft = item.side === 'left'
 
   return (
+    <>
     <motion.div
       ref={ref}
       initial={{ opacity: 0, x: fromLeft ? -32 : 32 }}
@@ -214,7 +296,7 @@ function TimelineCard({ item, index }) {
         <span className="text-[11px] font-medium text-zinc-500 tracking-wide">{item.year}</span>
       </div>
       <h3 className="text-[14px] font-semibold text-white tracking-tight leading-snug mb-2 hyphens-auto break-words">{item.title}</h3>
-      {item.org && <p className="text-[12px] font-medium text-blue-300/80 mb-1.5">{item.org}</p>}
+      {item.org && <p className={`text-[12px] font-medium mb-1.5 ${cat.org}`}>{item.org}</p>}
       <p className="text-[12.5px] text-zinc-400 leading-relaxed">{item.desc}</p>
       {item.dropout && <SemesterBar semesters={item.dropout.semesters} />}
       {item.partOf && (
@@ -224,7 +306,7 @@ function TimelineCard({ item, index }) {
         </div>
       )}
       {item.parallelToMilitary && (
-        <div className="sm:hidden flex items-center gap-1.5 mt-3 text-[11px] text-orange-400/90">
+        <div className="sm:hidden flex items-center gap-1.5 mt-3 text-[11px] text-[#a5bd84]/90">
           <IconShield />
           <span>Parallel zum Dienst</span>
         </div>
@@ -237,6 +319,8 @@ function TimelineCard({ item, index }) {
         </div>
       )}
     </motion.div>
+    {item.level && <LevelHint level={item.level} inView={inView} delay={index * 0.06} />}
+    </>
   )
 }
 
@@ -294,6 +378,142 @@ function RailSegment({ rgb, part, index, inView }) {
   )
 }
 
+// ---------- Study fork ----------
+// At the dropout a dashed path branches off to the right of the line, runs parallel past the
+// Studium card, swings out into the free space beside the Bundeswehr card and merges back
+// into the line at the Fernstudium — the studies are paused, not over.
+const FORK_TRACK = 8 // px right of the line, mirrors the rails on the left
+const FORK_SWING = 72
+
+function useForkGeometry(containerRef) {
+  const [geom, setGeom] = useState(null)
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const measure = () => {
+      const rows = [...el.querySelectorAll('[data-tl-row]')]
+      const from = TIMELINE.findIndex(t => t.dropout)
+      const to = TIMELINE.findIndex(t => t.resumes)
+      if (!rows.length || from < 0 || to <= from) return
+      const dot = (i) => {
+        const d = rows[i].querySelector('[data-tl-dot]')
+        return [rows[i].offsetLeft + d.offsetLeft + d.offsetWidth / 2, rows[i].offsetTop + d.offsetTop + d.offsetHeight / 2]
+      }
+      const [x0, ya] = dot(from)
+      const [, yb] = dot(to)
+      const phone = x0 < 40 // phones: cards on every row next to the line, so no swing
+      const swing = phone ? FORK_TRACK : FORK_SWING
+      const x1 = x0 + FORK_TRACK, x2 = x0 + swing
+      const y1 = rows[from].offsetTop + rows[from].offsetHeight // below the Studium card
+      const y4 = rows[to].offsetTop                             // above the Fernstudium card
+      const ym = (y1 + y4) / 2
+      const ease = 22
+      const d = [
+        `M${x0},${ya}`,
+        `C${x0},${ya + ease} ${x1},${ya + ease} ${x1},${ya + ease * 2}`, // peel off the dot
+        `L${x1},${y1}`,
+        `C${x1},${y1 + (ym - y1) * 0.55} ${x2},${ym - (ym - y1) * 0.55} ${x2},${ym}`, // swing out …
+        `C${x2},${ym + (y4 - ym) * 0.55} ${x1},${y4 - (y4 - ym) * 0.55} ${x1},${y4}`, // … and back
+        `L${x1},${yb - ease * 2}`,
+        `C${x1},${yb - ease} ${x0},${yb - ease} ${x0},${yb}`, // merge into the dot
+      ].join(' ')
+      // Curly brace "{" just left of the line: tip points left at the card
+      const gapMid = (i) => (rows[i].offsetTop + rows[i].offsetHeight + rows[i + 1].offsetTop) / 2
+      const braces = phone ? [] : SIDE_JOBS.map(job => {
+        const top = gapMid(job.startAfter), bottom = gapMid(job.endAfter), mid = (top + bottom) / 2
+        // Small gap to the timeline; top and bottom closures are mirror images
+        const xb = x0 - 10, depth = 34, xm = xb - depth / 2, tip = xb - depth, r = 17
+        const d = `M${xb},${top} Q${xm},${top} ${xm},${top + r} L${xm},${mid - r} Q${xm},${mid} ${tip},${mid}`
+          + ` Q${xm},${mid} ${xm},${mid + r} L${xm},${bottom - r} Q${xm},${bottom} ${xb},${bottom}`
+        return { ...job, d, top, bottom, mid, tip }
+      })
+      setGeom({ d, h: el.offsetHeight, w: el.offsetWidth, y0: ya, y1: yb, apex: phone ? null : [x2, ym], braces })
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [containerRef])
+  return geom
+}
+
+// Drawn together with the main line: the clip grows with the same scroll progress
+// (pathLength can't be used on a dashed stroke)
+// Drawn as the main line passes, like the fork
+function SideJobBrace({ brace, geom, progress }) {
+  // The clip reaches a few px past both ends, otherwise it cuts the stroke at the bottom closure
+  const pad = 6
+  const clipH = useTransform(progress, v => Math.max(0, Math.min(brace.bottom + pad, v * geom.h + pad) - (brace.top - pad)))
+  const id = `tl-brace-${brace.startAfter}`
+  return (
+    <>
+      <clipPath id={id} clipPathUnits="userSpaceOnUse">
+        <motion.rect x={-50} y={brace.top - pad} width={geom.w + 100} height={clipH} />
+      </clipPath>
+      <g clipPath={`url(#${id})`}>
+        {/* soft glow underneath, then the brace itself */}
+        <path d={brace.d} fill="none" stroke={`rgba(${brace.rgb},0.07)`} strokeWidth="5"
+          strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'blur(2px)' }} />
+        <path d={brace.d} fill="none" stroke={`rgba(${brace.rgb},0.9)`} strokeWidth="2.5"
+          strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </>
+  )
+}
+
+// Compact card at the brace tip — deliberately less detail than the main timeline cards
+function SideJobLabel({ brace, geom, progress }) {
+  const shown = useTransform(progress, v => (v * geom.h > brace.mid ? 1 : 0))
+  const x = useTransform(shown, v => (v ? '-100%' : 'calc(-100% + 12px)'))
+  const c = (a) => `rgba(${brace.rgb},${a})`
+  return (
+    <motion.div
+      className="absolute w-[180px] rounded-lg px-3.5 py-3 bg-[#0d0d0d] shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+      style={{
+        left: brace.tip - 12, top: brace.mid, x, y: '-50%', opacity: shown,
+        border: `1px solid ${c(0.22)}`,
+        transition: 'opacity 0.45s ease, transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)',
+      }}
+    >
+      <span className="inline-flex items-center gap-1.5 text-[9.5px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border"
+        style={{ color: c(0.9), background: c(0.08), borderColor: c(0.2) }}>
+        <span className="w-1 h-1 rounded-full" style={{ background: c(0.9) }} />
+        {brace.badge}
+      </span>
+      <div className="mt-2 text-[13px] font-semibold text-white tracking-tight leading-snug">{brace.title}</div>
+      <div className="text-[11.5px] font-medium mt-0.5" style={{ color: c(0.8) }}>{brace.org}</div>
+      <div className="text-[10.5px] text-zinc-500 mt-1.5">{brace.period}</div>
+    </motion.div>
+  )
+}
+
+function StudyFork({ geom, progress }) {
+  const clipH = useTransform(progress, v => Math.max(0, Math.min(geom.y1, v * geom.h) - geom.y0))
+  const labelOpacity = useTransform(progress, v => (v * geom.h > (geom.apex?.[1] ?? Infinity) ? 1 : 0))
+  return (
+    <>
+      <svg aria-hidden className="absolute inset-0 pointer-events-none overflow-visible" width={geom.w} height={geom.h}>
+        <clipPath id="tl-fork-clip" clipPathUnits="userSpaceOnUse">
+          <motion.rect x={-50} y={geom.y0} width={geom.w + 100} height={clipH} />
+        </clipPath>
+        <path d={geom.d} fill="none" stroke="rgba(96,165,250,0.5)" strokeWidth="1.25"
+          strokeDasharray="4 5" strokeLinecap="round" clipPath="url(#tl-fork-clip)" />
+        {geom.braces.map((b, i) => <SideJobBrace key={i} brace={b} geom={geom} progress={progress} />)}
+      </svg>
+      {geom.braces.map((b, i) => <SideJobLabel key={i} brace={b} geom={geom} progress={progress} />)}
+      {geom.apex && (
+        <motion.span
+          aria-hidden
+          className="absolute pointer-events-none text-[10.5px] font-medium tracking-wide text-blue-300/70 whitespace-nowrap"
+          style={{ left: geom.apex[0] + 10, top: geom.apex[1], y: '-50%', opacity: labelOpacity, transition: 'opacity 0.4s ease' }}
+        >
+          Studium pausiert
+        </motion.span>
+      )}
+    </>
+  )
+}
+
 function TimelineRow({ item, index }) {
   const track = item.track && TRACKS[item.track]
   const prev = TIMELINE[index - 1]
@@ -307,7 +527,7 @@ function TimelineRow({ item, index }) {
 
   return (
     // Phones: dot column + card column. From sm up: alternating left/right around the center line.
-    <div ref={rowRef} className="relative grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 items-center">
+    <div ref={rowRef} data-tl-row className={`relative grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 items-center ${item.roomy ? 'sm:py-12' : ''}`}>
       {joinsPrev && <RailSegment rgb={track.rgb} part="upper" index={index} inView={inView} />}
       {joinsNext && <RailSegment rgb={track.rgb} part="lower" index={index} inView={inView} />}
       {track && !joinsNext && track.tail && <RailSegment rgb={track.rgb} part="tail" index={index} inView={inView} />}
@@ -320,7 +540,7 @@ function TimelineRow({ item, index }) {
         )}
         {item.parallelToMilitary && <ServiceContinues index={index} />}
       </div>
-      <div className="flex flex-col items-center py-2 col-start-1 row-start-1 sm:col-start-auto sm:row-start-auto">
+      <div data-tl-dot className="flex flex-col items-center py-2 col-start-1 row-start-1 sm:col-start-auto sm:row-start-auto">
         <TimelineDot index={index} ring={ring} inView={inView} />
       </div>
       <div className={`${item.side === 'right' ? 'flex' : 'hidden sm:flex'} col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto justify-start`}>
@@ -344,7 +564,7 @@ function ServiceContinues({ index }) {
       initial={{ opacity: 0, x: -16 }}
       animate={inView ? { opacity: 1, x: 0 } : {}}
       transition={{ duration: 0.55, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="hidden sm:flex items-center gap-2 rounded-lg border border-dashed border-orange-500/30 bg-orange-500/[0.04] px-3 py-2 text-[11px] text-orange-400/90"
+      className="hidden sm:flex items-center gap-2 rounded-lg border border-dashed border-[#a5bd84]/30 bg-[#a5bd84]/[0.04] px-3 py-2 text-[11px] text-[#a5bd84]/90"
     >
       <IconShield />
       <span className="leading-tight">Dienst läuft weiter</span>
@@ -353,19 +573,12 @@ function ServiceContinues({ index }) {
 }
 
 function Bio() {
-  const ref = useRef()
-  const inView = useInView(ref, { once: true, margin: '-60px' })
-
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="flex flex-col h-full"
-    >
-      <h2 className="text-[15px] font-light text-zinc-500 mb-1">Mein Name ist</h2>
-      <h3
+    <div className="flex flex-col h-full">
+      <Reveal as="h2" className="text-[15px] font-light text-zinc-500 mb-1">Mein Name ist</Reveal>
+      <Reveal
+        as="h3"
+        delay={0.08}
         className="text-white leading-tight mb-8"
         style={{
           fontSize: 'clamp(2rem, 4vw, 2.8rem)',
@@ -375,7 +588,7 @@ function Bio() {
         }}
       >
         Vincent Fidanli
-      </h3>
+      </Reveal>
 
       <ul className="-mt-4 mb-8 space-y-1.5 text-[13px] text-zinc-400">
         {[
@@ -383,23 +596,30 @@ function Bio() {
           'Medien- und Gestaltungstechnischer Assistent',
           <a key="mail" href="mailto:vincent@fidanli.de" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">vincent@fidanli.de</a>,
         ].map((item, i) => (
-          <li key={i} className="flex items-center gap-2.5">
+          <Reveal as="li" key={i} delay={0.12 + i * 0.07} className="flex items-center gap-2.5">
             <span className="w-1 h-1 rounded-full bg-zinc-500 flex-shrink-0" />
             {item}
-          </li>
+          </Reveal>
         ))}
       </ul>
 
       <div className="space-y-10 text-[13.5px] leading-[1.75] text-zinc-400">
-        <p>Im Anschluss an mein Fachabitur und das dazugehörige Praktikum habe ich Medieninformatik an der <a href="https://www.thm.de/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">Technischen Hochschule Mittelhessen (THM)</a> studiert. Nach dem zweiten Semester habe ich mich entschieden, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 möchte ich das Studium neben dem Dienst als Fernstudium an der <a href="https://www.iu.de/bachelor/medieninformatik/fernstudium/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">IU Internationalen Hochschule</a> fortsetzen (Teilzeit II, 12 Semester).</p>
-        <p>Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</p>
-        <p>In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die echten Menschen wirklich nützen.</p>
+        <Reveal as="p">Im Anschluss an mein Fachabitur und das dazugehörige Praktikum habe ich Medieninformatik an der <a href="https://www.thm.de/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">Technischen Hochschule Mittelhessen (THM)</a> studiert. Nach dem zweiten Semester habe ich mich entschieden, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 möchte ich das Studium neben dem Dienst als Fernstudium an der <a href="https://www.iu.de/bachelor/medieninformatik/fernstudium/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">IU Internationalen Hochschule</a> fortsetzen (Teilzeit II, 12 Semester).</Reveal>
+        <Reveal as="p">Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</Reveal>
+        <Reveal as="p">In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die Menschen wirklich nützen.</Reveal>
+        <Reveal as="p">Das Medieninformatikstudium an der THM hat mir grundsätzlich sehr gut gefallen. Parallel dazu habe ich jedoch in der Nachtschicht im Briefzentrum bei <a href="https://www.google.com/maps/search/?api=1&query=DHL+Briefzentrum+Langg%C3%B6ns" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">DHL in Langgöns</a> gearbeitet, sodass mir oft die Kraft fehlte, mich so intensiv auf Prüfungen und Testate vorzubereiten, wie ich es mir gewünscht hätte. Gleichzeitig hat mich diese Zeit viel gelehrt, das mir heute im Dienst und darüber hinaus zugutekommt: Disziplin und die Erkenntnis, dass Erfolg nicht von allein kommt. Man muss ihn sich erarbeiten.</Reveal>
+        <Reveal as="p">Im ersten Semester konnte ich noch stark auf die Vorkenntnisse aus meiner schulischen Ausbildung zurückgreifen. Spätestens im zweiten Semester wurde der Stoff jedoch neu und anspruchsvoller, und mir wurde klar, dass sich Nachtschicht, Vorlesungen, Prüfungen und Testate auf Dauer nicht in der Qualität vereinbaren ließen, die ich von mir selbst erwarte. Nach reiflicher Überlegung habe ich mich deshalb entschieden, das Studium zu pausieren und meinen Dienst als Soldat anzutreten. Ich wollte mich finanziell und persönlich festigen und ein stabiles Fundament für meinen weiteren Lebensweg schaffen. Ursprünglich hatte ich geplant, das Studium nach meiner Dienstzeit mit Unterstützung des Berufsförderungsdienstes wieder aufzunehmen.</Reveal>
+        <Reveal as="p">Im Laufe meiner Dienstzeit habe ich jedoch festgestellt, dass mir meine Aufgaben in der Mannschaftslaufbahn genug zeitlichen Freiraum lassen, um ein Teilzeit-Fernstudium neben dem Dienst zu bewältigen. Deshalb nehme ich zum 1. Januar 2027 den Bachelor of Science in Medieninformatik wieder auf, um mein Ziel, das ich schon so lange verfolge, endlich zu erreichen.</Reveal>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
-        {STATIONEN.map(({ label, href }) => (
-          <a
+        {STATIONEN.map(({ label, href }, i) => (
+          <Reveal
+            as="a"
             key={label}
+            delay={i * 0.07}
+            y={10}
+            extraTransition="color 150ms ease, border-color 150ms ease"
             href={href}
             target="_blank"
             rel="noopener noreferrer"
@@ -407,20 +627,20 @@ function Bio() {
           >
             {label}
             <svg aria-hidden="true" viewBox="0 0 12 12" className="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h6v6M10 2 3 9" /></svg>
-          </a>
+          </Reveal>
         ))}
       </div>
 
       <div className="mt-10 grid grid-cols-2 gap-3">
-        {STATS.map(({ value, label }) => (
-          <div key={label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        {STATS.map(({ value, label }, i) => (
+          <Reveal key={label} delay={(i % 2) * 0.08} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="text-[22px] font-bold tracking-tight text-white">{value}</div>
             <div className="text-[12px] text-zinc-500 mt-0.5">{label}</div>
-          </div>
+          </Reveal>
         ))}
       </div>
 
-      <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 flex items-center gap-3">
+      <Reveal className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 flex items-center gap-3">
         <span
           className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0"
           style={{ boxShadow: '0 0 8px rgba(52,211,153,0.75)' }}
@@ -429,12 +649,12 @@ function Bio() {
           <div className="text-[13px] font-medium text-emerald-400 tracking-tight">Verfügbar ab 2029</div>
           <div className="text-[11px] text-zinc-500 mt-0.5">Offen für Praktika &amp; Werkstudentenstellen</div>
         </div>
-      </div>
+      </Reveal>
 
       <div className="flex-1 min-h-[6rem] flex items-center mt-8">
         <FrameworkTyper />
       </div>
-    </motion.div>
+    </div>
   )
 }
 
@@ -505,6 +725,7 @@ export default function AboutSection() {
   })
   const rawScaleY = useTransform(scrollYProgress, [0, 1], [0, 1])
   const lineScaleY = useSpring(rawScaleY, { stiffness: 60, damping: 22 })
+  const forkGeom = useForkGeometry(timelineRef)
 
   return (
     <>
@@ -544,6 +765,7 @@ export default function AboutSection() {
                 className="absolute left-[var(--tl-x)] -translate-x-1/2 top-0 w-px bg-gradient-to-b from-indigo-500/60 via-indigo-400/30 to-transparent origin-top"
                 style={{ scaleY: lineScaleY, height: '100%' }}
               />
+              {forkGeom && <StudyFork geom={forkGeom} progress={lineScaleY} />}
 
               <div className="flex flex-col gap-10">
                 {TIMELINE.map((item, i) => (
