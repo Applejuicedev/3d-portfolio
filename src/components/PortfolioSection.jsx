@@ -333,7 +333,7 @@ function PortfolioCard({ project, onMount, index }) {
 
         <div className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-[250ms]" style={{ zIndex: 9 }}>
           <div ref={spotlightRef} className="absolute pointer-events-none" style={{
-            width: 720, height: 720, left: -360, top: -360,
+            width: 720, height: 720, left: -360, top: -360, willChange: 'transform',
             background: `radial-gradient(circle closest-side, rgba(${project.accentRgb},0.10), transparent 65%)`,
           }} />
         </div>
