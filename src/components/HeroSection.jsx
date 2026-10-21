@@ -17,7 +17,6 @@ const NAME_SHADOW   = '0 1px 4px rgba(0,0,0,0.35), 0 3px 14px rgba(0,0,0,0.18)'
 
 export default function HeroSection() {
   const mousePos    = useRef({ x: 0, y: 0 })
-  const projectedRef = useRef([])
   const heroRef      = useRef()
   const [heroVisible, setHeroVisible] = useState(true)
 
@@ -29,11 +28,12 @@ export default function HeroSection() {
   }, [])
 
   const handleMouseMove = useCallback((e) => {
-    mousePos.current = { x: e.clientX, y: e.clientY }
+    mousePos.current.x = e.clientX
+    mousePos.current.y = e.clientY
   }, [])
 
   useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mousemove', handleMouseMove, { passive: true })
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [handleMouseMove])
 
@@ -55,7 +55,7 @@ export default function HeroSection() {
         style={{ zIndex: 3, paddingTop: '80px' }}
       >
         <Suspense fallback={null}>
-          <NetworkOrb3D mouseRef={mousePos} projectedRef={projectedRef} active={heroVisible} />
+          <NetworkOrb3D mouseRef={mousePos} active={heroVisible} />
         </Suspense>
       </div>
 
@@ -112,7 +112,7 @@ export default function HeroSection() {
 
           {/* Tagline */}
           <motion.p variants={item} className="text-[11px] text-zinc-500 font-medium tracking-[0.22em] uppercase">
-            Medieninformatik&ensp;·&ensp;Frontend&ensp;·&ensp;UX/UI
+            Medieninformatik&ensp;·&ensp;Portfolio
           </motion.p>
 
           {/* CTA buttons */}
@@ -127,7 +127,7 @@ export default function HeroSection() {
               onClick={() => document.getElementById('portfolio')?.scrollIntoView({ behavior: 'smooth' })}
               className="px-5 py-[9px] rounded-lg border border-white/[0.1] text-zinc-200 text-[13px] font-medium tracking-tight hover:bg-white/[0.05] active:opacity-60 transition-colors duration-150"
             >
-              Portfolio
+              Projekte
             </button>
           </motion.div>
         </motion.div>
