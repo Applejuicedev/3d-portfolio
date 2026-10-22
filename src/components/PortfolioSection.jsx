@@ -235,12 +235,10 @@ const PROJECTS = [
 // Background: grid fragments (like the rest of the site) spread over the whole section, plus a few
 // soft greyscale blurs that scroll with the content, so only one shows up here and there.
 const PORTFOLIO_GRIDS = [
-  { style: { top: '-6%', right: '-6%' },   w: 700, h: 560, seed: 7,  fade: 'ellipse 55% 50% at 50% 45%' },
-  { style: { top: '2%', left: '24%' },     w: 400, h: 320, seed: 89, fade: 'ellipse 50% 48% at 50% 50%' },
-  { style: { top: '22%', left: '-8%' },    w: 620, h: 520, seed: 23, fade: 'ellipse 52% 50% at 50% 55%' },
-  { style: { top: '44%', right: '2%' },    w: 520, h: 440, seed: 41, fade: 'ellipse 50% 48% at 50% 50%' },
-  { style: { top: '64%', left: '6%' },     w: 560, h: 460, seed: 57, fade: 'ellipse 52% 50% at 50% 50%' },
-  { style: { bottom: '-10%', right: '-6%' }, w: 700, h: 560, seed: 71, fade: 'ellipse 55% 50% at 50% 55%' },
+  { style: { top: '-12%', right: '-14%' },  w: 1200, h: 980, seed: 7,  fade: 'ellipse 55% 50% at 50% 50%' },
+  { style: { top: '24%', left: '-16%' },    w: 1150, h: 940, seed: 23, fade: 'ellipse 52% 50% at 50% 50%' },
+  { style: { top: '50%', right: '-16%' },   w: 1100, h: 900, seed: 41, fade: 'ellipse 52% 50% at 50% 50%' },
+  { style: { bottom: '-14%', left: '-12%' }, w: 1100, h: 900, seed: 57, fade: 'ellipse 55% 50% at 50% 50%' },
 ]
 
 // greyscale only, as large as the grid fragments (px): light-grey hazes alternating with deep black
