@@ -21,6 +21,11 @@ function easeOutBack(p) {
 }
 // Cursor links: a node connects inside CONNECT_R and lets go beyond RELEASE_R (px)
 const MAX_LINKS = 2
+// Cursor threads: a new one shoots out from the cursor to the node; a released one tears in the
+// middle and both ends snap back (to the node and to the cursor) while fading
+const LINK_GROW = 0.28 // s
+const LINK_TEAR = 0.42 // s
+const TEAR_AT = 0.5    // where along the thread it tears (0 = node, 1 = cursor)
 const CONNECT_R = 230
 const RELEASE_R = 340
 
@@ -46,9 +51,9 @@ function BrainNet({ mouseRef, onBuilt }) {
   const groupRef = useRef()
   const time = useRef(0)
   const mouseOffset = useRef({ x: 0, y: 0 })
-  const links = useRef([]) // { node, strength, released }
+  const links = useRef([]) // { node, grow, tear, released }
   // Scratch objects reused every frame (no per-frame allocations)
-  const tmp = useMemo(() => ({ mvp: new THREE.Matrix4(), world: new THREE.Vector3(), ndc: new THREE.Vector3(), cursor: new THREE.Vector3() }), [])
+  const tmp = useMemo(() => ({ mvp: new THREE.Matrix4(), world: new THREE.Vector3(), ndc: new THREE.Vector3(), cursor: new THREE.Vector3(), tipA: new THREE.Vector3(), tipB: new THREE.Vector3(), tipEnd: new THREE.Vector3() }), [])
   const scr = useMemo(() => ({ sx: new Float32Array(NODE_COUNT), sy: new Float32Array(NODE_COUNT), front: new Uint8Array(NODE_COUNT) }), [])
 
   const { edgeGeo, nodeGeo, local, shown, edgeArrive, edgeFinal } = useMemo(() => {
@@ -108,9 +113,10 @@ function BrainNet({ mouseRef, onBuilt }) {
   // One line object per possible cursor link, each with its own opacity for fading
   const linkLines = useMemo(() => Array.from({ length: MAX_LINKS }, () => {
     const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3))
+    // two segments: whole while growing/held, the two torn halves while tearing
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3))
     const mat = new THREE.LineBasicMaterial({ color: '#a5b4fc', transparent: true, opacity: 0, depthWrite: false })
-    const line = new THREE.Line(geo, mat)
+    const line = new THREE.LineSegments(geo, mat)
     line.frustumCulled = false
     line.visible = false
     return line
@@ -231,7 +237,7 @@ function BrainNet({ mouseRef, onBuilt }) {
 
     const group = groupRef.current
     group.updateMatrixWorld()
-    const { mvp, world, ndc, cursor } = tmp
+    const { mvp, world, ndc, cursor, tipA, tipB, tipEnd } = tmp
     mvp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse).multiply(group.matrixWorld)
     const e = mvp.elements
     const g = group.matrixWorld.elements
@@ -267,19 +273,18 @@ function BrainNet({ mouseRef, onBuilt }) {
         // A fading link still occupies a slot — let the new one take it over
         list.splice(list.findIndex(l => l.released), 1)
       }
-      list.push({ node: best, strength: 0, released: false })
+      list.push({ node: best, grow: 0, tear: 0, released: false })
       active++
     }
 
-    // Fade in / out, dropping links that have fully faded
-    // Connecting is near-instant, letting go stays soft
+    // Advance grow / tear, dropping threads that have fully torn
     const dt = Math.min(delta, 0.1)
-    const kIn = 1 - Math.exp(-dt * 40)
-    const kOut = 1 - Math.exp(-dt * 9)
     for (let i = list.length - 1; i >= 0; i--) {
       const l = list[i]
-      l.strength += ((l.released ? 0 : 1) - l.strength) * (l.released ? kOut : kIn)
-      if (l.released && l.strength < 0.01) list.splice(i, 1)
+      if (l.released) {
+        l.tear = Math.min(1, l.tear + dt / LINK_TEAR)
+        if (l.tear >= 1) list.splice(i, 1)
+      } else l.grow = Math.min(1, l.grow + dt / LINK_GROW)
     }
 
     const baseOpacity = dark ? 0.38 : 0.3
@@ -291,13 +296,27 @@ function BrainNet({ mouseRef, onBuilt }) {
       // Put the cursor end on the node's depth plane so the line sits in the scene
       ndc.copy(world).project(camera)
       cursor.set((mx / r.width) * 2 - 1, -(my / r.height) * 2 + 1, ndc.z).unproject(camera)
-      // While fading out, the line retracts towards the node
-      if (l.released) cursor.lerpVectors(world, cursor, l.strength)
       const pos = line.geometry.attributes.position
-      pos.setXYZ(0, world.x, world.y, world.z)
-      pos.setXYZ(1, cursor.x, cursor.y, cursor.z)
+      const set = (i, v) => pos.setXYZ(i, v.x, v.y, v.z)
+      if (!l.released) {
+        // growing: shoots out from the cursor towards the node, slowing down on arrival
+        const k = 1 - Math.pow(1 - l.grow, 3)
+        tipA.lerpVectors(cursor, world, k)
+        set(0, cursor); set(1, tipA); set(2, cursor); set(3, cursor)
+        line.material.opacity = baseOpacity * Math.min(1, l.grow * 3)
+      } else {
+        // torn in the middle: each half snaps back to its own end (fast at first, then easing out)
+        // while fading. A thread that hadn't fully arrived tears between the cursor and its tip.
+        const reach = 1 - Math.pow(1 - l.grow, 3)
+        tipEnd.lerpVectors(cursor, world, reach)                  // far end of the thread
+        tipA.lerpVectors(cursor, tipEnd, 1 - TEAR_AT)             // tear point
+        const k = 1 - Math.pow(1 - l.tear, 2.5)
+        tipB.lerpVectors(tipA, cursor, k)                          // cursor half
+        tipA.lerp(tipEnd, k)                                       // node half
+        set(0, cursor); set(1, tipB); set(2, tipEnd); set(3, tipA)
+        line.material.opacity = baseOpacity * (1 - l.tear) * (1 - l.tear)
+      }
       pos.needsUpdate = true
-      line.material.opacity = baseOpacity * l.strength
       line.visible = true
     }
   }
