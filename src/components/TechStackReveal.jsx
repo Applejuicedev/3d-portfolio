@@ -456,8 +456,9 @@ export default function TechStackReveal() {
       })
       tl.to(bases, { strokeDashoffset: 0, ease: 'none', duration: 0.7, stagger: { each: 0.025, from: 'random' } }, 0)
         .from(svg.querySelectorAll('[data-via]'), { opacity: 0, scale: 0, transformOrigin: 'center', duration: 0.15, stagger: 0.01 }, 0.55)
-        .fromTo(chipBodyRef.current, { boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 0 0px rgba(99,102,241,0), inset 0 1px 0 rgba(255,255,255,0.05)' },
-          { boxShadow: '0 0 0 1px rgba(129,140,248,0.28), 0 0 120px rgba(99,102,241,0.22), inset 0 1px 0 rgba(255,255,255,0.08)', duration: 0.25, ease: 'power2.out' }, 0.85)
+        // switched on: only the chip's edge takes on colour, no glow around it
+        .fromTo(chipBodyRef.current, { borderColor: 'rgba(255,255,255,0.08)' },
+          { borderColor: 'rgba(129,140,248,0.7)', duration: 0.25, ease: 'power2.out' }, 0.85)
         .fromTo(chipTitleRef.current, { color: '#ffffff', textShadow: '0 0 0px rgba(129,140,248,0)' },
           { color: '#e0e7ff', textShadow: '0 0 18px rgba(129,140,248,0.75), 0 0 42px rgba(99,102,241,0.35)', duration: 0.25, ease: 'power2.out' }, 0.85)
         .fromTo(chipLabelRef.current, { color: '#3f3f46' }, { color: '#a5b4fc', duration: 0.25 }, 0.85)
@@ -483,7 +484,9 @@ export default function TechStackReveal() {
     <>
       <div className="h-px bg-white/[0.05]" />
 
-      <div ref={sectionRef} className="relative overflow-hidden bg-[#0a0a0a] py-32">
+      {/* At least a full screen tall with the board centred: while the long scroll animation runs,
+          the whole board is on screen */}
+      <div ref={sectionRef} className="relative overflow-hidden bg-[#0a0a0a] py-40 lg:py-48 min-h-[100svh] flex flex-col justify-center">
         {/* Pixel substrate, faded towards the edges */}
         <canvas
           ref={canvasRef}
@@ -494,7 +497,7 @@ export default function TechStackReveal() {
             maskImage: 'radial-gradient(ellipse 58% 50% at 50% 52%, black 25%, transparent 100%)',
           }}
         />
-        <div className="relative max-w-5xl mx-auto px-5 sm:px-8">
+        <div className="relative w-full max-w-5xl mx-auto px-5 sm:px-8">
 
           {/* PCB board — pt-20 gives vertical room for upward decorative traces */}
           <div ref={containerRef} className="relative pt-20">
@@ -559,7 +562,7 @@ export default function TechStackReveal() {
                   style={{
                     background:  'linear-gradient(150deg, #161616 0%, #0d0d0d 100%)',
                     borderColor: 'rgba(255,255,255,0.08)',
-                    boxShadow:   '0 0 0 1px rgba(255,255,255,0.03), 0 0 80px rgba(99,102,241,0.07), inset 0 1px 0 rgba(255,255,255,0.05)',
+                    boxShadow:   '0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.05)',
                   }}
                 >
                   {['top-3 left-3','top-3 right-3','bottom-3 left-3','bottom-3 right-3'].map((pos, i) => (
