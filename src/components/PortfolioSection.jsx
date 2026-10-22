@@ -243,11 +243,13 @@ const PORTFOLIO_GRIDS = [
   { style: { bottom: '-10%', right: '-6%' }, w: 700, h: 560, seed: 71, fade: 'ellipse 55% 50% at 50% 55%' },
 ]
 
-// greyscale only: two soft light-grey hazes and one deep black pool, so the field has depth
+// greyscale only, as large as the grid fragments (px): light-grey hazes alternating with deep black
+// pools down the section, so the field has depth
 const BLOBS = [
-  { rgb: '255,255,255', a: 0.045, size: 34, x: 14, y: 14, dx: 12, dy: 8,   dur: 19 },
-  { rgb: '0,0,0',       a: 0.55,  size: 30, x: 88, y: 42, dx: -10, dy: 12, dur: 23 },
-  { rgb: '255,255,255', a: 0.035, size: 30, x: 22, y: 76, dx: 10, dy: -10, dur: 21 },
+  { rgb: '255,255,255', a: 0.04,  size: 760, x: 16, y: 12, dx: 12, dy: 8,   dur: 19 },
+  { rgb: '0,0,0',       a: 0.5,   size: 700, x: 86, y: 36, dx: -10, dy: 12, dur: 23 },
+  { rgb: '255,255,255', a: 0.035, size: 720, x: 18, y: 62, dx: 10, dy: -10, dur: 21 },
+  { rgb: '0,0,0',       a: 0.45,  size: 680, x: 84, y: 88, dx: -8, dy: -8,  dur: 25 },
 ]
 
 function BlurSpots() {
@@ -267,8 +269,8 @@ function BlurSpots() {
     <div ref={ref} aria-hidden className="absolute inset-0 pointer-events-none">
       {BLOBS.map((b) => (
         <div key={`${b.x}-${b.y}`} className="absolute rounded-full" style={{
-          left: `${b.x}%`, top: `${b.y}%`, width: `${b.size}vw`, height: `${b.size}vw`,
-          marginLeft: `-${b.size / 2}vw`, marginTop: `-${b.size / 2}vw`,
+          left: `${b.x}%`, top: `${b.y}%`, width: b.size, height: b.size,
+          marginLeft: -b.size / 2, marginTop: -b.size / 2,
           background: `radial-gradient(circle closest-side, rgba(${b.rgb},${b.a}), rgba(${b.rgb},${b.a / 3}) 55%, transparent)`,
           filter: 'blur(30px)',
         }} />
