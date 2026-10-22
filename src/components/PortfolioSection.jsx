@@ -55,33 +55,76 @@ function StatusBadge({ status }) {
   )
 }
 
+// Miniature of the hero's network orb: points on a sphere (golden spiral, tilted), each linked to
+// its two nearest neighbours. Computed once, so it looks the same on every visit.
+const MINI_ORB = (() => {
+  const n = 26, pts = []
+  for (let i = 0; i < n; i++) {
+    const y = 1 - (2 * (i + 0.5)) / n, r = Math.sqrt(1 - y * y), th = i * 2.399963
+    const x = Math.cos(th) * r, z = Math.sin(th) * r
+    // tilt a little so it doesn't look like a flat spiral
+    const yy = y * 0.94 - z * 0.34, zz = y * 0.34 + z * 0.94
+    pts.push([50 + x * 40, 50 + yy * 40, zz])
+  }
+  const edges = new Set()
+  pts.forEach((p, i) => {
+    pts.map((q, j) => [j, Math.hypot(p[0] - q[0], p[1] - q[1], (p[2] - q[2]) * 40)])
+      .filter(([j]) => j !== i).sort((a, b) => a[1] - b[1]).slice(0, 2)
+      .forEach(([j]) => edges.add(i < j ? `${i}-${j}` : `${j}-${i}`))
+  })
+  return { pts, edges: [...edges].map((e) => e.split('-').map(Number)) }
+})()
+
+function MiniOrb({ className }) {
+  const { pts, edges } = MINI_ORB
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" className={className} aria-hidden>
+      {edges.map(([a, b]) => (
+        <line key={`${a}-${b}`} x1={pts[a][0]} y1={pts[a][1]} x2={pts[b][0]} y2={pts[b][1]}
+          stroke="#818cf8" strokeOpacity={0.12 + (pts[a][2] + pts[b][2] + 2) * 0.06} strokeWidth="0.45" />
+      ))}
+      {pts.map(([x, y, z], i) => (
+        <circle key={i} cx={x} cy={y} r={0.8 + (z + 1) * 0.35} fill="#a5b4fc" fillOpacity={0.35 + (z + 1) * 0.2} />
+      ))}
+    </svg>
+  )
+}
+
 const PROJECTS = [
   {
     title: '3D Portfolio Website',
     category: 'Web Development',
     status: 'Live',
-    desc: 'Dieses Portfolio — React, Three.js und GSAP. Animierter Hintergrund, 3D-Orb und scroll-getriebene Animationen.',
+    desc: 'Dieses Portfolio — React, Three.js und GSAP. Ein 3D-Netz, das sich selbst aufbaut, und scroll-getriebene Animationen in jeder Section.',
     tech: ['React', 'Three.js', 'GSAP', 'Tailwind'],
     github: '#', demo: '#',
     accentRgb: '59,130,246',
+    // a miniature of the current hero: statement on the left, network orb on the right
     visual: (
-      <div className="w-full h-full bg-[#0d0d0d] relative overflow-hidden">
+      <div className="w-full h-full bg-[#0a0a0a] relative overflow-hidden">
         <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)', backgroundSize: '20px 20px' }} />
-        <div className="absolute top-3 left-3 right-3 h-5 bg-[#1a1a1a] rounded-t-lg flex items-center px-2 gap-1">
-          <div className="w-2 h-2 rounded-full bg-red-400/70" /><div className="w-2 h-2 rounded-full bg-yellow-400/70" /><div className="w-2 h-2 rounded-full bg-green-400/70" />
-        </div>
-        <div className="absolute top-11 left-3 right-3 bottom-3 flex gap-2">
-          <div className="flex-1 space-y-1.5 py-1">
-            <div className="h-2.5 bg-white/10 rounded w-1/2" /><div className="h-1.5 bg-white/06 rounded w-3/4" /><div className="h-1.5 bg-white/06 rounded w-2/3" />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 45% 70% at 74% 55%, rgba(99,102,241,0.12), transparent 70%)' }} />
+        <MiniOrb className="absolute right-3 top-1/2 -translate-y-1/2 w-[46%] h-[92%]" />
+        <div className="absolute left-5 top-1/2 -translate-y-1/2 flex flex-col">
+          <span className="inline-flex items-center gap-1 self-start px-1.5 py-[2px] rounded-full border border-white/[0.08] text-[5.5px] text-zinc-400 mb-2">
+            <span className="w-[3px] h-[3px] rounded-full bg-emerald-400" style={{ boxShadow: '0 0 3px rgba(52,211,153,0.8)' }} />
+            Verfügbar ab 2029
+          </span>
+          <span className="text-[6px] text-zinc-500 mb-1">Hey, ich bin Vincent — Medieninformatiker</span>
+          <span className="text-[15px] leading-[1.05] font-medium tracking-tight text-white">Design trifft Code.</span>
+          <span className="text-[15px] leading-[1.05] font-medium tracking-tight text-zinc-500">Ich baue</span>
+          <span className="text-[15px] leading-[1.1] font-medium tracking-tight text-[#93c5fd]">Web-Apps</span>
+          <div className="flex gap-1 mt-2">
+            {[['React', '#61DAFB'], ['Next.js', '#e2e2e2'], ['TypeScript', '#4C8DCA']].map(([l, c]) => (
+              <span key={l} className="inline-flex items-center gap-[3px] px-1.5 py-[2px] rounded-full border border-white/[0.09] bg-[#0b0b0d] text-[5.5px] text-zinc-300">
+                <span className="w-[4px] h-[4px] rounded-full" style={{ background: c }} />{l}
+              </span>
+            ))}
           </div>
-          <div className="w-16 h-20 rounded-lg bg-gradient-to-b from-indigo-600/30 to-violet-800/30 flex items-center justify-center border border-white/[0.06]">
-            <div className="w-6 h-6 rounded-full bg-indigo-400/40" style={{ boxShadow: '0 0 12px rgba(99,102,241,0.4)' }} />
+          <div className="flex gap-1 mt-2.5">
+            <span className="px-2 py-[3px] rounded border border-indigo-400/25 bg-indigo-500/15 text-[5.5px] text-indigo-100">Projekte ansehen</span>
+            <span className="px-2 py-[3px] rounded border border-white/[0.1] text-[5.5px] text-zinc-200">Über mich</span>
           </div>
-        </div>
-        <div className="absolute bottom-4 right-4 flex gap-1.5">
-          {['#818cf8','#34d399','#60a5fa','#f87171','#a78bfa'].map((c, i) => (
-            <div key={i} className="w-4 h-2 rounded-full opacity-60" style={{ backgroundColor: c }} />
-          ))}
         </div>
       </div>
     ),
