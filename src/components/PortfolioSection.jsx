@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { useInView } from 'framer-motion'
 import gsap from 'gsap'
 import { GridPatches } from './BackgroundPatterns'
@@ -232,12 +232,50 @@ const PROJECTS = [
   },
 ]
 
-// Drei getrennte Flächen, die sich nicht berühren: oben rechts, unten links und kleiner unten rechts
+// Background: grid fragments (like the rest of the site) spread over the whole section, plus a few
+// soft greyscale blurs that scroll with the content, so only one shows up here and there.
 const PORTFOLIO_GRIDS = [
-  { style: { top: '-15%', right: '-8%' },  w: 760, h: 620, seed: 7,  fade: 'ellipse 55% 50% at 50% 45%' },
-  { style: { bottom: '-15%', left: '-8%' }, w: 760, h: 620, seed: 23, fade: 'ellipse 52% 50% at 50% 55%' },
-  { style: { bottom: '-10%', right: '4%' }, w: 520, h: 420, seed: 41, fade: 'ellipse 50% 48% at 50% 50%' },
+  { style: { top: '-6%', right: '-6%' },   w: 700, h: 560, seed: 7,  fade: 'ellipse 55% 50% at 50% 45%' },
+  { style: { top: '2%', left: '24%' },     w: 400, h: 320, seed: 89, fade: 'ellipse 50% 48% at 50% 50%' },
+  { style: { top: '22%', left: '-8%' },    w: 620, h: 520, seed: 23, fade: 'ellipse 52% 50% at 50% 55%' },
+  { style: { top: '44%', right: '2%' },    w: 520, h: 440, seed: 41, fade: 'ellipse 50% 48% at 50% 50%' },
+  { style: { top: '64%', left: '6%' },     w: 560, h: 460, seed: 57, fade: 'ellipse 52% 50% at 50% 50%' },
+  { style: { bottom: '-10%', right: '-6%' }, w: 700, h: 560, seed: 71, fade: 'ellipse 55% 50% at 50% 55%' },
 ]
+
+// greyscale only: two soft light-grey hazes and one deep black pool, so the field has depth
+const BLOBS = [
+  { rgb: '255,255,255', a: 0.045, size: 34, x: 14, y: 14, dx: 12, dy: 8,   dur: 19 },
+  { rgb: '0,0,0',       a: 0.55,  size: 30, x: 88, y: 42, dx: -10, dy: 12, dur: 23 },
+  { rgb: '255,255,255', a: 0.035, size: 30, x: 22, y: 76, dx: 10, dy: -10, dur: 21 },
+]
+
+function BlurSpots() {
+  const ref = useRef()
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const tweens = [...ref.current.children].map((el, i) => gsap.to(el, {
+      xPercent: BLOBS[i].dx, yPercent: BLOBS[i].dy, duration: BLOBS[i].dur,
+      ease: 'sine.inOut', yoyo: true, repeat: -1,
+    }))
+    // only drift while the section is on screen
+    const io = new IntersectionObserver(([e]) => tweens.forEach((t) => (e.isIntersecting ? t.resume() : t.pause())))
+    io.observe(ref.current)
+    return () => { io.disconnect(); tweens.forEach((t) => t.kill()) }
+  }, [])
+  return (
+    <div ref={ref} aria-hidden className="absolute inset-0 pointer-events-none">
+      {BLOBS.map((b) => (
+        <div key={`${b.x}-${b.y}`} className="absolute rounded-full" style={{
+          left: `${b.x}%`, top: `${b.y}%`, width: `${b.size}vw`, height: `${b.size}vw`,
+          marginLeft: `-${b.size / 2}vw`, marginTop: `-${b.size / 2}vw`,
+          background: `radial-gradient(circle closest-side, rgba(${b.rgb},${b.a}), rgba(${b.rgb},${b.a / 3}) 55%, transparent)`,
+          filter: 'blur(30px)',
+        }} />
+      ))}
+    </div>
+  )
+}
 
 // Hover effects avoid React state and only animate transform/opacity,
 // so mouse movement never re-renders the card or triggers layout/paint.
@@ -303,7 +341,7 @@ function PortfolioCard({ project, onMount, index }) {
   }, [])
 
   return (
-    <div ref={wrapperRef} style={{ opacity: 0 }}>
+    <div ref={wrapperRef} className="h-full" style={{ opacity: 0 }}>
       <div
         ref={liftRef}
         onPointerMove={handleMouseMove}
@@ -422,9 +460,43 @@ function SectionHeader() {
   )
 }
 
+// Desktop: which project is currently on top of the stack; click jumps to it
+function ProjectIndex({ active, onSelect }) {
+  return (
+    <ol className="hidden lg:flex flex-col gap-1 -ml-3">
+      {PROJECTS.map((p, i) => (
+        <li key={p.title}>
+          <button
+            onClick={() => onSelect(i)}
+            className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors duration-300 hover:bg-white/[0.03] ${
+              active === i ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'
+            }`}
+          >
+            <span className="text-[11px] font-medium tabular-nums tracking-wide">0{i + 1}</span>
+            <span
+              className="h-px bg-current transition-all duration-500 ease-out"
+              style={{ width: active === i ? 28 : 12, opacity: active === i ? 0.8 : 0.4 }}
+            />
+            <span className="text-[13px] font-medium tracking-tight">{p.title}</span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+// Sticky offset of each card; later cards stop a bit lower so the edges of the ones below peek out
+const STACK_TOP = 96
+const STACK_STEP = 16
+const STACK_REST = 0.3 // scroll distance (share of the viewport) a card rests fully visible on top
+
 export default function PortfolioSection() {
-  const gridRef  = useRef()
+  const sectionRef = useRef()
+  const deckRef  = useRef()
   const cardRefs = useRef([])
+  const stackedRef = useRef(false)
+  const activeRef = useRef(0)
+  const [active, setActive] = useState(0)
 
   const handleMount = useCallback((el, i) => {
     cardRefs.current[i] = el
@@ -432,45 +504,163 @@ export default function PortfolioSection() {
 
   useEffect(() => {
     const cards = cardRefs.current.filter(Boolean)
-    if (!cards.length || !gridRef.current) return
+    const items = [...deckRef.current.children]
+    if (!cards.length) return
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        cards,
-        { opacity: 0, y: 48, scale: 0.97 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          stagger: { amount: 0.55, from: 'start' },
-          duration: 0.72,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: gridRef.current,
-            start: 'top 82%',
-            toggleActions: 'play none none none',
-          },
-        }
-      )
+      // Each card fades up on its own as it scrolls in
+      cards.forEach((card) => {
+        gsap.fromTo(card,
+          { opacity: 0, y: 48, scale: 0.97 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.72, ease: 'power3.out',
+            scrollTrigger: { trigger: card, start: 'top 88%', once: true } },
+        )
+      })
     })
 
-    return () => ctx.revert()
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // Stacking: the cards are position: sticky, so they move 1:1 with the scroll — no pinning.
+    // We only scale + dim the cards that are being covered, based on how far the next one has come.
+    const update = () => {
+      if (!stackedRef.current) return
+      const vh = window.innerHeight
+      const progress = items.map((item, i) => {
+        if (!i) return 1
+        const stop = STACK_TOP + i * STACK_STEP
+        const top = item.getBoundingClientRect().top
+        return gsap.utils.clamp(0, 1, (vh - top) / (vh - stop))
+      })
+      items.forEach((item, i) => {
+        // how many cards (fractionally) lie on top of this one
+        const depth = progress.slice(i + 1).reduce((a, b) => a + b, 0)
+        // brightness instead of opacity: covered cards get darker but stay solid
+        gsap.set(item, { scale: 1 - depth * 0.05, filter: depth > 0.001 ? `brightness(${1 - Math.min(depth, 2) * 0.3})` : 'none' })
+      })
+      let next = 0
+      progress.forEach((p, i) => { if (p > 0.5) next = i })
+      if (next !== activeRef.current) { activeRef.current = next; setActive(next) }
+    }
+
+    // Equal card heights (like in the grid) — and only stack when a card fits on screen,
+    // otherwise its lower part would end up hidden under the next card.
+    const fit = () => {
+      items.forEach((item) => { item.style.height = '' })
+      const h = Math.max(...items.map((item) => item.offsetHeight))
+      items.forEach((item) => { item.style.height = `${h}px` })
+      stackedRef.current = !reduced && h + STACK_TOP + (items.length - 1) * STACK_STEP + 24 < window.innerHeight
+      // While stacking, each card rests fully visible for a while before the next one slides over
+      // it — otherwise the next card covers its buttons (at the bottom of the card) almost at once
+      const rest = stackedRef.current ? `${Math.round(window.innerHeight * STACK_REST)}px` : ''
+      deckRef.current.style.rowGap = rest
+      // The section ends exactly when the last card has arrived: then its bottom edge sits on the
+      // bottom of the screen. From there the whole section stays put (sticky) and the contact
+      // section slides over it when scrolling on.
+      const section = sectionRef.current
+      if (stackedRef.current) {
+        const lastTop = STACK_TOP + (items.length - 1) * STACK_STEP
+        const padBottom = parseFloat(getComputedStyle(section).paddingBottom)
+        deckRef.current.style.paddingBottom = `${Math.max(0, window.innerHeight - lastTop - h - padBottom)}px`
+        section.style.position = 'sticky'
+        section.style.top = `${Math.min(0, window.innerHeight - section.offsetHeight)}px`
+      } else {
+        deckRef.current.style.paddingBottom = ''
+        section.style.position = ''
+        section.style.top = ''
+      }
+      items.forEach((item, i) => {
+        item.style.position = stackedRef.current ? 'sticky' : 'relative'
+        item.style.top = `${STACK_TOP + i * STACK_STEP}px`
+        if (!stackedRef.current) gsap.set(item, { clearProps: 'transform,filter' })
+      })
+      update()
+    }
+    fit()
+    document.fonts?.ready.then(fit)
+    window.addEventListener('resize', fit)
+    const st = ScrollTrigger.create({ trigger: deckRef.current, start: 'top bottom', end: 'bottom top', onUpdate: update })
+
+    // Stopper: when the last card has arrived, scrolling stops right there — leftover momentum from
+    // the trackpad/mouse wheel can't carry on into the contact section. A new gesture moves on:
+    // momentum only ever slows down, so wheel deltas growing again mean a fresh swipe, and a
+    // notched mouse wheel (even, non-shrinking steps) counts as new input after a moment. The hold
+    // also ends after a short pause, after at most HOLD_MAX, or when scrolling back up. It re-arms
+    // only once the user is back among the cards (a screen height above the stop).
+    const section = sectionRef.current
+    const stopY = () => section.offsetTop + section.offsetHeight - window.innerHeight
+    const HOLD_PAUSE = 250, HOLD_MAX = 2000, NOTCH_AFTER = 350
+    let held = false, passed = false, idle = 0, holdStart = 0, lastDelta = 0
+    const release = () => { held = false; passed = true; clearTimeout(idle) }
+    const wheel = (e) => {
+      if (!stackedRef.current) return
+      if (e.deltaY <= 0) { if (held) release(); return }
+      if (held) {
+        const heldFor = performance.now() - holdStart
+        const fresh = e.deltaY > lastDelta * 1.3 + 2 || (e.deltaY >= 50 && e.deltaY >= lastDelta && heldFor > NOTCH_AFTER)
+        lastDelta = e.deltaY
+        // past HOLD_MAX only real input gets through — the tiny tail of a long momentum is swallowed
+        if (fresh || (heldFor > HOLD_MAX && e.deltaY >= 8)) { release(); return }
+        e.preventDefault()
+        clearTimeout(idle)
+        idle = setTimeout(release, HOLD_PAUSE)
+        return
+      }
+      const y = window.scrollY, target = stopY()
+      if (!passed && y < target && y + e.deltaY >= target) {
+        e.preventDefault()
+        window.scrollTo({ top: target, behavior: 'instant' })
+        held = true
+        holdStart = performance.now()
+        lastDelta = e.deltaY
+        idle = setTimeout(release, HOLD_PAUSE)
+      }
+    }
+    const rearm = () => { if (window.scrollY < stopY() - window.innerHeight) passed = false }
+    window.addEventListener('wheel', wheel, { passive: false })
+    window.addEventListener('scroll', rearm, { passive: true })
+
+    return () => {
+      window.removeEventListener('resize', fit)
+      window.removeEventListener('wheel', wheel)
+      window.removeEventListener('scroll', rearm)
+      clearTimeout(idle)
+      st.kill()
+      ctx.revert()
+    }
+  }, [])
+
+  // Scroll so that card i has just settled on the stack
+  const scrollToCard = useCallback((i) => {
+    const deck = deckRef.current
+    const first = deck.children[0]
+    const gap = parseFloat(getComputedStyle(deck).rowGap) || 0
+    const deckTop = deck.getBoundingClientRect().top + window.scrollY
+    const y = deckTop + i * (first.offsetHeight + gap) - (stackedRef.current ? STACK_TOP + i * STACK_STEP : STACK_TOP)
+    window.scrollTo({ top: y, behavior: 'smooth' })
   }, [])
 
   return (
     <>
       <div className="h-px bg-white/[0.05]" />
 
-      <div id="portfolio" className="relative bg-[#080808] py-32 overflow-hidden">
+      <div id="portfolio" ref={sectionRef} className="relative bg-[#080808] py-32 overflow-clip">
         <GridPatches patches={PORTFOLIO_GRIDS} />
+        <BlurSpots />
 
         <div className="max-w-6xl mx-auto px-8 relative z-10">
-          <SectionHeader />
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-20 items-start">
+            <div className="lg:sticky lg:top-28">
+              <SectionHeader />
+              <ProjectIndex active={active} onSelect={scrollToCard} />
+            </div>
 
-          <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7">
-            {PROJECTS.map((p, i) => (
-              <PortfolioCard key={p.title} project={p} index={i} onMount={handleMount} />
-            ))}
+            <div ref={deckRef} className="flex flex-col gap-10 max-w-[440px] w-full mx-auto">
+              {PROJECTS.map((p, i) => (
+                <div key={p.title} className="origin-top">
+                  <PortfolioCard project={p} index={i} onMount={handleMount} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

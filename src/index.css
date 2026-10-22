@@ -18,9 +18,23 @@ body { overflow-x: hidden; background-color: #0a0a0a; }
 }
 canvas { touch-action: none; }
 
+/* ── Crosshair cursor (mouse/trackpad only) ──────────────────────
+   A real CSS cursor, not a JS-driven element: zero lag, nothing to re-position while scrolling.
+   Clickable things get the normal pointer (hand), so interactivity stays obvious. */
+:root {
+  --cursor-cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M12 4L12 10M12 14L12 20M4 12L10 12M14 12L20 12' stroke='%230a0a0a' stroke-opacity='.45' stroke-width='2.6'/%3E%3Cpath d='M12 4L12 10M12 14L12 20M4 12L10 12M14 12L20 12' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E") 12 12, crosshair;
+}
+@media (hover: hover) and (pointer: fine) {
+  *, *::before, *::after { cursor: var(--cursor-cross) !important; }
+  a, a *, button, button *, [role="button"], [role="button"] *, label, summary, select,
+  .cursor-pointer, .cursor-pointer * {
+    cursor: pointer !important;
+  }
+}
+
 /* ── Text selection ──────────────────────────────────────────── */
-::selection      { background: rgba(99,102,241,0.28); color: #fff; }
-::-moz-selection { background: rgba(99,102,241,0.28); color: #fff; }
+::selection      { background: #34d399; color: #1e40af; }
+::-moz-selection { background: #34d399; color: #1e40af; }
 
 /* ── Marquee keyframes ───────────────────────────────────────── */
 @keyframes marquee {

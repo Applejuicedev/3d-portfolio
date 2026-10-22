@@ -4,6 +4,21 @@ import * as THREE from 'three'
 
 const NODE_COUNT = 62
 const MAX_EDGES = 110
+
+// Load-in: the nodes shoot out of the core one after another (with a small overshoot), and each
+// edge appears as soon as both of its nodes have arrived
+const INTRO_DELAY = 0.35   // s, so it starts together with the hero text
+const NODE_SPREAD = 1.1    // s over which the nodes start
+const NODE_FLIGHT = 0.75   // s each node needs to reach its place
+const nodeStart = (i) => INTRO_DELAY + (i / NODE_COUNT) * NODE_SPREAD
+const nodeArrive = (i) => nodeStart(i) + NODE_FLIGHT
+const EDGE_GROW = 0.5 // s each edge needs to grow from one node to the other
+// the last edge starts when the last node arrives and then still needs to grow
+const INTRO_END = nodeArrive(NODE_COUNT - 1) + EDGE_GROW
+function easeOutBack(p) {
+  const c1 = 1.4, c3 = c1 + 1
+  return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2)
+}
 // Cursor links: a node connects inside CONNECT_R and lets go beyond RELEASE_R (px)
 const MAX_LINKS = 2
 const CONNECT_R = 230
@@ -36,7 +51,7 @@ function BrainNet({ mouseRef }) {
   const tmp = useMemo(() => ({ mvp: new THREE.Matrix4(), world: new THREE.Vector3(), ndc: new THREE.Vector3(), cursor: new THREE.Vector3() }), [])
   const scr = useMemo(() => ({ sx: new Float32Array(NODE_COUNT), sy: new Float32Array(NODE_COUNT), front: new Uint8Array(NODE_COUNT) }), [])
 
-  const { edgeGeo, nodeGeo, local } = useMemo(() => {
+  const { edgeGeo, nodeGeo, local, shown, edgeArrive, edgeFinal } = useMemo(() => {
     const vecs = []
     for (let i = 0; i < NODE_COUNT; i++) {
       const theta = Math.random() * Math.PI * 2
@@ -61,16 +76,27 @@ function BrainNet({ mouseRef }) {
         if (!seen.has(key)) { seen.add(key); pairs.push([i, j]) }
       }
     }
+    // edges in the order their second node arrives, so the draw range can simply grow
+    pairs.sort((p, q) => Math.max(p[0], p[1]) - Math.max(q[0], q[1]))
+    const edgeArrive = pairs.map(([a, b]) => nodeArrive(Math.max(a, b)))
+    // each edge grows from the node that arrived first (lower index) towards the other one
     const edgePos = []
-    pairs.forEach(([a, b]) => {
+    pairs.forEach(([p, q]) => {
+      const [a, b] = p < q ? [p, q] : [q, p]
       edgePos.push(vecs[a].x, vecs[a].y, vecs[a].z, vecs[b].x, vecs[b].y, vecs[b].z)
     })
     const edgeGeo = new THREE.BufferGeometry()
+    // drawn edge positions: the far end is animated during the intro, final positions afterwards
+    const edgeFinal = new Float32Array(edgePos)
     edgeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(edgePos), 3))
     const local = new Float32Array(vecs.flatMap(v => [v.x, v.y, v.z]))
+    // drawn positions: animated during the intro, identical to `local` afterwards
+    const shown = new Float32Array(local.length)
     const nodeGeo = new THREE.BufferGeometry()
-    nodeGeo.setAttribute('position', new THREE.BufferAttribute(local, 3))
-    return { edgeGeo, nodeGeo, local }
+    nodeGeo.setAttribute('position', new THREE.BufferAttribute(shown, 3))
+    nodeGeo.setDrawRange(0, 0)
+    edgeGeo.setDrawRange(0, 0)
+    return { edgeGeo, nodeGeo, local, shown, edgeArrive, edgeFinal }
   }, [])
 
   const edgeMat = useMemo(() => new THREE.LineBasicMaterial({ color: '#818cf8', transparent: true, opacity: 0.12 }), [])
@@ -113,6 +139,48 @@ function BrainNet({ mouseRef }) {
   }, [gl])
 
   const lastDark = useRef(null)
+  const intro = useRef({ t: 0, done: false })
+
+  // Skip the build-up for people who prefer reduced motion
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) intro.current.t = INTRO_END
+  }, [])
+
+  function updateIntro(dt) {
+    const it = intro.current
+    it.t += dt
+    const t = it.t
+    let started = 0
+    for (let i = 0; i < NODE_COUNT; i++) {
+      const p = Math.min(1, Math.max(0, (t - nodeStart(i)) / NODE_FLIGHT))
+      if (t >= nodeStart(i)) started = i + 1
+      const k = p >= 1 ? 1 : easeOutBack(p)
+      shown[i * 3] = local[i * 3] * k
+      shown[i * 3 + 1] = local[i * 3 + 1] * k
+      shown[i * 3 + 2] = local[i * 3 + 2] * k
+    }
+    nodeGeo.attributes.position.needsUpdate = true
+    nodeGeo.setDrawRange(0, started)
+    let edges = 0
+    while (edges < edgeArrive.length && edgeArrive[edges] <= t) edges++
+    // grow each started edge from its first node to its second (ease-out)
+    const pos = edgeGeo.attributes.position.array
+    for (let e = 0; e < edges; e++) {
+      const p = Math.min(1, (t - edgeArrive[e]) / EDGE_GROW)
+      const k = 1 - (1 - p) * (1 - p)
+      const o = e * 6
+      for (let d = 0; d < 3; d++) pos[o + 3 + d] = edgeFinal[o + d] + (edgeFinal[o + 3 + d] - edgeFinal[o + d]) * k
+    }
+    edgeGeo.attributes.position.needsUpdate = true
+    edgeGeo.setDrawRange(0, edges * 2)
+    if (t >= INTRO_END) {
+      it.done = true
+      nodeGeo.setDrawRange(0, Infinity)
+      edgeGeo.attributes.position.array.set(edgeFinal)
+      edgeGeo.attributes.position.needsUpdate = true
+      edgeGeo.setDrawRange(0, Infinity)
+    }
+  }
 
   useFrame((state, delta) => {
     const group = groupRef.current
@@ -131,7 +199,10 @@ function BrainNet({ mouseRef }) {
 
     const dt = Math.min(delta, 0.1) // avoid a jump after resuming from pause
     time.current += dt
-    if (mouseRef?.current) {
+    if (!intro.current.done) updateIntro(dt)
+    // The cursor only takes effect once the orb has finished building itself; the lerp below then
+    // eases the tilt in smoothly instead of snapping
+    if (mouseRef?.current && intro.current.done) {
       const nx = (mouseRef.current.x / window.innerWidth) * 2 - 1
       const ny = -((mouseRef.current.y / window.innerHeight) * 2 - 1)
       // 0.04 per 60 fps frame, scaled so the follow speed is identical at 120 Hz
@@ -146,6 +217,7 @@ function BrainNet({ mouseRef }) {
   })
 
   function updateCursorLinks(camera, delta, dark) {
+    if (!intro.current.done) return // no cursor links while the orb is still building
     const r = rect.current
     const m = mouseRef?.current
     const mx = m ? m.x - r.left : -1e4

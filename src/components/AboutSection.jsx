@@ -1,9 +1,14 @@
-import { useRef, useEffect, useState, useLayoutEffect } from 'react'
-import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion'
+import { useRef, useEffect, useState, useLayoutEffect, useCallback } from 'react'
+import { motion, useScroll, useTransform, useSpring, useInView, useMotionValueEvent, useMotionValue } from 'framer-motion'
 import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { SplitText } from 'gsap/SplitText'
 import { Contours } from './BackgroundPatterns'
 
-const NAME_SHADOW = '0 1px 4px rgba(0,0,0,0.45), 0 3px 12px rgba(0,0,0,0.25), 0 0 60px rgba(99,102,241,0.06)'
+gsap.registerPlugin(ScrollTrigger, SplitText)
+
+// Same gradient as the hero name, so both read as one brand
+const NAME_GRADIENT = 'linear-gradient(135deg, #bfdbfe 0%, #a5b4fc 28%, #e0e7ff 52%, #818cf8 74%, #93c5fd 100%)'
 
 const FRAMEWORKS = [
   'React', 'Claude Code', 'Next.js', 'TypeScript', 'ChatGPT', 'Three.js', 'Node.js',
@@ -53,6 +58,157 @@ function Reveal({ as: Tag = 'div', delay = 0, y = 18, extraTransition, className
     >
       {children}
     </Tag>
+  )
+}
+
+// Short version of the bio in large type: the words are "read" while scrolling, brightening from
+// dim to light; names in [data-accent] end in indigo.
+function Summary({ children }) {
+  const ref = useRef()
+  useEffect(() => {
+    const mm = gsap.matchMedia()
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const split = SplitText.create(ref.current, { type: 'words' })
+      gsap.fromTo(split.words, { color: '#3f3f46' }, {
+        color: (i, el) => (el.closest('[data-accent]') ? '#a5b4fc' : '#e4e4e7'),
+        stagger: 0.1,
+        ease: 'none',
+        scrollTrigger: { trigger: ref.current, start: 'top 65%', end: 'bottom 35%', scrub: true },
+      })
+    })
+    return () => mm.revert()
+  }, [])
+  return (
+    <p ref={ref} className="text-[20px] md:text-[24px] font-medium tracking-tight leading-[1.45] text-zinc-200 [&_[data-accent]]:text-indigo-300">
+      {children}
+    </p>
+  )
+}
+
+// One paragraph of the full story with a small kicker above it
+function Chapter({ label, children }) {
+  return (
+    <div data-chapter>
+      <p data-kicker className="text-[10px] font-semibold tracking-[0.22em] uppercase text-indigo-300/70 mb-2">{label}</p>
+      <p data-text>{children}</p>
+    </div>
+  )
+}
+
+// The full story. Each chapter's lines rise out of a mask as it scrolls in; while reading, the
+// chapter closest to the middle of the screen is fully lit, the others step back, and a thin rail
+// on the left fills up with the reading progress.
+function Story({ children }) {
+  const rootRef = useRef()
+  const railRef = useRef()
+
+  useEffect(() => {
+    const mm = gsap.matchMedia()
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const chapters = gsap.utils.toArray('[data-chapter]', rootRef.current)
+      chapters.forEach((ch) => {
+        let revealed = false
+        const reveal = { trigger: ch, start: 'top 85%', once: true }
+        gsap.from(ch.querySelector('[data-kicker]'), { opacity: 0, x: -10, duration: 0.6, ease: 'power2.out', scrollTrigger: reveal })
+        SplitText.create(ch.querySelector('[data-text]'), {
+          type: 'lines',
+          mask: 'lines',
+          autoSplit: true, // re-split on resize so the line breaks stay right
+          onSplit(self) {
+            if (revealed) return // a re-split after the reveal must not play it again
+            return gsap.from(self.lines, {
+              yPercent: 100, duration: 0.9, ease: 'expo.out', stagger: 0.03,
+              scrollTrigger: reveal,
+              onComplete: () => { revealed = true },
+            })
+          },
+        })
+      })
+
+      // reading focus: the chapter closest to the middle of the screen is lit
+      let focused = -1
+      const focus = () => {
+        const mid = window.innerHeight / 2
+        let best = 0, bestD = Infinity
+        chapters.forEach((ch, i) => {
+          const r = ch.getBoundingClientRect()
+          const d = r.top > mid ? r.top - mid : r.bottom < mid ? mid - r.bottom : 0
+          if (d < bestD) { bestD = d; best = i }
+        })
+        if (best === focused) return
+        focused = best
+        chapters.forEach((ch, i) => gsap.to(ch, { opacity: i === best ? 1 : 0.4, duration: 0.45, overwrite: 'auto' }))
+      }
+      ScrollTrigger.create({ trigger: rootRef.current, start: 'top bottom', end: 'bottom top', onUpdate: focus, onRefresh: focus })
+
+      gsap.fromTo(railRef.current, { scaleY: 0 }, {
+        scaleY: 1, ease: 'none',
+        scrollTrigger: { trigger: rootRef.current, start: 'top 62%', end: 'bottom 38%', scrub: true },
+      })
+    })
+    return () => mm.revert()
+  }, [])
+
+  return (
+    <div ref={rootRef} className="relative mt-10 pl-6 py-2">
+      {/* reading progress rail */}
+      <div aria-hidden className="absolute left-0 top-2 bottom-2 w-px">
+        <div className="absolute inset-0 bg-white/[0.06]" />
+        <div ref={railRef} className="absolute inset-0 bg-gradient-to-b from-indigo-400/70 to-indigo-500/30 origin-top" style={{ transform: 'scaleY(0)' }} />
+      </div>
+      <div className="space-y-9 text-[14.5px] leading-[1.8] text-zinc-300">{children}</div>
+    </div>
+  )
+}
+
+// The name rises letter by letter out of a mask when it scrolls in. Every letter gets its own slice
+// of the gradient, so the name still reads as one continuous gradient.
+function Name({ children }) {
+  const ref = useRef()
+  useEffect(() => {
+    const el = ref.current
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const ctx = gsap.context(() => SplitText.create(el, {
+      type: 'chars,lines',
+      mask: 'lines',
+      autoSplit: true,
+      onSplit(self) {
+        const box = el.getBoundingClientRect()
+        self.chars.forEach((c) => {
+          const r = c.getBoundingClientRect()
+          Object.assign(c.style, {
+            backgroundImage: NAME_GRADIENT,
+            backgroundSize: `${box.width}px ${box.height}px`,
+            backgroundPosition: `${box.left - r.left}px ${box.top - r.top}px`,
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          })
+        })
+        if (reduced) return
+        return gsap.from(self.chars, {
+          yPercent: 115, duration: 1.1, ease: 'expo.out', stagger: 0.035,
+          scrollTrigger: { trigger: el, start: 'top 85%', once: true },
+        })
+      },
+    }))
+    return () => ctx.revert()
+  }, [])
+  return (
+    <h3
+      ref={ref}
+      className="leading-[1.1] mb-10 pb-1"
+      style={{
+        fontSize: 'clamp(2.6rem, 5vw, 3.8rem)',
+        fontWeight: 300,
+        letterSpacing: '-0.03em',
+        color: '#c7d2fe',
+        // soft indigo glow instead of a dark shadow, which would grey out the gradient
+        filter: 'drop-shadow(0 0 22px rgba(99,102,241,0.28))',
+      }}
+    >
+      {children}
+    </h3>
   )
 }
 
@@ -229,12 +385,12 @@ const STATS = [
 
 // Note that pops in just below the card once it has scrolled in (level meter + text).
 // It sits in the flow, so the row grows and it never overlaps the next card.
-function LevelHint({ level, inView, delay }) {
+function LevelHint({ level, inView }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -6, scale: 0.96 }}
-      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-      transition={{ duration: 0.4, delay: delay + 0.7, ease: [0.34, 1.56, 0.64, 1] }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -6, scale: 0.96 }}
+      transition={inView ? { duration: 0.4, delay: 0.6, ease: [0.34, 1.56, 0.64, 1] } : { duration: 0.2 }}
       className="mt-2.5 flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 origin-top-left"
     >
       <LevelMeter value={level.value} max={level.max} />
@@ -258,19 +414,16 @@ function LevelMeter({ value, max }) {
   )
 }
 
-function TimelineCard({ item, index }) {
-  const ref = useRef()
-  const inView = useInView(ref, { once: true, margin: '-60px' })
+function TimelineCard({ item, inView }) {
   const cat = CATEGORIES[item.category] || CATEGORIES.Education
   const fromLeft = item.side === 'left'
 
   return (
     <>
     <motion.div
-      ref={ref}
       initial={{ opacity: 0, x: fromLeft ? -32 : 32 }}
-      animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.55, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
+      animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: fromLeft ? -32 : 32 }}
+      transition={{ duration: inView ? 0.55 : 0.35, delay: inView ? 0.08 : 0, ease: [0.25, 0.46, 0.45, 0.94] }}
       className={`relative rounded-xl border bg-[#0d0d0d] p-5 shadow-[0_4px_24px_rgba(0,0,0,0.35)] transition-colors duration-200 ${
         item.planned ? 'border-dashed border-blue-500/30 hover:border-blue-500/50' : 'border-white/[0.07] hover:border-white/[0.12]'
       }`}
@@ -319,19 +472,18 @@ function TimelineCard({ item, index }) {
         </div>
       )}
     </motion.div>
-    {item.level && <LevelHint level={item.level} inView={inView} delay={index * 0.06} />}
+    {item.level && <LevelHint level={item.level} inView={inView} />}
     </>
   )
 }
 
-// inView comes from the row: the dot starts at scale(0), and Safari never reports
-// a zero-size element as intersecting, so it can't observe itself.
-function TimelineDot({ index, ring, inView }) {
+// inView comes from the row (set once the drawn line reaches this dot)
+function TimelineDot({ ring, inView }) {
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
-      animate={inView ? { scale: 1, opacity: 1 } : {}}
-      transition={{ duration: 0.35, delay: index * 0.06 + 0.1, ease: [0.34, 1.56, 0.64, 1] }}
+      animate={inView ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
+      transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
       className="w-3 h-3 rounded-full bg-[#0a0a0a] border-2 border-indigo-500 flex-shrink-0 z-10"
       style={{ boxShadow: ring
         ? `0 0 0 3px #0a0a0a, 0 0 0 4.5px ${ring}, 0 0 12px ${ring}`
@@ -355,35 +507,32 @@ function SemesterBar({ semesters }) {
   )
 }
 
-// One piece of a track rail. Rows in a group are separated by the gap-10 (40px) spacing,
-// so the lower half reaches into the gap to meet the next row's upper half.
-function RailSegment({ rgb, part, index, inView }) {
-  const pos = {
-    upper: { top: 0, height: '50%' },
-    lower: { top: '50%', height: 'calc(50% + 40px)' },
-    tail:  { top: '50%', height: 'calc(50% + 24px)' },
-  }[part]
-  const background = part === 'tail'
-    ? `linear-gradient(to bottom, rgba(${rgb},0.55), transparent)`
-    : `rgba(${rgb},0.55)`
-  return (
-    <motion.div
-      aria-hidden
-      initial={{ scaleY: 0 }}
-      animate={inView ? { scaleY: 1 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.06 + (part === 'upper' ? 0 : 0.25), ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="absolute w-[2px] origin-top pointer-events-none"
-      style={{ ...pos, left: 'calc(var(--tl-x) - 7px)', background }}
-    />
-  )
-}
-
 // ---------- Study fork ----------
 // At the dropout a dashed path branches off to the right of the line, runs parallel past the
 // Studium card, swings out into the free space beside the Bundeswehr card and merges back
 // into the line at the Fernstudium — the studies are paused, not over.
 const FORK_TRACK = 8 // px right of the line, mirrors the rails on the left
 const FORK_SWING = 72
+
+// A parallel line `off` px to the left of the main line, cut to the y range [y0, y1]
+function offsetPath(pts, off, y0, y1) {
+  const out = pts.map(([x, y], i) => {
+    const [ax, ay] = pts[Math.max(0, i - 1)], [bx, by] = pts[Math.min(pts.length - 1, i + 1)]
+    const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1
+    return [x - (dy / len) * off, y + (dx / len) * off]
+  })
+  const at = (y) => {
+    const i = out.findIndex(([, py]) => py >= y)
+    // beyond the end of the line (e.g. a fading tail): continue straight down from the last point
+    if (i === -1) return [out[out.length - 1][0], y]
+    if (i === 0) return [out[0][0], y]
+    const [ax, ay] = out[i - 1], [bx, by] = out[i]
+    const t = (y - ay) / (by - ay || 1)
+    return [ax + (bx - ax) * t, y]
+  }
+  const mid = out.filter(([, y]) => y > y0 && y < y1)
+  return [at(y0), ...mid, at(y1)].map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+}
 
 function useForkGeometry(containerRef) {
   const [geom, setGeom] = useState(null)
@@ -427,7 +576,26 @@ function useForkGeometry(containerRef) {
           + ` Q${xm},${mid} ${xm},${mid + r} L${xm},${bottom - r} Q${xm},${bottom} ${xb},${bottom}`
         return { ...job, d, top, bottom, mid, tip }
       })
-      setGeom({ d, h: el.offsetHeight, w: el.offsetWidth, y0: ya, y1: yb, apex: phone ? null : [x2, ym], braces })
+      // Track rails: one continuous line per track from its first to its last dot (+ fading tail),
+      // just left of the main line — drawn with the line's tip like the fork, never piecewise
+      const h = el.offsetHeight
+      const xLine = dot(0)[0]
+      const pts = [[xLine, 0], [xLine, h]]
+      const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+      const rails = []
+      TIMELINE.forEach((t, i) => {
+        if (!t.track || TIMELINE[i - 1]?.track === t.track) return
+        let j = i
+        while (TIMELINE[j + 1]?.track === t.track) j++
+        const track = TRACKS[t.track]
+        const y0 = dot(i)[1], y1 = dot(j)[1]
+        const tail = track.tail ? rows[j].offsetTop + rows[j].offsetHeight + 24 : null
+        rails.push({
+          key: t.track, rgb: track.rgb, d: offsetPath(pts, 6, y0, y1),
+          tail: tail && { d: offsetPath(pts, 6, y1, tail), y0: y1, y1: tail },
+        })
+      })
+      setGeom({ line, rails, dots: rows.map((_, i) => dot(i)[1]), d, h, w: el.offsetWidth, y0: ya, y1: yb, apex: phone ? null : [x2, ym], braces })
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -437,13 +605,13 @@ function useForkGeometry(containerRef) {
   return geom
 }
 
-// Drawn together with the main line: the clip grows with the same scroll progress
+// Drawn together with the main line: the clip grows with the line's tip (px from the top)
 // (pathLength can't be used on a dashed stroke)
 // Drawn as the main line passes, like the fork
-function SideJobBrace({ brace, geom, progress }) {
+function SideJobBrace({ brace, geom, tip }) {
   // The clip reaches a few px past both ends, otherwise it cuts the stroke at the bottom closure
   const pad = 6
-  const clipH = useTransform(progress, v => Math.max(0, Math.min(brace.bottom + pad, v * geom.h + pad) - (brace.top - pad)))
+  const clipH = useTransform(tip, v => Math.max(0, Math.min(brace.bottom + pad, v + pad) - (brace.top - pad)))
   const id = `tl-brace-${brace.startAfter}`
   return (
     <>
@@ -462,8 +630,8 @@ function SideJobBrace({ brace, geom, progress }) {
 }
 
 // Compact card at the brace tip — deliberately less detail than the main timeline cards
-function SideJobLabel({ brace, geom, progress }) {
-  const shown = useTransform(progress, v => (v * geom.h > brace.mid ? 1 : 0))
+function SideJobLabel({ brace, tip }) {
+  const shown = useTransform(tip, v => (v > brace.mid ? 1 : 0))
   const x = useTransform(shown, v => (v ? '-100%' : 'calc(-100% + 12px)'))
   const c = (a) => `rgba(${brace.rgb},${a})`
   return (
@@ -487,20 +655,48 @@ function SideJobLabel({ brace, geom, progress }) {
   )
 }
 
-function StudyFork({ geom, progress }) {
-  const clipH = useTransform(progress, v => Math.max(0, Math.min(geom.y1, v * geom.h) - geom.y0))
-  const labelOpacity = useTransform(progress, v => (v * geom.h > (geom.apex?.[1] ?? Infinity) ? 1 : 0))
+function StudyFork({ geom, tip }) {
+  const clipH = useTransform(tip, v => Math.max(0, Math.min(geom.y1, v) - geom.y0))
+  const tipH = useTransform(tip, v => Math.max(0, Math.min(geom.h, v)))
+  const labelOpacity = useTransform(tip, v => (v > (geom.apex?.[1] ?? Infinity) ? 1 : 0))
   return (
     <>
       <svg aria-hidden className="absolute inset-0 pointer-events-none overflow-visible" width={geom.w} height={geom.h}>
         <clipPath id="tl-fork-clip" clipPathUnits="userSpaceOnUse">
           <motion.rect x={-50} y={geom.y0} width={geom.w + 100} height={clipH} />
         </clipPath>
+        <clipPath id="tl-rail-clip" clipPathUnits="userSpaceOnUse">
+          <motion.rect x={-50} y={0} width={geom.w + 100} height={tipH} />
+        </clipPath>
+        {/* Main line: faint base, plus the indigo stroke drawn down to the tip (fading towards it) */}
+        <motion.linearGradient id="tl-line-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={tipH}>
+          <stop offset="0" stopColor="rgba(99,102,241,0.6)" />
+          <stop offset="0.5" stopColor="rgba(129,140,248,0.3)" />
+          <stop offset="1" stopColor="rgba(129,140,248,0)" />
+        </motion.linearGradient>
+        <path d={geom.line} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+        <g clipPath="url(#tl-rail-clip)">
+          <path d={geom.line} fill="none" stroke="url(#tl-line-grad)" strokeWidth="1" />
+          {geom.rails.map((r) => (
+            <g key={r.key}>
+              <path d={r.d} fill="none" stroke={`rgba(${r.rgb},0.55)`} strokeWidth="2" />
+              {r.tail && (
+                <>
+                  <linearGradient id={`tl-rail-tail-${r.key}`} gradientUnits="userSpaceOnUse" x1="0" y1={r.tail.y0} x2="0" y2={r.tail.y1}>
+                    <stop offset="0" stopColor={`rgba(${r.rgb},0.55)`} />
+                    <stop offset="1" stopColor={`rgba(${r.rgb},0)`} />
+                  </linearGradient>
+                  <path d={r.tail.d} fill="none" stroke={`url(#tl-rail-tail-${r.key})`} strokeWidth="2" />
+                </>
+              )}
+            </g>
+          ))}
+        </g>
         <path d={geom.d} fill="none" stroke="rgba(96,165,250,0.5)" strokeWidth="1.25"
           strokeDasharray="4 5" strokeLinecap="round" clipPath="url(#tl-fork-clip)" />
-        {geom.braces.map((b, i) => <SideJobBrace key={i} brace={b} geom={geom} progress={progress} />)}
+        {geom.braces.map((b, i) => <SideJobBrace key={i} brace={b} geom={geom} tip={tip} />)}
       </svg>
-      {geom.braces.map((b, i) => <SideJobLabel key={i} brace={b} geom={geom} progress={progress} />)}
+      {geom.braces.map((b, i) => <SideJobLabel key={i} brace={b} tip={tip} />)}
       {geom.apex && (
         <motion.span
           aria-hidden
@@ -514,39 +710,28 @@ function StudyFork({ geom, progress }) {
   )
 }
 
-function TimelineRow({ item, index }) {
+function TimelineRow({ item, inView }) {
   const track = item.track && TRACKS[item.track]
-  const prev = TIMELINE[index - 1]
-  const next = TIMELINE[index + 1]
-  const joinsPrev = track && prev?.track === item.track
-  const joinsNext = track && next?.track === item.track
   // A track's first entry anchors it; milestones and parallel entries get a ringed dot
   const ring = track && (item.milestone || item.parallelToMilitary) ? track.ring : null
-  const rowRef = useRef()
-  const inView = useInView(rowRef, { once: true, margin: '-40px' })
-
   return (
     // Phones: dot column + card column. From sm up: alternating left/right around the center line.
-    <div ref={rowRef} data-tl-row className={`relative grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 items-center ${item.roomy ? 'sm:py-12' : ''}`}>
-      {joinsPrev && <RailSegment rgb={track.rgb} part="upper" index={index} inView={inView} />}
-      {joinsNext && <RailSegment rgb={track.rgb} part="lower" index={index} inView={inView} />}
-      {track && !joinsNext && track.tail && <RailSegment rgb={track.rgb} part="tail" index={index} inView={inView} />}
-
+    <div data-tl-row className={`relative grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 items-center ${item.roomy ? 'sm:py-12' : ''}`}>
       <div className={`${item.side === 'left' ? 'flex' : 'hidden sm:flex'} col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto justify-start sm:justify-end`}>
         {item.side === 'left' && (
           <div className="w-full sm:max-w-[240px]">
-            <TimelineCard item={item} index={index} />
+            <TimelineCard item={item} inView={inView} />
           </div>
         )}
-        {item.parallelToMilitary && <ServiceContinues index={index} />}
+        {item.parallelToMilitary && <ServiceContinues inView={inView} />}
       </div>
       <div data-tl-dot className="flex flex-col items-center py-2 col-start-1 row-start-1 sm:col-start-auto sm:row-start-auto">
-        <TimelineDot index={index} ring={ring} inView={inView} />
+        <TimelineDot ring={ring} inView={inView} />
       </div>
       <div className={`${item.side === 'right' ? 'flex' : 'hidden sm:flex'} col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto justify-start`}>
         {item.side === 'right' && (
           <div className="w-full sm:max-w-[240px]">
-            <TimelineCard item={item} index={index} />
+            <TimelineCard item={item} inView={inView} />
           </div>
         )}
       </div>
@@ -555,15 +740,12 @@ function TimelineRow({ item, index }) {
 }
 
 // Compact marker on the opposite side showing that the service continues alongside the degree
-function ServiceContinues({ index }) {
-  const ref = useRef()
-  const inView = useInView(ref, { once: true, margin: '-60px' })
+function ServiceContinues({ inView }) {
   return (
     <motion.div
-      ref={ref}
       initial={{ opacity: 0, x: -16 }}
-      animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.55, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
+      animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: -16 }}
+      transition={{ duration: inView ? 0.55 : 0.3, delay: inView ? 0.15 : 0, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="hidden sm:flex items-center gap-2 rounded-lg border border-dashed border-[#a5bd84]/30 bg-[#a5bd84]/[0.04] px-3 py-2 text-[11px] text-[#a5bd84]/90"
     >
       <IconShield />
@@ -576,41 +758,22 @@ function Bio() {
   return (
     <div className="flex flex-col h-full">
       <Reveal as="h2" className="text-[15px] font-light text-zinc-500 mb-1">Mein Name ist</Reveal>
-      <Reveal
-        as="h3"
-        delay={0.08}
-        className="text-white leading-tight mb-8"
-        style={{
-          fontSize: 'clamp(2rem, 4vw, 2.8rem)',
-          fontWeight: 300,
-          letterSpacing: '-0.025em',
-          textShadow: NAME_SHADOW,
-        }}
-      >
-        Vincent Fidanli
-      </Reveal>
+      <Name>Vincent Fidanli</Name>
 
-      <ul className="-mt-4 mb-8 space-y-1.5 text-[13px] text-zinc-400">
-        {[
-          '22 Jahre',
-          'Medien- und Gestaltungstechnischer Assistent',
-          <a key="mail" href="mailto:vincent@fidanli.de" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">vincent@fidanli.de</a>,
-        ].map((item, i) => (
-          <Reveal as="li" key={i} delay={0.12 + i * 0.07} className="flex items-center gap-2.5">
-            <span className="w-1 h-1 rounded-full bg-zinc-500 flex-shrink-0" />
-            {item}
-          </Reveal>
-        ))}
-      </ul>
+      <Summary>
+        Ich gestalte und entwickle digitale Anwendungen, an der Schnittstelle von Design und Code. Nach
+        Ausbildung, Fachabitur und zwei Semestern Medieninformatik an der <span data-accent>THM</span> bin
+        ich heute Zeitsoldat bei der <span data-accent>Bundeswehr</span>. Ab 2027 studiere ich nebenbei im
+        Fernstudium an der <span data-accent>IU</span> weiter.
+      </Summary>
 
-      <div className="space-y-10 text-[13.5px] leading-[1.75] text-zinc-400">
-        <Reveal as="p">Im Anschluss an mein Fachabitur und das dazugehörige Praktikum habe ich Medieninformatik an der <a href="https://www.thm.de/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">Technischen Hochschule Mittelhessen (THM)</a> studiert. Nach dem zweiten Semester habe ich mich entschieden, als Zeitsoldat zur Bundeswehr zu gehen, um der Gesellschaft und meinem Vaterland etwas zurückzugeben. Ab 2027 möchte ich das Studium neben dem Dienst als Fernstudium an der <a href="https://www.iu.de/bachelor/medieninformatik/fernstudium/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">IU Internationalen Hochschule</a> fortsetzen (Teilzeit II, 12 Semester).</Reveal>
-        <Reveal as="p">Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</Reveal>
-        <Reveal as="p">In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die Menschen wirklich nützen.</Reveal>
-        <Reveal as="p">Das Medieninformatikstudium an der THM hat mir grundsätzlich sehr gut gefallen. Parallel dazu habe ich jedoch in der Nachtschicht im Briefzentrum bei <a href="https://www.google.com/maps/search/?api=1&query=DHL+Briefzentrum+Langg%C3%B6ns" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">DHL in Langgöns</a> gearbeitet, sodass mir oft die Kraft fehlte, mich so intensiv auf Prüfungen und Testate vorzubereiten, wie ich es mir gewünscht hätte. Gleichzeitig hat mich diese Zeit viel gelehrt, das mir heute im Dienst und darüber hinaus zugutekommt: Disziplin und die Erkenntnis, dass Erfolg nicht von allein kommt. Man muss ihn sich erarbeiten.</Reveal>
-        <Reveal as="p">Im ersten Semester konnte ich noch stark auf die Vorkenntnisse aus meiner schulischen Ausbildung zurückgreifen. Spätestens im zweiten Semester wurde der Stoff jedoch neu und anspruchsvoller, und mir wurde klar, dass sich Nachtschicht, Vorlesungen, Prüfungen und Testate auf Dauer nicht in der Qualität vereinbaren ließen, die ich von mir selbst erwarte. Nach reiflicher Überlegung habe ich mich deshalb entschieden, das Studium zu pausieren und meinen Dienst als Soldat anzutreten. Ich wollte mich finanziell und persönlich festigen und ein stabiles Fundament für meinen weiteren Lebensweg schaffen. Ursprünglich hatte ich geplant, das Studium nach meiner Dienstzeit mit Unterstützung des Berufsförderungsdienstes wieder aufzunehmen.</Reveal>
-        <Reveal as="p">Im Laufe meiner Dienstzeit habe ich jedoch festgestellt, dass mir meine Aufgaben in der Mannschaftslaufbahn genug zeitlichen Freiraum lassen, um ein Teilzeit-Fernstudium neben dem Dienst zu bewältigen. Deshalb nehme ich zum 1. Januar 2027 den Bachelor of Science in Medieninformatik wieder auf, um mein Ziel, das ich schon so lange verfolge, endlich zu erreichen.</Reveal>
-      </div>
+      <Story>
+        <Chapter label="Die Anfänge">Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</Chapter>
+        <Chapter label="Praktikum">In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die Menschen wirklich nützen.</Chapter>
+        <Chapter label="Studium & Nachtschicht">Das Medieninformatikstudium an der THM hat mir grundsätzlich sehr gut gefallen. Parallel dazu habe ich jedoch in der Nachtschicht im Briefzentrum bei <a href="https://www.google.com/maps/search/?api=1&query=DHL+Briefzentrum+Langg%C3%B6ns" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">DHL in Langgöns</a> gearbeitet, sodass mir oft die Kraft fehlte, mich so intensiv auf Prüfungen und Testate vorzubereiten, wie ich es mir gewünscht hätte. Gleichzeitig hat mich diese Zeit viel gelehrt, das mir heute im Dienst und darüber hinaus zugutekommt: Disziplin und die Erkenntnis, dass Erfolg nicht von allein kommt. Man muss ihn sich erarbeiten.</Chapter>
+        <Chapter label="Die Entscheidung">Im ersten Semester konnte ich noch stark auf die Vorkenntnisse aus meiner schulischen Ausbildung zurückgreifen. Spätestens im zweiten Semester wurde der Stoff jedoch neu und anspruchsvoller, und mir wurde klar, dass sich Nachtschicht, Vorlesungen, Prüfungen und Testate auf Dauer nicht in der Qualität vereinbaren ließen, die ich von mir selbst erwarte. Nach reiflicher Überlegung habe ich mich deshalb entschieden, das Studium zu pausieren und meinen Dienst als Soldat anzutreten. Ich wollte mich finanziell und persönlich festigen und ein stabiles Fundament für meinen weiteren Lebensweg schaffen. Ursprünglich hatte ich geplant, das Studium nach meiner Dienstzeit mit Unterstützung des Berufsförderungsdienstes wieder aufzunehmen.</Chapter>
+        <Chapter label="Heute">Im Laufe meiner Dienstzeit habe ich jedoch festgestellt, dass mir meine Aufgaben in der Mannschaftslaufbahn genug zeitlichen Freiraum lassen, um ein Teilzeit-Fernstudium neben dem Dienst zu bewältigen. Deshalb nehme ich zum 1. Januar 2027 den Bachelor of Science in Medieninformatik wieder auf, um mein Ziel, das ich schon so lange verfolge, endlich zu erreichen.</Chapter>
+      </Story>
 
       <div className="mt-8 flex flex-wrap gap-2">
         {STATIONEN.map(({ label, href }, i) => (
@@ -651,7 +814,7 @@ function Bio() {
         </div>
       </Reveal>
 
-      <div className="flex-1 min-h-[6rem] flex items-center mt-8">
+      <div className="mt-10">
         <FrameworkTyper />
       </div>
     </div>
@@ -669,7 +832,6 @@ export default function AboutSection() {
   const sectionRef  = useRef()
   const glowRef     = useRef()
   const timelineRef = useRef()
-
   useEffect(() => {
     const section = sectionRef.current
     if (!section || !glowRef.current) return
@@ -719,13 +881,37 @@ export default function AboutSection() {
     }
   }, [])
 
-  const { scrollYProgress } = useScroll({
-    target: timelineRef,
-    offset: ['start 85%', 'end 55%'],
-  })
-  const rawScaleY = useTransform(scrollYProgress, [0, 1], [0, 1])
-  const lineScaleY = useSpring(rawScaleY, { stiffness: 60, damping: 22 })
   const forkGeom = useForkGeometry(timelineRef)
+  const geomRef = useRef(null)
+  geomRef.current = forkGeom
+
+  // The line's tip follows a fixed height on screen (70 % down), measured in px from the top of the
+  // timeline. Independent of the timeline's height, so switching the layout never re-draws it.
+  // Folding the story shifts the page up like scrolling up, so the line retracts along with it
+  const { scrollY } = useScroll()
+  const tipTarget = useMotionValue(0)
+  const updateTip = useCallback(() => {
+    const el = timelineRef.current
+    if (!el) return
+    tipTarget.set(Math.max(0, Math.min(el.offsetHeight, window.innerHeight * 0.7 - el.getBoundingClientRect().top)))
+  }, [tipTarget])
+  useMotionValueEvent(scrollY, 'change', updateTip)
+  useEffect(() => {
+    updateTip()
+    window.addEventListener('resize', updateTip)
+    return () => window.removeEventListener('resize', updateTip)
+  }, [updateTip, forkGeom])
+  const tip = useSpring(tipTarget, { stiffness: 60, damping: 22 })
+
+  // The timeline builds up with the line: a station appears once the drawn line reaches its dot,
+  // and disappears again when scrolling back up past it
+  const [reached, setReached] = useState(0)
+  const updateReached = useCallback((v) => {
+    const g = geomRef.current
+    if (g) setReached(g.dots.filter((y) => v >= y - 8).length)
+  }, [])
+  useMotionValueEvent(tip, 'change', updateReached)
+  useEffect(() => updateReached(tip.get()), [forkGeom, tip, updateReached])
 
   return (
     <>
@@ -752,24 +938,18 @@ export default function AboutSection() {
         <div className="max-w-7xl mx-auto px-8 relative z-10">
           <p className="section-label mb-16">Über mich</p>
 
-          <div className="grid lg:grid-cols-[1fr_1.1fr] gap-20 items-stretch">
+          <div className="grid lg:grid-cols-[1fr_1.1fr] gap-20 items-start">
 
             {/* Left: bio */}
             <Bio />
 
-            {/* Right: alternating timeline */}
-            {/* --tl-x: position of the timeline line (left edge on phones, centered from sm up) */}
-            <div ref={timelineRef} className="relative [--tl-x:6px] sm:[--tl-x:50%]">
-              <div className="absolute left-[var(--tl-x)] -translate-x-1/2 top-0 bottom-0 w-px bg-white/[0.06] origin-top" />
-              <motion.div
-                className="absolute left-[var(--tl-x)] -translate-x-1/2 top-0 w-px bg-gradient-to-b from-indigo-500/60 via-indigo-400/30 to-transparent origin-top"
-                style={{ scaleY: lineScaleY, height: '100%' }}
-              />
-              {forkGeom && <StudyFork geom={forkGeom} progress={lineScaleY} />}
+            {/* Right: alternating timeline. The line itself is drawn as an SVG path through the measured dots. */}
+            <div ref={timelineRef} className="relative">
+              {forkGeom && <StudyFork geom={forkGeom} tip={tip} />}
 
               <div className="flex flex-col gap-10">
                 {TIMELINE.map((item, i) => (
-                  <TimelineRow key={i} item={item} index={i} />
+                  <TimelineRow key={i} item={item} inView={i < reached} />
                 ))}
               </div>
             </div>
