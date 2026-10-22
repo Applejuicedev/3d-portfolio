@@ -42,7 +42,7 @@ function makeDotTexture() {
   return tex
 }
 
-function BrainNet({ mouseRef }) {
+function BrainNet({ mouseRef, onBuilt }) {
   const groupRef = useRef()
   const time = useRef(0)
   const mouseOffset = useRef({ x: 0, y: 0 })
@@ -175,6 +175,7 @@ function BrainNet({ mouseRef }) {
     edgeGeo.setDrawRange(0, edges * 2)
     if (t >= INTRO_END) {
       it.done = true
+      onBuilt?.()
       nodeGeo.setDrawRange(0, Infinity)
       edgeGeo.attributes.position.array.set(edgeFinal)
       edgeGeo.attributes.position.needsUpdate = true
@@ -312,7 +313,7 @@ function BrainNet({ mouseRef }) {
   )
 }
 
-export default function NetworkOrb3D({ mouseRef, active = true }) {
+export default function NetworkOrb3D({ mouseRef, active = true, onBuilt }) {
   return (
     <Canvas
       frameloop={active ? 'always' : 'never'}
@@ -321,7 +322,7 @@ export default function NetworkOrb3D({ mouseRef, active = true }) {
       dpr={[1, 1.5]}
       style={{ background: 'transparent' }}
     >
-      <BrainNet mouseRef={mouseRef} />
+      <BrainNet mouseRef={mouseRef} onBuilt={onBuilt} />
     </Canvas>
   )
 }

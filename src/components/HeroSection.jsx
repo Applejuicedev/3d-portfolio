@@ -34,6 +34,18 @@ export default function HeroSection() {
   const wordRef   = useRef()
   const badgesRef = useRef()
   const [heroVisible, setHeroVisible] = useState(true)
+  const glowRef = useRef()
+
+  // The orb reports when it has finished building: the glow behind it swells in from its centre,
+  // with a brief brighter flash that settles — the network "switches on"
+  const glowOn = useCallback(() => {
+    const el = glowRef.current
+    if (!el) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { gsap.set(el, { '--glow': 0.08 }); return }
+    gsap.timeline()
+      .fromTo(el, { '--glow': 0, scale: 0.6 }, { '--glow': 0.15, scale: 1.04, duration: 0.9, ease: 'power3.out' })
+      .to(el, { '--glow': 0.08, scale: 1, duration: 1.2, ease: 'power2.inOut' })
+  }, [])
   const [idx, setIdx] = useState(0)
   const firstTopic = useRef(true)
 
@@ -98,10 +110,11 @@ export default function HeroSection() {
       {/* Layer 1: Animated grid */}
       <HeroGrid />
 
-      {/* Layer 2: Ambient glow behind the orb */}
+      {/* Layer 2: Ambient glow behind the orb — switches on once the orb has built itself */}
       <div
+        ref={glowRef}
         className="absolute inset-0 pointer-events-none"
-        style={{ zIndex: 2, background: 'radial-gradient(ellipse 50% 60% at 72% 50%, rgba(99,102,241,0.08) 0%, transparent 65%)' }}
+        style={{ zIndex: 2, transformOrigin: '72% 50%', '--glow': 0, background: 'radial-gradient(ellipse 50% 60% at 72% 50%, rgba(99,102,241,var(--glow)) 0%, transparent 65%)' }}
       />
 
       {/* Layer 3: 3D Orb — right half on desktop, behind the text on phones */}
@@ -110,7 +123,7 @@ export default function HeroSection() {
         style={{ zIndex: 3, paddingTop: '80px' }}
       >
         <Suspense fallback={null}>
-          <NetworkOrb3D mouseRef={mousePos} active={heroVisible} />
+          <NetworkOrb3D mouseRef={mousePos} active={heroVisible} onBuilt={glowOn} />
         </Suspense>
       </div>
 
