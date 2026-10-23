@@ -91,3 +91,21 @@ canvas { touch-action: none; }
     opacity: 1;
   }
 }
+
+/* ── Hero: editor caret after the selected "Code" ─────────────── */
+@keyframes hero-caret { 0%, 55% { opacity: 1 } 60%, 100% { opacity: 0 } }
+
+/* ── Hero typer caret: ::after of the span it follows, zero net width so nothing shifts ── */
+.typer-caret::after {
+  content: '';
+  display: inline-block;
+  width: max(2px, 0.04em);
+  height: 0.85em;
+  margin-left: 0.04em;
+  margin-right: calc(-0.04em - max(2px, 0.04em));
+  vertical-align: -0.08em;
+  background: rgb(165 180 252 / 0.7);
+}
+.typer-blink .typer-caret::after { animation: hero-caret 1.1s step-end infinite; }
+.typer-off .typer-caret::after { opacity: 0; animation: none; }
+@media (prefers-reduced-motion: reduce) { .typer-blink .typer-caret::after { animation: none; } }

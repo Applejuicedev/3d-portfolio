@@ -15,12 +15,12 @@ const INTRO_END = Math.max(COL_END, ROW_END) + LINE_FADE + 50
 
 function easeOut2(t) { return 1 - (1 - t) * (1 - t) }
 
-function makeParticle(W, H) {
-  const col = Math.floor(Math.random() * Math.floor(W / CELL))
-  const row = Math.floor(Math.random() * Math.floor(H / CELL))
+function makeParticle(W, H, cell = CELL) {
+  const col = Math.floor(Math.random() * Math.floor(W / cell))
+  const row = Math.floor(Math.random() * Math.floor(H / cell))
   return {
-    x: col * CELL + (Math.random() - 0.5) * 6,
-    y: row * CELL + (Math.random() - 0.5) * 6,
+    x: col * cell + (Math.random() - 0.5) * 6,
+    y: row * cell + (Math.random() - 0.5) * 6,
     vx: (Math.random() - 0.5) * 0.12,
     vy: (Math.random() - 0.5) * 0.12,
     targetOpacity: 0.35 + Math.random() * 0.5,
@@ -55,7 +55,8 @@ function glowSprite(rgb, size, dpr) {
   return sprite
 }
 
-function drawStatic(ctx, W, H, elapsed, dark) {
+function drawStatic(ctx, W, H, elapsed, dark, CELL) {
+  const k = Math.min(2, CELL / 48) // crosses and rings grow a little with the cell
   ctx.clearRect(0, 0, W, H)
 
   // ── Vertical lines (column by column, left → right) ──────
@@ -95,7 +96,7 @@ function drawStatic(ctx, W, H, elapsed, dark) {
     ctx.lineWidth = 0.75
     for (let x = CELL; x < W; x += CELL * 3) {
       for (let y = CELL; y < H; y += CELL * 3) {
-        const s = 3.5
+        const s = 3.5 * k
         ctx.beginPath()
         ctx.moveTo(x - s, y); ctx.lineTo(x + s, y)
         ctx.moveTo(x, y - s); ctx.lineTo(x, y + s)
@@ -111,17 +112,47 @@ function drawStatic(ctx, W, H, elapsed, dark) {
     for (let x = CELL * 3; x < W; x += CELL * 9) {
       for (let y = CELL * 3; y < H; y += CELL * 9) {
         ctx.strokeStyle = `rgba(99,102,241,${0.08 * ringP})`
-        ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.stroke()
+        ctx.beginPath(); ctx.arc(x, y, 14 * k, 0, Math.PI * 2); ctx.stroke()
         ctx.strokeStyle = `rgba(99,102,241,${0.04 * ringP})`
-        ctx.beginPath(); ctx.arc(x, y, 28, 0, Math.PI * 2); ctx.stroke()
+        ctx.beginPath(); ctx.arc(x, y, 28 * k, 0, Math.PI * 2); ctx.stroke()
       }
     }
   }
 }
 
+
+// Star field instead of the grid: many tiny faint stars, a few brighter ones with a soft halo.
+// Seeded, so the sky looks the same on every visit; fades in once like the grid built itself.
+function drawStars(ctx, W, H, elapsed) {
+  ctx.clearRect(0, 0, W, H)
+  const fade = easeOut2(Math.max(0, Math.min(1, elapsed / 1200)))
+  if (fade <= 0) return
+  let seed = 7331
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646 }
+  const count = Math.round((W * H) / 6500)
+  for (let i = 0; i < count; i++) {
+    const x = rnd() * W, y = rnd() * H
+    const big = rnd() < 0.03
+    const r = big ? 1.1 + rnd() * 0.6 : 0.35 + rnd() * 0.65
+    const a = (big ? 0.55 + rnd() * 0.3 : 0.12 + rnd() * 0.4) * fade
+    const tint = rnd() < 0.25 ? '199,210,254' : '255,255,255'
+    if (big) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 7)
+      g.addColorStop(0, `rgba(${tint},${a * 0.25})`)
+      g.addColorStop(1, `rgba(${tint},0)`)
+      ctx.fillStyle = g
+      ctx.beginPath(); ctx.arc(x, y, r * 7, 0, Math.PI * 2); ctx.fill()
+    }
+    ctx.fillStyle = `rgba(${tint},${a})`
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill()
+  }
+}
+
 // The grid is static after its build-up, so it lives on its own canvas that is only
 // redrawn during the intro, on resize or on theme change. Only the particles animate.
-export default function HeroGrid() {
+// `grid={false}` draws just the particles (snapped to a `cell` grid), for sections that draw the
+// grid lines themselves.
+export default function HeroGrid({ grid: withGrid = true, cell = CELL, stars = false }) {
   const gridRef = useRef()
   const fxRef   = useRef()
 
@@ -139,7 +170,7 @@ export default function HeroGrid() {
     const startTime = Date.now()
 
     const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-      const p = makeParticle(window.innerWidth, window.innerHeight)
+      const p = makeParticle(window.innerWidth, window.innerHeight, cell)
       p.life = -i * 20
       p.prev = null // last drawn rect, cleared next frame
       return p
@@ -169,8 +200,11 @@ export default function HeroGrid() {
       const dark = document.documentElement.classList.contains('dark')
 
       if (dark !== lastDark) { lastDark = dark; staticDone = false }
-      if (!staticDone) {
-        drawStatic(gctx, W, H, elapsed, dark)
+      if (!staticDone && stars) {
+        drawStars(gctx, W, H, elapsed)
+        staticDone = elapsed > 1300
+      } else if (!staticDone && withGrid) {
+        drawStatic(gctx, W, H, elapsed, dark, cell)
         staticDone = elapsed > INTRO_END
       }
 
@@ -196,7 +230,7 @@ export default function HeroGrid() {
           if (p.y > H + 16) p.y = -16
 
           if (p.life >= p.maxLife) {
-            Object.assign(p, makeParticle(W, H))
+            Object.assign(p, makeParticle(W, H, cell))
             p.life = 0
             continue
           }

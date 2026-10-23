@@ -85,11 +85,28 @@ function Summary({ children }) {
   )
 }
 
-// One paragraph of the full story with a small kicker above it
-function Chapter({ label, children }) {
+const MONO = "'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, monospace"
+
+// Section label as a path, like the prompt in the hero
+export function SectionPath({ path, className = 'mb-16' }) {
   return (
-    <div data-chapter>
-      <p data-kicker className="text-[10px] font-semibold tracking-[0.22em] uppercase text-indigo-300/70 mb-2">{label}</p>
+    <p className={`text-[12.5px] text-zinc-600 ${className}`} style={{ fontFamily: MONO }}>
+      ~/<span className="text-zinc-400">{path}</span>
+    </p>
+  )
+}
+
+// One paragraph of the full story, written like a commit: short hash (+ ref) and the chapter name,
+// with a commit dot sitting on the reading rail
+function Chapter({ label, hash, gitRef, children }) {
+  return (
+    <div data-chapter className="relative">
+      <span aria-hidden className="absolute -left-[27px] top-[3px] w-[7px] h-[7px] rounded-full border border-indigo-300/70 bg-[#0a0a0a]" />
+      <p data-kicker className="flex items-baseline gap-2.5 mb-2">
+        <span className="text-[11.5px] text-zinc-600" style={{ fontFamily: MONO }}>{hash}</span>
+        {gitRef && <span className="text-[11px] text-zinc-500" style={{ fontFamily: MONO }}>({gitRef})</span>}
+        <span className="text-[10px] font-semibold tracking-[0.22em] uppercase text-indigo-300/70">{label}</span>
+      </p>
       <p data-text>{children}</p>
     </div>
   )
@@ -150,13 +167,14 @@ function Story({ children }) {
   }, [])
 
   return (
-    <div ref={rootRef} className="relative mt-10 pl-6 py-2">
+    <div ref={rootRef} data-story className="relative mt-10 pl-6 py-2">
+      <p aria-hidden className="mb-[33px] text-[12px] text-zinc-600" style={{ fontFamily: MONO }}>$ <span className="text-zinc-400">git log --reverse</span> <span className="text-zinc-700">story.md</span></p>
       {/* reading progress rail */}
       <div aria-hidden className="absolute left-0 top-2 bottom-2 w-px">
         <div className="absolute inset-0 bg-white/[0.06]" />
         <div ref={railRef} className="absolute inset-0 bg-gradient-to-b from-indigo-400/70 to-indigo-500/30 origin-top" style={{ transform: 'scaleY(0)' }} />
       </div>
-      <div className="space-y-9 text-[14.5px] leading-[1.8] text-zinc-300">{children}</div>
+      <div className="space-y-[48px] text-[14.5px] leading-[1.8] text-zinc-300">{children}</div>
     </div>
   )
 }
@@ -212,78 +230,159 @@ function Name({ children }) {
   )
 }
 
-function FrameworkTyper() {
+// Types the tools one after another (type, hold, delete, next), starting once `active`
+function useToolTyper(active) {
   const [display, setDisplay]     = useState('')
   const [isDeleting, setDeleting] = useState(false)
   const [idx, setIdx]             = useState(0)
-  const ref = useRef()
-  const inView = useInView(ref, { once: true, margin: '-60px' })
 
   useEffect(() => {
-    if (!inView) return // start typing only once the typer has been revealed
+    if (!active) return
     const target = FRAMEWORKS[idx]
-
     if (!isDeleting && display === target) {
       const t = setTimeout(() => setDeleting(true), 2100)
       return () => clearTimeout(t)
     }
     if (isDeleting && display === '') {
-      const t = setTimeout(() => {
-        setDeleting(false)
-        setIdx(i => (i + 1) % FRAMEWORKS.length)
-      }, 380)
+      const t = setTimeout(() => { setDeleting(false); setIdx(i => (i + 1) % FRAMEWORKS.length) }, 380)
       return () => clearTimeout(t)
     }
-
-    const base   = isDeleting ? 40 : 85
-    const jitter = Math.random() * 22
     const t = setTimeout(() => {
-      setDisplay(isDeleting
-        ? target.slice(0, display.length - 1)
-        : target.slice(0, display.length + 1)
-      )
-    }, base + jitter)
+      setDisplay(isDeleting ? target.slice(0, display.length - 1) : target.slice(0, display.length + 1))
+    }, (isDeleting ? 40 : 85) + Math.random() * 22)
     return () => clearTimeout(t)
-  }, [display, isDeleting, idx, inView])
+  }, [display, isDeleting, idx, active])
 
-  const brandColor = FRAMEWORK_COLORS[FRAMEWORKS[idx]] || '#93c5fd'
+  return { display, color: FRAMEWORK_COLORS[FRAMEWORKS[idx]] || '#93c5fd' }
+}
+
+// The story in short, as a source file: what the chapters say, as one object. Stations are links,
+// the tools are typed into `arbeitetMit`.
+const K = ({ children }) => <span className="text-sky-200/70">{children}</span>          // key
+const S = ({ children }) => <span className="text-amber-100/60">'{children}'</span>      // string
+const N = ({ children }) => <span className="text-emerald-200/70">{children}</span>      // number
+const P = ({ children }) => <span className="text-zinc-600">{children}</span>             // punctuation
+const C = ({ children }) => <span className="text-zinc-600">{'  // '}{children}</span>    // comment
+const L = ({ href, children }) => (
+  <a href={href} target="_blank" rel="noopener noreferrer"
+    className="text-amber-100/60 underline decoration-white/15 underline-offset-[3px] transition-colors duration-150 hover:text-white hover:decoration-white/40">'{children}'</a>
+)
+
+// story.md: the same story as a compact record, with a few things the text doesn't say
+const H = ({ level = 1, children }) => <><span className="text-zinc-600">{'#'.repeat(level)} </span><span className="text-indigo-300/80">{children}</span></>
+const Li = ({ when, children }) => <><span className="text-zinc-600">- </span>{when && <span className="text-emerald-200/60">{when.padEnd(13)}</span>}<span className="text-zinc-400">{children}</span></>
+const B = ({ children }) => <span className="text-zinc-200"><span className="text-zinc-600">**</span>{children}<span className="text-zinc-600">**</span></span>
+const MD_LINES = [
+  <H>Werdegang</H>,
+  '',
+  <Li when="2020 – 2022">MGTA · Berufliche Schule Butzbach</Li>,
+  <Li when="2022 – 2023">Fachabitur</Li>,
+  <Li when="2023 – 2024">Praktikum · Mastercode Applications</Li>,
+  <Li when="2024 – 2025">Medieninformatik · THM, 2 Semester</Li>,
+  <Li when="2024 – 2025">Nachtschicht · DHL Briefzentrum</Li>,
+  <Li when="2025 – 2029">Soldat auf Zeit · Leichter Späher</Li>,
+  <Li when="ab 2027">B.Sc. Medieninformatik · IU, Teilzeit</Li>,
+  '',
+  <H level={2}>Gerade in Arbeit</H>,
+  <Li><B>Dienstzeit</B> – App für Soldaten</Li>,
+  <Li><B>Creator's Journal</B> – Garmin-Dashboard</Li>,
+  '',
+  <H level={2}>Kontakt</H>,
+  <><span className="text-zinc-600">&lt;</span><a href="mailto:vincent@fidanli.de" className="text-amber-100/60 underline decoration-white/15 underline-offset-[3px] transition-colors duration-150 hover:text-white">vincent@fidanli.de</a><span className="text-zinc-600">&gt;</span></>,
+]
+
+function ProfileFile() {
+  const ref = useRef()
+  const [tab, setTab] = useState('ts')
+  const inView = useInView(ref, { once: true, margin: '-60px' })
+  const tool = useToolTyper(inView)
+  const lines = [
+    <><span className="text-violet-300/60">export const</span> <span className="text-zinc-200">vincent</span> <P>= {'{'}</P></>,
+    <>  <K>alter</K><P>:</P> <N>22</N><P>,</P></>,
+    <>  <K>rolle</K><P>:</P> <S>Zeitsoldat · Medieninformatik</S><P>,</P></>,
+    <>  <K>ausbildung</K><P>: [</P><S>MGTA</S><P>, </P><S>Fachabitur</S><P>],</P><C>DQR-Niveau 4</C></>,
+    <>  <K>praktikum</K><P>:</P> <S>6 Monate Webentwicklung</S><P>,</P></>,
+    <>  <K>studium</K><P>: {'{'}</P> <K>thm</K><P>:</P> <S>pausiert</S><P>,</P> <K>iu</K><P>:</P> <S>ab 2027</S> <P>{'}'},</P></>,
+    <>  <K>dienst</K><P>:</P> <S>2025 – mind. 2029</S><P>,</P></>,
+    <>  <K>stationen</K><P>: [</P></>,
+    ...STATIONEN.map(({ label, href }) => <>    <L href={href}>{label}</L><P>,</P></>),
+    <>  <P>],</P></>,
+    <>  <K>arbeitetMit</K><P>:</P> <span className="text-amber-100/60">'</span><span style={{ color: tool.color, transition: 'color .25s ease' }}>{tool.display}</span><span className="typer-blink"><span className="typer-caret" /></span><span className="text-amber-100/60">'</span><P>,</P></>,
+    <>  <K>verfügbar</K><P>:</P> <N>2029</N><P>,</P><C><span className="text-amber-300/60">●</span> Praktika & Werkstudentenstellen</C></>,
+    <P>{'}'}</P>,
+  ]
+  // Desktop: the file's bottom edge lines up with the bottom of the last timeline card. The space
+  // that takes is shared out so the gap summary → story and the gap story → file are the same.
+  // Re-checked whenever sizes change.
+  const wrapRef = useRef()
+  useEffect(() => {
+    const wrap = wrapRef.current
+    const section = wrap.closest('#uber-mich')
+    const story = section.querySelector('[data-story]')
+    const wide = window.matchMedia('(min-width: 1024px)')
+    let raf = 0
+    const align = () => {
+      const card = [...section.querySelectorAll('[data-tl-row]')].pop()?.querySelector('.rounded-xl.p-5')
+      if (!card || !wide.matches) { wrap.style.paddingTop = ''; story.style.marginTop = ''; return }
+      const top = parseFloat(story.style.marginTop || 0) ? parseFloat(story.style.marginTop) - 40 : 0 // mt-10 base
+      const bottom = parseFloat(wrap.style.paddingTop) || 0
+      const extra = Math.max(0, top + bottom + card.getBoundingClientRect().bottom - wrap.getBoundingClientRect().bottom)
+      // with no extra space the gap below the story is 8px larger than the one above it
+      const t = Math.max(0, Math.round((extra + 8) / 2))
+      const b = Math.max(0, Math.round(extra - t))
+      if (Math.abs(t - top) < 1 && Math.abs(b - bottom) < 1) return
+      story.style.marginTop = `${40 + t}px`
+      wrap.style.paddingTop = `${b}px`
+      ScrollTrigger.refresh()
+    }
+    const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(align) }
+    const ro = new ResizeObserver(schedule)
+    ro.observe(section.querySelector('[data-tl-row]').parentElement)
+    ro.observe(wrap.parentElement)
+    wide.addEventListener('change', schedule)
+    document.fonts?.ready.then(schedule)
+    schedule()
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); wide.removeEventListener('change', schedule) }
+  }, [])
 
   return (
-    <div
-      ref={ref}
-      className="w-full border-t border-white/[0.06] pt-6"
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? 'none' : 'translate3d(0, 18px, 0)',
-        transition: `opacity 0.6s ${REVEAL_EASE}, transform 0.6s ${REVEAL_EASE}`,
-      }}
-    >
-      <p className="text-[10px] font-semibold text-zinc-500 tracking-[0.22em] uppercase mb-4">
-        Ich arbeite mit
-      </p>
-      <div className="flex items-end gap-0" style={{ minHeight: '4.4rem' }}>
-        <span
-          className="font-light tracking-tight leading-none"
-          style={{
-            fontSize: 'clamp(2.6rem, 4.5vw, 3.8rem)',
-            color: brandColor,
-            minWidth: '1ch',
-            transition: 'color 0.25s ease',
-          }}
-        >
-          {display}
-        </span>
-        <span
-          className="inline-block ml-1 mb-[4px] rounded-[1px] flex-shrink-0"
-          style={{
-            width: 3,
-            height: 'clamp(1.9rem, 3.4vw, 2.8rem)',
-            background: brandColor,
-            animation: 'blink 1.1s ease-in-out infinite',
-            transition: 'background 0.25s ease',
-          }}
-        />
+    <div ref={wrapRef} className="mt-12">
+    <Reveal>
+      {/* heading for the summary: what follows is the story in short */}
+      <p className="mb-2 text-[12px] text-zinc-600" style={{ fontFamily: MONO }}>$ <span className="text-zinc-400">cat</span> {tab === 'ts' ? 'vincent.ts' : 'story.md'}</p>
+      <h3 className="mb-5 text-[24px] font-medium tracking-tight text-zinc-100">Auf einen Blick</h3>
+      <div ref={ref} className="rounded-lg border border-white/[0.07] bg-[#0b0b0d]/80 overflow-hidden" style={{ fontFamily: MONO }}>
+        <div className="flex items-stretch border-b border-white/[0.06] text-[11.5px]">
+          {[['ts', 'vincent.ts'], ['md', 'story.md']].map(([id, name]) => (
+            <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+              className={`px-4 py-2 border-r border-white/[0.06] border-t transition-colors duration-150 ${tab === id
+                ? 'bg-white/[0.03] text-zinc-300 border-t-indigo-400/50'
+                : 'border-t-transparent text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.02]'}`}>
+              {name}
+            </button>
+          ))}
+        </div>
+        {/* both files sit in the same grid cell, so the panel always has the taller one's height
+            and switching tabs never moves anything */}
+        <div className="grid py-4 overflow-x-auto text-[13px] leading-[1.85]">
+          {[['ts', lines], ['md', MD_LINES]].map(([id, rows]) => (
+            <div key={id} aria-hidden={tab !== id} className={`[grid-area:1/1] ${tab === id ? '' : 'invisible'}`}>
+              {rows.map((line, i) => (
+                <div key={i} className="grid grid-cols-[44px_1fr] pr-4 whitespace-pre">
+                  <span className="text-right pr-4 text-zinc-700 tabular-nums select-none">{i + 1}</span>
+                  <span className="text-zinc-400">{line}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        {/* status bar, like the bottom of an editor window */}
+        <div className="flex items-center justify-between gap-4 border-t border-white/[0.06] px-4 py-1.5 text-[11px] text-zinc-600 whitespace-nowrap overflow-hidden">
+          <span>⎇ main <span className="ml-3">✓ 0 Probleme</span></span>
+          <span className="hidden sm:inline">{tab === 'ts' ? 'TypeScript' : 'Markdown'} · UTF-8 · LF</span>
+        </div>
       </div>
+    </Reveal>
     </div>
   )
 }
@@ -321,7 +420,6 @@ function IconShield() {
 const ICONS = { Education: <IconGraduation />, Work: <IconBriefcase />, Military: <IconShield />, Freelance: <IconBriefcase /> }
 
 const TIMELINE = [
-  { year: '2016 – 2020', title: 'Realschulabschluss', org: 'Schrenzerschule Butzbach', desc: 'Schulische Grundlage mit frühem Interesse an Technik und Design.', category: 'Education', side: 'right' },
   {
     year: '2020 – 2022', title: 'Medien- & Gestaltungstechnischer Assistent', org: 'Berufliche Schule Butzbach',
     level: { label: 'DQR-Niveau 4', detail: 'Deutscher Qualifikationsrahmen', value: 4, max: 8 },
@@ -358,7 +456,7 @@ const TIMELINE = [
 // Side jobs: a yellow curly brace beside the line spanning their period, between two stations
 // (`afterRow` / `beforeRow` = the gaps it starts and ends in). Desktop only — no room on phones.
 const SIDE_JOBS = [
-  { badge: 'Nebenjob', title: 'Nachtschicht im Briefzentrum', org: 'DHL', period: 'März 2024 – Aug. 2025', rgb: '250,204,21', startAfter: 3, endAfter: 4 },
+  { badge: 'Nebenjob', title: 'Nachtschicht im Briefzentrum', org: 'DHL', period: 'März 2024 – Aug. 2025', rgb: '250,204,21', startAfter: 2, endAfter: 3 },
 ]
 
 // Tracks connect timeline entries that belong together (drawn as a colored rail beside the main line)
@@ -374,13 +472,6 @@ const STATIONEN = [
   { label: 'THM', href: 'https://www.thm.de/' },
   { label: 'Bundeswehr', href: 'https://www.bundeswehr.de/' },
   { label: 'IU Fernstudium', href: 'https://www.iu.de/bachelor/medieninformatik/fernstudium/' },
-]
-
-const STATS = [
-  { value: '22',  label: 'Jahre alt' },
-  { value: '6+',  label: 'Monate Praktikum' },
-  { value: '3+',  label: 'Projekte' },
-  { value: 'IU',  label: 'Hochschule' },
 ]
 
 // Note that pops in just below the card once it has scrolled in (level meter + text).
@@ -402,13 +493,16 @@ function LevelHint({ level, inView }) {
   )
 }
 
-// Ascending bars, the first `value` of `max` lit — e.g. DQR level 4 of 8
+// Pyramid of `max` tiers, the bottom `value` lit — e.g. DQR level 4 of 8
 function LevelMeter({ value, max }) {
+  const W = 16, H = 13, step = H / max, gap = 0.45
+  const half = (y) => (W / 2) * (y / H) // sides run straight up to the apex
   return (
-    <svg aria-hidden viewBox={`0 0 ${max * 3 - 1} 12`} className="h-3 flex-shrink-0" style={{ width: max * 3 - 1 }}>
+    <svg aria-hidden viewBox={`0 0 ${W} ${H}`} className="flex-shrink-0" style={{ width: W + 2, height: H + 1 }}>
       {Array.from({ length: max }, (_, i) => {
-        const h = 3 + (9 * i) / (max - 1)
-        return <rect key={i} x={i * 3} y={12 - h} width="2" height={h} rx="0.5" fill={i < value ? 'rgba(212,212,216,0.75)' : 'rgba(255,255,255,0.12)'} />
+        const yb = H - i * step, yt = yb - step + gap
+        const pts = [[W / 2 - half(yb), yb], [W / 2 + half(yb), yb], [W / 2 + half(yt), yt], [W / 2 - half(yt), yt]]
+        return <polygon key={i} points={pts.map((p) => p.join(',')).join(' ')} fill={i < value ? 'rgba(212,212,216,0.75)' : 'rgba(255,255,255,0.12)'} />
       })}
     </svg>
   )
@@ -756,7 +850,7 @@ function ServiceContinues({ inView }) {
 
 function Bio() {
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0">
       <Reveal as="h2" className="text-[15px] font-light text-zinc-500 mb-1">Mein Name ist</Reveal>
       <Name>Vincent Fidanli</Name>
 
@@ -768,55 +862,14 @@ function Bio() {
       </Summary>
 
       <Story>
-        <Chapter label="Die Anfänge">Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</Chapter>
-        <Chapter label="Praktikum">In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die Menschen wirklich nützen.</Chapter>
-        <Chapter label="Studium & Nachtschicht">Das Medieninformatikstudium an der THM hat mir grundsätzlich sehr gut gefallen. Parallel dazu habe ich jedoch in der Nachtschicht im Briefzentrum bei <a href="https://www.google.com/maps/search/?api=1&query=DHL+Briefzentrum+Langg%C3%B6ns" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">DHL in Langgöns</a> gearbeitet, sodass mir oft die Kraft fehlte, mich so intensiv auf Prüfungen und Testate vorzubereiten, wie ich es mir gewünscht hätte. Gleichzeitig hat mich diese Zeit viel gelehrt, das mir heute im Dienst und darüber hinaus zugutekommt: Disziplin und die Erkenntnis, dass Erfolg nicht von allein kommt. Man muss ihn sich erarbeiten.</Chapter>
-        <Chapter label="Die Entscheidung">Im ersten Semester konnte ich noch stark auf die Vorkenntnisse aus meiner schulischen Ausbildung zurückgreifen. Spätestens im zweiten Semester wurde der Stoff jedoch neu und anspruchsvoller, und mir wurde klar, dass sich Nachtschicht, Vorlesungen, Prüfungen und Testate auf Dauer nicht in der Qualität vereinbaren ließen, die ich von mir selbst erwarte. Nach reiflicher Überlegung habe ich mich deshalb entschieden, das Studium zu pausieren und meinen Dienst als Soldat anzutreten. Ich wollte mich finanziell und persönlich festigen und ein stabiles Fundament für meinen weiteren Lebensweg schaffen. Ursprünglich hatte ich geplant, das Studium nach meiner Dienstzeit mit Unterstützung des Berufsförderungsdienstes wieder aufzunehmen.</Chapter>
-        <Chapter label="Heute">Im Laufe meiner Dienstzeit habe ich jedoch festgestellt, dass mir meine Aufgaben in der Mannschaftslaufbahn genug zeitlichen Freiraum lassen, um ein Teilzeit-Fernstudium neben dem Dienst zu bewältigen. Deshalb nehme ich zum 1. Januar 2027 den Bachelor of Science in Medieninformatik wieder auf, um mein Ziel, das ich schon so lange verfolge, endlich zu erreichen.</Chapter>
+        <Chapter label="Die Anfänge" hash="a1c3f0e">Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</Chapter>
+        <Chapter label="Praktikum" hash="7be21d4">In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die Menschen wirklich nützen.</Chapter>
+        <Chapter label="Studium & Nachtschicht" hash="c94e0a2">Das Medieninformatikstudium an der THM hat mir grundsätzlich sehr gut gefallen. Parallel dazu habe ich jedoch in der Nachtschicht im Briefzentrum bei <a href="https://www.google.com/maps/search/?api=1&query=DHL+Briefzentrum+Langg%C3%B6ns" target="_blank" rel="noopener noreferrer" className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white">DHL in Langgöns</a> gearbeitet, sodass mir oft die Kraft fehlte, mich so intensiv auf Prüfungen und Testate vorzubereiten, wie ich es mir gewünscht hätte. Gleichzeitig hat mich diese Zeit viel gelehrt, das mir heute im Dienst und darüber hinaus zugutekommt: Disziplin und die Erkenntnis, dass Erfolg nicht von allein kommt. Man muss ihn sich erarbeiten.</Chapter>
+        <Chapter label="Die Entscheidung" hash="3f8d6b1" gitRef="pause">Im ersten Semester konnte ich noch stark auf die Vorkenntnisse aus meiner schulischen Ausbildung zurückgreifen. Spätestens im zweiten Semester wurde der Stoff jedoch neu und anspruchsvoller, und mir wurde klar, dass sich Nachtschicht, Vorlesungen, Prüfungen und Testate auf Dauer nicht in der Qualität vereinbaren ließen, die ich von mir selbst erwarte. Nach reiflicher Überlegung habe ich mich deshalb entschieden, das Studium zu pausieren und meinen Dienst als Soldat anzutreten. Ich wollte mich finanziell und persönlich festigen und ein stabiles Fundament für meinen weiteren Lebensweg schaffen. Ursprünglich hatte ich geplant, das Studium nach meiner Dienstzeit mit Unterstützung des Berufsförderungsdienstes wieder aufzunehmen.</Chapter>
+        <Chapter label="Heute" hash="e05c7f9" gitRef="HEAD → main">Im Laufe meiner Dienstzeit habe ich jedoch festgestellt, dass mir meine Aufgaben in der Mannschaftslaufbahn genug zeitlichen Freiraum lassen, um ein Teilzeit-Fernstudium neben dem Dienst zu bewältigen. Deshalb nehme ich zum 1. Januar 2027 den Bachelor of Science in Medieninformatik wieder auf, um mein Ziel, das ich schon so lange verfolge, endlich zu erreichen.</Chapter>
       </Story>
 
-      <div className="mt-8 flex flex-wrap gap-2">
-        {STATIONEN.map(({ label, href }, i) => (
-          <Reveal
-            as="a"
-            key={label}
-            delay={i * 0.07}
-            y={10}
-            extraTransition="color 150ms ease, border-color 150ms ease"
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md bg-white/[0.04] border border-white/[0.07] text-zinc-400 transition-colors duration-150 hover:text-white hover:border-white/20"
-          >
-            {label}
-            <svg aria-hidden="true" viewBox="0 0 12 12" className="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2h6v6M10 2 3 9" /></svg>
-          </Reveal>
-        ))}
-      </div>
-
-      <div className="mt-10 grid grid-cols-2 gap-3">
-        {STATS.map(({ value, label }, i) => (
-          <Reveal key={label} delay={(i % 2) * 0.08} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className="text-[22px] font-bold tracking-tight text-white">{value}</div>
-            <div className="text-[12px] text-zinc-500 mt-0.5">{label}</div>
-          </Reveal>
-        ))}
-      </div>
-
-      <Reveal className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 flex items-center gap-3">
-        <span
-          className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0"
-          style={{ boxShadow: '0 0 8px rgba(52,211,153,0.75)' }}
-        />
-        <div>
-          <div className="text-[13px] font-medium text-emerald-400 tracking-tight">Verfügbar ab 2029</div>
-          <div className="text-[11px] text-zinc-500 mt-0.5">Offen für Praktika &amp; Werkstudentenstellen</div>
-        </div>
-      </Reveal>
-
-      <div className="mt-10">
-        <FrameworkTyper />
-      </div>
+      <ProfileFile />
     </div>
   )
 }
@@ -935,8 +988,8 @@ export default function AboutSection() {
           }}
         />
 
-        <div className="max-w-7xl mx-auto px-8 relative z-10">
-          <p className="section-label mb-16">Über mich</p>
+        <div className="px-6 sm:px-10 lg:px-16 relative z-10">
+          <SectionPath path="über-mich" />
 
           <div className="grid lg:grid-cols-[1fr_1.1fr] gap-20 items-start">
 

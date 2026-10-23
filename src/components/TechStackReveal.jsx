@@ -307,6 +307,120 @@ const PIN = ({ direction, count }) => {
   ))
 }
 
+// ── Motherboard texture ─────────────────────────────────────────
+// A static, very faint board behind everything: IC footprints with pins, parallel bus traces with
+// 45° bends, small passives, vias, mounting holes and silkscreen labels. Deterministic, so it looks
+// the same on every visit; faded out towards the edges so it stays in the background.
+const MB_W = 1600, MB_H = 1100
+const MB_ICS = [
+  { x: 80,   y: 110, w: 150, h: 150, label: 'U1' },
+  { x: 1340, y: 150, w: 180, h: 120, label: 'U2' },
+  { x: 110,  y: 760, w: 120, h: 190, label: 'U3' },
+  { x: 1360, y: 740, w: 160, h: 160, label: 'U4' },
+  { x: 690,  y: 34,  w: 220, h: 56,  label: 'J1', header: true },
+  { x: 700,  y: 1010, w: 200, h: 50, label: 'J2', header: true },
+]
+
+function buildMotherboard() {
+  const rnd = seededRnd(20261023)
+  const lines = [], pads = [], vias = [], labels = []
+  const busy = MB_ICS.map(({ x, y, w, h }) => [x - 30, y - 30, x + w + 30, y + h + 30])
+  const free = (x, y, w, h) => !busy.some(([a, b, c, d]) => x < c && x + w > a && y < d && y + h > b)
+
+  // IC packages: outline, pins along the edges, pin-1 mark, label
+  MB_ICS.forEach(({ x, y, w, h, label, header }) => {
+    pads.push({ x, y, w, h, outline: true })
+    if (header) {
+      for (let px = x + 12; px < x + w - 8; px += 16) for (const py of [y + 14, y + h - 22]) pads.push({ x: px, y: py, w: 8, h: 8, round: true })
+    } else {
+      for (let px = x + 14; px < x + w - 10; px += 12) { lines.push(`M${px},${y} v-9`); lines.push(`M${px},${y + h} v9`) }
+      for (let py = y + 14; py < y + h - 10; py += 12) { lines.push(`M${x},${py} h-9`); lines.push(`M${x + w},${py} h9`) }
+      vias.push({ x: x + 10, y: y + 10, r: 2.5 })
+    }
+    labels.push({ x: x, y: y - 16, t: label })
+  })
+
+  // bus groups: parallel traces leaving an IC, a 45° jog, then running on towards the board centre
+  const bus = (x, y, dx, n, run1, jog, run2) => {
+    for (let i = 0; i < n; i++) {
+      const o = i * 8
+      const yy = y + o
+      const x1 = x + dx * run1, x2 = x1 + dx * jog, y2 = yy + jog * Math.sign(jog >= 0 ? 1 : -1)
+      lines.push(`M${x},${yy} H${x1} L${x2},${yy + jog} H${x2 + dx * run2}`)
+      vias.push({ x: x2 + dx * run2, y: yy + jog, r: 2 })
+    }
+  }
+  bus(230, 150, 1, 6, 90, 40, 160)
+  bus(230, 220, 1, 4, 60, -30, 120)
+  bus(1340, 180, -1, 5, 80, 50, 150)
+  bus(230, 800, 1, 5, 110, -60, 140)
+  bus(1360, 780, -1, 6, 70, -40, 170)
+  bus(1360, 860, -1, 3, 140, 30, 90)
+
+  // single meandering traces between the components
+  for (let k = 0; k < 14; k++) {
+    let x = 260 + rnd() * 1080, y = 120 + rnd() * 860
+    let d = `M${Math.round(x)},${Math.round(y)}`
+    for (let seg = 0; seg < 3; seg++) {
+      const len = 40 + rnd() * 120
+      const dir = Math.floor(rnd() * 4)
+      if (dir === 0) x += len; else if (dir === 1) x -= len
+      else { const s = rnd() < 0.5 ? 1 : -1; x += s * len * 0.5; y += (dir === 2 ? 1 : -1) * len * 0.5 }
+      d += ` L${Math.round(x)},${Math.round(y)}`
+    }
+    lines.push(d)
+    vias.push({ x, y, r: 2 })
+  }
+
+  // passives (resistors / capacitors): a body between two pads, some with a label
+  let n = 0
+  for (let tries = 0; tries < 400 && n < 46; tries++) {
+    const vert = rnd() < 0.4
+    const w = vert ? 8 : 18, h = vert ? 18 : 8
+    const x = 40 + rnd() * (MB_W - 80), y = 40 + rnd() * (MB_H - 80)
+    if (!free(x, y, w, h)) continue
+    busy.push([x - 6, y - 6, x + w + 6, y + h + 6])
+    pads.push({ x, y, w, h, outline: true, small: true })
+    if (vert) { pads.push({ x: x + 1, y, w: 6, h: 4 }); pads.push({ x: x + 1, y: y + h - 4, w: 6, h: 4 }) }
+    else { pads.push({ x, y: y + 1, w: 4, h: 6 }); pads.push({ x: x + w - 4, y: y + 1, w: 4, h: 6 }) }
+    if (rnd() < 0.35) labels.push({ x: x + w + 4, y: y + h - 1, t: `${rnd() < 0.5 ? 'R' : 'C'}${1 + Math.floor(rnd() * 48)}` })
+    n++
+  }
+  // scattered vias
+  for (let k = 0; k < 40; k++) vias.push({ x: rnd() * MB_W, y: rnd() * MB_H, r: 1.6 })
+  return { lines, pads, vias, labels }
+}
+
+function MotherboardTexture() {
+  const [mb] = useState(buildMotherboard)
+  return (
+    <svg aria-hidden viewBox={`0 0 ${MB_W} ${MB_H}`} preserveAspectRatio="xMidYMid slice"
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      style={{
+        WebkitMaskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, black 30%, transparent 100%)',
+        maskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, black 30%, transparent 100%)',
+      }}>
+      <g fill="none" stroke="rgba(255,255,255,0.045)" strokeWidth="1" strokeLinejoin="round">
+        {mb.lines.map((d, i) => <path key={i} d={d} />)}
+      </g>
+      {mb.pads.map((p, i) => p.outline
+        ? <rect key={i} x={p.x} y={p.y} width={p.w} height={p.h} rx={p.small ? 1.5 : 4} fill={p.small ? 'none' : 'rgba(255,255,255,0.012)'} stroke="rgba(255,255,255,0.05)" />
+        : p.round
+          ? <circle key={i} cx={p.x + p.w / 2} cy={p.y + p.h / 2} r={p.w / 2} fill="none" stroke="rgba(255,255,255,0.06)" />
+          : <rect key={i} x={p.x} y={p.y} width={p.w} height={p.h} fill="rgba(255,255,255,0.05)" />)}
+      {mb.vias.map((v, i) => <circle key={i} cx={v.x} cy={v.y} r={v.r} fill="none" stroke="rgba(255,255,255,0.06)" />)}
+      {/* mounting holes */}
+      {[[36, 36], [MB_W - 36, 36], [36, MB_H - 36], [MB_W - 36, MB_H - 36]].map(([x, y]) => (
+        <g key={`${x}${y}`} fill="none" stroke="rgba(255,255,255,0.05)"><circle cx={x} cy={y} r="14" /><circle cx={x} cy={y} r="7" /></g>
+      ))}
+      <g fill="rgba(255,255,255,0.07)" fontSize="9" fontFamily="'Cascadia Code', ui-monospace, monospace" letterSpacing="0.5">
+        {mb.labels.map((l, i) => <text key={i} x={l.x} y={l.y}>{l.t}</text>)}
+        <text x={MB_W - 260} y={MB_H - 30}>VF-BOARD · REV 2026</text>
+      </g>
+    </svg>
+  )
+}
+
 export default function TechStackReveal() {
   const containerRef  = useRef()
   const sectionRef    = useRef()
@@ -487,6 +601,7 @@ export default function TechStackReveal() {
       {/* At least a full screen tall with the board centred: while the long scroll animation runs,
           the whole board is on screen */}
       <div ref={sectionRef} className="relative overflow-hidden bg-[#0a0a0a] py-40 lg:py-48 min-h-[100svh] flex flex-col justify-center">
+        <MotherboardTexture />
         {/* Pixel substrate, faded towards the edges */}
         <canvas
           ref={canvasRef}
@@ -595,19 +710,20 @@ export default function TechStackReveal() {
               </div>
             </div>
 
-            {/* Tech cards */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-4 relative" style={{ zIndex: 10 }}>
+            {/* Tech cards: a compact list on phones, three columns from sm up */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-4 relative" style={{ zIndex: 10 }}>
               {TECH.map(({ name, Icon, color, desc }, i) => (
                 <div
                   key={name}
                   ref={el => { cardRefs.current[i] = el }}
-                  className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-2 sm:px-4 py-3 sm:py-3.5 text-center sm:text-left rounded-xl border bg-[#0d0d0d] hover:bg-[#111] transition-colors duration-200"
+                  className="flex flex-row items-center gap-3 px-4 py-2.5 sm:py-3.5 text-left rounded-lg sm:rounded-xl border bg-[#0d0d0d] hover:bg-[#111] transition-colors duration-200"
                   style={{ borderColor: 'rgba(255,255,255,0.07)' }}
                 >
                   <Icon style={{ width: 18, height: 18, color, flexShrink: 0, opacity: 0.85 }} />
-                  <div className="min-w-0">
-                    <div className="text-[12px] sm:text-[13px] font-medium text-white leading-tight">{name}</div>
-                    <div className="text-[9px] sm:text-[10px] text-zinc-600 tracking-[0.06em] sm:tracking-[0.15em] uppercase mt-0.5">{desc}</div>
+                  {/* phones: name and description on one line, like a list row */}
+                  <div className="min-w-0 flex-1 flex items-baseline justify-between gap-3 sm:block">
+                    <div className="text-[13px] font-medium text-white leading-tight">{name}</div>
+                    <div className="text-[9.5px] sm:text-[10px] text-zinc-600 tracking-[0.12em] sm:tracking-[0.15em] uppercase sm:mt-0.5 truncate">{desc}</div>
                   </div>
                 </div>
               ))}

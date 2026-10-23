@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
+import { SectionPath } from './AboutSection'
 
 gsap.registerPlugin(ScrollTrigger, SplitText)
 
@@ -99,7 +100,7 @@ function ContactStatement() {
 
   return (
     <div ref={rootRef} className="bg-[#0a0a0a] pt-28 pb-24 px-6 text-center cursor-default" style={{ perspective: 600 }}>
-      <p className="section-label mb-6">Kontakt</p>
+      <SectionPath path="kontakt" className="mb-6" />
       <p
         data-statement
         className="font-bold tracking-tight leading-none select-none"

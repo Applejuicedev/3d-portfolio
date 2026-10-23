@@ -1,10 +1,14 @@
+import { SectionPath } from './AboutSection'
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { useInView } from 'framer-motion'
 import gsap from 'gsap'
-import { GridPatches } from './BackgroundPatterns'
+import { GridPattern } from './BackgroundPatterns'
+import HeroGrid from './HeroGrid'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
+
+const MONO = "'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, monospace"
 
 function GitHubIcon() {
   return (
@@ -55,37 +59,29 @@ function StatusBadge({ status }) {
   )
 }
 
-// Miniature of the hero's network orb: points on a sphere (golden spiral, tilted), each linked to
-// its two nearest neighbours. Computed once, so it looks the same on every visit.
-const MINI_ORB = (() => {
-  const n = 26, pts = []
-  for (let i = 0; i < n; i++) {
-    const y = 1 - (2 * (i + 0.5)) / n, r = Math.sqrt(1 - y * y), th = i * 2.399963
-    const x = Math.cos(th) * r, z = Math.sin(th) * r
-    // tilt a little so it doesn't look like a flat spiral
-    const yy = y * 0.94 - z * 0.34, zz = y * 0.34 + z * 0.94
-    pts.push([50 + x * 40, 50 + yy * 40, zz])
-  }
-  const edges = new Set()
-  pts.forEach((p, i) => {
-    pts.map((q, j) => [j, Math.hypot(p[0] - q[0], p[1] - q[1], (p[2] - q[2]) * 40)])
-      .filter(([j]) => j !== i).sort((a, b) => a[1] - b[1]).slice(0, 2)
-      .forEach(([j]) => edges.add(i < j ? `${i}-${j}` : `${j}-${i}`))
-  })
-  return { pts, edges: [...edges].map((e) => e.split('-').map(Number)) }
-})()
-
-function MiniOrb({ className }) {
-  const { pts, edges } = MINI_ORB
+// Miniature of the hero's Web-Apps object: a wire globe with an orbit ring and a browser window in
+// front. Every stroke is a faint line with dots along it, like the nodes of the real network.
+function MiniWeb({ className }) {
+  const line = { fill: 'none', stroke: '#818cf8', strokeOpacity: 0.22, strokeWidth: 0.35 }
+  const dots = { fill: 'none', stroke: '#a5b4fc', strokeOpacity: 0.45, strokeWidth: 0.9, strokeLinecap: 'round', strokeDasharray: '0 5.5' }
+  const both = (el) => <>{el(line)}{el(dots)}</>
+  const lats = [-26, -13, 0, 13, 26]
+  const lons = [0, 36, 72, 108, 144]
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" className={className} aria-hidden>
-      {edges.map(([a, b]) => (
-        <line key={`${a}-${b}`} x1={pts[a][0]} y1={pts[a][1]} x2={pts[b][0]} y2={pts[b][1]}
-          stroke="#818cf8" strokeOpacity={0.12 + (pts[a][2] + pts[b][2] + 2) * 0.06} strokeWidth="0.45" />
-      ))}
-      {pts.map(([x, y, z], i) => (
-        <circle key={i} cx={x} cy={y} r={0.8 + (z + 1) * 0.35} fill="#a5b4fc" fillOpacity={0.35 + (z + 1) * 0.2} />
-      ))}
+      <g transform="rotate(-18 40 40)">
+        {both((st) => <circle cx="40" cy="40" r="30" {...st} />)}
+        {lats.map((y) => { const rx = Math.sqrt(30 * 30 - y * y); return <g key={y}>{both((st) => <ellipse cx="40" cy={40 + y} rx={rx} ry={rx * 0.22} {...st} />)}</g> })}
+        {lons.map((a) => <g key={a}>{both((st) => <ellipse cx="40" cy="40" rx={Math.abs(Math.cos((a * Math.PI) / 180)) * 30 + 0.5} ry="30" {...st} />)}</g>)}
+        {both((st) => <ellipse cx="40" cy="40" rx="44" ry="12" transform="rotate(22 40 40)" {...st} />)}
+      </g>
+      {/* browser window in front */}
+      <rect x="46" y="54" width="48" height="33" rx="2.5" fill="#0a0a0a" fillOpacity="0.85" />
+      {both((st) => <rect x="46" y="54" width="48" height="33" rx="2.5" {...st} />)}
+      {both((st) => <path d="M46 61 H94" {...st} />)}
+      {[50, 53.5, 57].map((x) => <circle key={x} cx={x} cy="57.5" r="0.9" fill="#a5b4fc" fillOpacity="0.7" />)}
+      {both((st) => <rect x="61" y="56.2" width="28" height="2.6" rx="1.3" {...st} />)}
+      {both((st) => <path d="M64 69 L59.5 73.5 L64 78 M76 69 L80.5 73.5 L76 78 M71.5 67.5 L68.5 79.5" {...st} />)}
     </svg>
   )
 }
@@ -97,33 +93,45 @@ const PROJECTS = [
     status: 'Live',
     desc: 'Dieses Portfolio — React, Three.js und GSAP. Ein 3D-Netz, das sich selbst aufbaut, und scroll-getriebene Animationen in jeder Section.',
     tech: ['React', 'Three.js', 'GSAP', 'Tailwind'],
-    github: '#', demo: '#',
+    github: 'https://github.com/Applejuicedev/3d-portfolio', demo: 'https://vincentfidanli.de',
+    repo: 'Applejuicedev/3d-portfolio',
     accentRgb: '59,130,246',
-    // a miniature of the current hero: statement on the left, network orb on the right
+    // a miniature of the current hero: terminal status, numbered headline, badges, topic tabs and
+    // path buttons on the left over a star field with a grid patch; the Web-Apps globe on the right
     visual: (
       <div className="w-full h-full bg-[#0a0a0a] relative overflow-hidden">
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)', backgroundSize: '20px 20px' }} />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 45% 70% at 74% 55%, rgba(99,102,241,0.12), transparent 70%)' }} />
-        <MiniOrb className="absolute right-3 top-1/2 -translate-y-1/2 w-[46%] h-[92%]" />
-        <div className="absolute left-5 top-1/2 -translate-y-1/2 flex flex-col">
-          <span className="inline-flex items-center gap-1 self-start px-1.5 py-[2px] rounded-full border border-white/[0.08] text-[5.5px] text-zinc-400 mb-2">
-            <span className="w-[3px] h-[3px] rounded-full bg-emerald-400" style={{ boxShadow: '0 0 3px rgba(52,211,153,0.8)' }} />
-            Verfügbar ab 2029
-          </span>
-          <span className="text-[6px] text-zinc-500 mb-1">Hey, ich bin Vincent — Medieninformatiker</span>
-          <span className="text-[15px] leading-[1.05] font-medium tracking-tight text-white">Design trifft Code.</span>
-          <span className="text-[15px] leading-[1.05] font-medium tracking-tight text-zinc-500">Ich baue</span>
-          <span className="text-[15px] leading-[1.1] font-medium tracking-tight text-[#93c5fd]">Web-Apps</span>
-          <div className="flex gap-1 mt-2">
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.5) 0.5px, transparent 0.7px)', backgroundSize: '23px 19px', backgroundPosition: '3px 7px', opacity: 0.35 }} />
+        <div className="absolute left-0 top-0 h-full w-[60%]" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px)', backgroundSize: '16px 16px', backgroundPosition: '20px 2px',
+          WebkitMaskImage: 'radial-gradient(ellipse 60% 55% at 35% 50%, black 35%, transparent 100%)', maskImage: 'radial-gradient(ellipse 60% 55% at 35% 50%, black 35%, transparent 100%)' }} />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 40% 60% at 76% 52%, rgba(99,102,241,0.1), transparent 70%)' }} />
+        <MiniWeb className="absolute right-2 top-1/2 -translate-y-1/2 w-[44%] h-[92%]" />
+        <div className="absolute left-5 top-1/2 -translate-y-1/2 flex flex-col" style={{ fontFamily: MONO }}>
+          <span className="text-[5.5px] text-zinc-500">vincentfidanli@dev:~$ <span className="text-zinc-300">cat ~/.plan</span></span>
+          <span className="text-[5.5px] text-zinc-600 mb-2"><span className="text-amber-300/70">●</span> Medieninformatik · verfügbar ab 2029</span>
+          {[['01', 'Design trifft Code.', 'text-white'], ['02', 'Ich baue', 'text-zinc-500'], ['03', 'Web-Apps', 'text-[#93c5fd]']].map(([n, t, c]) => (
+            <span key={n} className="relative">
+              <span className="absolute -left-3 top-[5px] text-[4px] text-zinc-700">{n}</span>
+              <span className={`text-[15px] leading-[1.05] font-medium tracking-tight ${c}`} style={{ fontFamily: 'Inter, sans-serif' }}>{t}</span>
+            </span>
+          ))}
+          <div className="flex gap-1 mt-2" style={{ fontFamily: 'Inter, sans-serif' }}>
             {[['React', '#61DAFB'], ['Next.js', '#e2e2e2'], ['TypeScript', '#4C8DCA']].map(([l, c]) => (
               <span key={l} className="inline-flex items-center gap-[3px] px-1.5 py-[2px] rounded-full border border-white/[0.09] bg-[#0b0b0d] text-[5.5px] text-zinc-300">
                 <span className="w-[4px] h-[4px] rounded-full" style={{ background: c }} />{l}
               </span>
             ))}
           </div>
-          <div className="flex gap-1 mt-2.5">
-            <span className="px-2 py-[3px] rounded border border-indigo-400/25 bg-indigo-500/15 text-[5.5px] text-indigo-100">Projekte ansehen</span>
-            <span className="px-2 py-[3px] rounded border border-white/[0.1] text-[5.5px] text-zinc-200">Über mich</span>
+          <div className="flex gap-[2px] mt-2 self-start rounded-[3px] border border-white/[0.07] p-[2px]">
+            {[['Web', '#93c5fd'], ['3D', '#c4b5fd'], ['iOS', '#fdba74'], ['UI', '#f9a8d4'], ['KI', '#fca5a5']].map(([l, c], i) => (
+              <span key={l} className={`inline-flex items-center gap-[2px] px-1 py-[1px] rounded-[2px] text-[4.5px] ${i === 0 ? 'bg-white/[0.06] text-zinc-200' : 'text-zinc-600'}`}>
+                <span className="w-[2.5px] h-[2.5px] rounded-full" style={{ background: c, opacity: i === 0 ? 1 : 0.45 }} />{l}
+              </span>
+            ))}
+          </div>
+          <div className="flex gap-[2px] mt-1.5 self-start rounded-[3px] border border-white/[0.1] p-[2px]">
+            <span className="px-1.5 py-[2px] rounded-[2px] bg-white/[0.06] text-[5px] text-zinc-200"><span className="text-zinc-600">~/</span>projekte</span>
+            <span className="px-1.5 py-[2px] text-[5px] text-zinc-500"><span className="text-zinc-700">~/</span>über-mich</span>
           </div>
         </div>
       </div>
@@ -136,6 +144,7 @@ const PROJECTS = [
     desc: "Persönliches Tages-Journal mit Zeitplan, Garmin-Health-Dashboard (Schlaf, HRV, VO₂max, Body Battery), Hevy-Trainingsanalyse und Wochen-/Monatsplanung.",
     tech: ['Next.js', 'TypeScript', 'Prisma', 'SQLite', 'Garmin API'],
     github: 'https://github.com/Applejuicedev/creators-journal',
+    repo: 'Applejuicedev/creators-journal',
     demo: null,
     accentRgb: '16,185,129',
     visual: (
@@ -204,6 +213,7 @@ const PROJECTS = [
     desc: 'App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto nach SAZV, Monatsübersicht als PDF wie die Buchungsliste und Datenblatt für den Urlaubsantrag. Alle Daten bleiben auf dem Gerät.',
     tech: ['React Native', 'Expo SDK 57', 'TypeScript', 'Expo Router', 'SQLite', 'Vitest'],
     github: null, demo: 'https://dienstzeit-app.de', demoLabel: 'Landingpage',
+    repo: 'Applejuicedev/dienstzeit-app',
     accentRgb: '61,174,114',
     visual: (
       <div className="w-full h-full bg-[#0d0d0d] relative overflow-hidden flex items-center justify-center gap-6">
@@ -275,50 +285,9 @@ const PROJECTS = [
   },
 ]
 
-// Background: grid fragments (like the rest of the site) spread over the whole section, plus a few
-// soft greyscale blurs that scroll with the content, so only one shows up here and there.
-const PORTFOLIO_GRIDS = [
-  { style: { top: '-12%', right: '-14%' },  w: 1200, h: 980, seed: 7,  fade: 'ellipse 55% 50% at 50% 50%' },
-  { style: { top: '24%', left: '-16%' },    w: 1150, h: 940, seed: 23, fade: 'ellipse 52% 50% at 50% 50%' },
-  { style: { top: '50%', right: '-16%' },   w: 1100, h: 900, seed: 41, fade: 'ellipse 52% 50% at 50% 50%' },
-  { style: { bottom: '-14%', left: '-12%' }, w: 1100, h: 900, seed: 57, fade: 'ellipse 55% 50% at 50% 50%' },
-]
-
-// greyscale only, as large as the grid fragments (px): light-grey hazes alternating with deep black
-// pools down the section, so the field has depth
-const BLOBS = [
-  { rgb: '255,255,255', a: 0.04,  size: 760, x: 16, y: 12, dx: 12, dy: 8,   dur: 19 },
-  { rgb: '0,0,0',       a: 0.5,   size: 700, x: 86, y: 36, dx: -10, dy: 12, dur: 23 },
-  { rgb: '255,255,255', a: 0.035, size: 720, x: 18, y: 62, dx: 10, dy: -10, dur: 21 },
-  { rgb: '0,0,0',       a: 0.45,  size: 680, x: 84, y: 88, dx: -8, dy: -8,  dur: 25 },
-]
-
-function BlurSpots() {
-  const ref = useRef()
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const tweens = [...ref.current.children].map((el, i) => gsap.to(el, {
-      xPercent: BLOBS[i].dx, yPercent: BLOBS[i].dy, duration: BLOBS[i].dur,
-      ease: 'sine.inOut', yoyo: true, repeat: -1,
-    }))
-    // only drift while the section is on screen
-    const io = new IntersectionObserver(([e]) => tweens.forEach((t) => (e.isIntersecting ? t.resume() : t.pause())))
-    io.observe(ref.current)
-    return () => { io.disconnect(); tweens.forEach((t) => t.kill()) }
-  }, [])
-  return (
-    <div ref={ref} aria-hidden className="absolute inset-0 pointer-events-none">
-      {BLOBS.map((b) => (
-        <div key={`${b.x}-${b.y}`} className="absolute rounded-full" style={{
-          left: `${b.x}%`, top: `${b.y}%`, width: b.size, height: b.size,
-          marginLeft: -b.size / 2, marginTop: -b.size / 2,
-          background: `radial-gradient(circle closest-side, rgba(${b.rgb},${b.a}), rgba(${b.rgb},${b.a / 3}) 55%, transparent)`,
-          filter: 'blur(30px)',
-        }} />
-      ))}
-    </div>
-  )
-}
+// Background: the hero's grid at a much larger cell size; the glowing particles live on a
+// screen-sized canvas that stays in view while the section scrolls
+const PORTFOLIO_CELL = 120
 
 // Hover effects avoid React state and only animate transform/opacity,
 // so mouse movement never re-renders the card or triggers layout/paint.
@@ -439,6 +408,14 @@ function PortfolioCard({ project, onMount, index }) {
           <h3 className="text-[16px] font-semibold text-white tracking-tight leading-snug">
             {project.title}
           </h3>
+          {/* repo and branch, like the header of a repository */}
+          {project.repo && (
+            <p className="-mt-2 flex items-center gap-2 text-[11.5px] text-zinc-600" style={{ fontFamily: MONO }}>
+              <span className="text-zinc-500">{project.repo}</span>
+              <span className="text-zinc-700">·</span>
+              <span>⎇ {project.branch ?? 'main'}</span>
+            </p>
+          )}
 
           <p className="text-[13px] text-zinc-400 leading-relaxed flex-1">
             {project.desc}
@@ -492,7 +469,7 @@ function SectionHeader() {
         transition: 'opacity 0.6s ease, transform 0.6s ease',
       }}
     >
-      <p className="section-label mb-4">Portfolio</p>
+      <SectionPath path="projekte" className="mb-4" />
       <h2 className="text-[28px] md:text-[36px] font-bold text-white tracking-tight mb-4 leading-tight">
         Ausgewählte Projekte
       </h2>
@@ -687,8 +664,12 @@ export default function PortfolioSection() {
       <div className="h-px bg-white/[0.05]" />
 
       <div id="portfolio" ref={sectionRef} className="relative bg-[#080808] py-32 overflow-clip">
-        <GridPatches patches={PORTFOLIO_GRIDS} />
-        <BlurSpots />
+        <GridPattern cell={PORTFOLIO_CELL} id="portfolio-grid" />
+        <div aria-hidden className="absolute inset-0 pointer-events-none">
+          <div className="sticky top-0 h-[100svh]">
+            <HeroGrid grid={false} cell={PORTFOLIO_CELL} />
+          </div>
+        </div>
 
         <div className="max-w-6xl mx-auto px-8 relative z-10">
           <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-20 items-start">

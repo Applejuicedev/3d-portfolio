@@ -1,4 +1,4 @@
-// Subtile Hintergrundmuster für die Sektionen: unregelmäßige Gitterflächen und Höhenlinien.
+// Subtile Hintergrundmuster für die Sektionen: Höhenlinien und das Gitter der Hero als Muster.
 // Beide liegen absolut positioniert hinter dem Inhalt (zIndex 0) und laufen über eine Maske weich aus.
 
 function seeded(seed) {
@@ -6,44 +6,6 @@ function seeded(seed) {
     seed = (seed * 16807) % 2147483647
     return (seed - 1) / 2147483646
   }
-}
-
-// ---------- Gitter: große, gleich große Kacheln, Linien enden versetzt ----------
-// Gleich große, quadratische Kacheln
-const GRID_STEP = 170
-
-function gridLines(w, h, seed) {
-  const rnd = seeded(seed)
-  const lines = []
-  for (let x = rnd() * 90; x < w; x += GRID_STEP) {
-    lines.push([x, h * rnd() * 0.3, x, h * (0.7 + rnd() * 0.3)])
-  }
-  for (let y = rnd() * 90; y < h; y += GRID_STEP) {
-    lines.push([w * rnd() * 0.3, y, w * (0.7 + rnd() * 0.3), y])
-  }
-  return lines
-}
-
-export function GridPatches({ patches }) {
-  return patches.map(({ style, w, h, seed, fade }, i) => {
-    const lines = gridLines(w, h, seed)
-    const mask = `radial-gradient(${fade}, #000 0%, rgba(0,0,0,0.55) 45%, transparent 100%)`
-    return (
-      <svg
-        key={i}
-        aria-hidden="true"
-        width={w}
-        height={h}
-        viewBox={`0 0 ${w} ${h}`}
-        className="absolute pointer-events-none"
-        style={{ ...style, zIndex: 0, maskImage: mask, WebkitMaskImage: mask }}
-      >
-        {lines.map(([x1, y1, x2, y2], j) => (
-          <line key={j} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(255,255,255,0.09)" strokeWidth="1" />
-        ))}
-      </svg>
-    )
-  })
 }
 
 // ---------- Höhenlinien: um jeden „Gipfel“ verschachtelte, wellige Ringe ----------
@@ -93,4 +55,30 @@ export function Contours({ hills }) {
       ))}
     </svg>
   ))
+}
+
+// The hero's grid as a repeating SVG pattern, for tall sections (a canvas that tall would be huge):
+// fine lines every `cell`, small crosses every third intersection and the faint indigo double ring
+// every ninth, exactly like HeroGrid, just at any cell size. One tile = 9 × 9 cells.
+export function GridPattern({ cell = 120, id = 'grid-pattern', line = 0.055, x = 0, y = 0, marks = true }) {
+  const T = cell * 9
+  const s = 3.5 * Math.min(2, cell / 48) // cross arm
+  const k = Math.min(2, cell / 48)        // ring scale
+  const lines = []
+  for (let i = 0; i < 9; i++) lines.push(`M${i * cell},0V${T}`, `M0,${i * cell}H${T}`)
+  const crosses = []
+  for (const x of [cell, cell * 4, cell * 7]) for (const y of [cell, cell * 4, cell * 7]) crosses.push(`M${x - s},${y}h${s * 2}M${x},${y - s}v${s * 2}`)
+  return (
+    <svg aria-hidden className="absolute inset-0 w-full h-full pointer-events-none">
+      <defs>
+        <pattern id={id} x={x} y={y} width={T} height={T} patternUnits="userSpaceOnUse">
+          <path d={lines.join('')} stroke={`rgba(255,255,255,${line})`} strokeWidth="0.5" fill="none" />
+          {marks && <path d={crosses.join('')} stroke="rgba(148,163,184,0.15)" strokeWidth="0.75" fill="none" />}
+          <circle cx={cell * 3} cy={cell * 3} r={14 * k} stroke="rgba(99,102,241,0.08)" strokeWidth="0.5" fill="none" />
+          <circle cx={cell * 3} cy={cell * 3} r={28 * k} stroke="rgba(99,102,241,0.04)" strokeWidth="0.5" fill="none" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill={`url(#${id})`} />
+    </svg>
+  )
 }

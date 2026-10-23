@@ -5,16 +5,21 @@ import * as THREE from 'three'
 const NODE_COUNT = 62 // sphere
 const MAX_EDGES = 110
 
-// Load-in: the nodes shoot out of the core one after another (with a small overshoot), and each
-// edge appears as soon as both of its nodes have arrived
+// Load-in: the nodes leave the core staggered and in random order, each on its own slightly curved
+// path (criss-cross rather than one synchronous burst), and settle without overshoot. A link
+// connects as soon as both of its nodes have arrived.
 const INTRO_DELAY = 0.35   // s, so it starts together with the hero text
-const NODE_SPREAD = 1.1    // s over which the nodes start
-const NODE_FLIGHT = 0.75   // s each node needs to reach its place
-const nodeStart = (i, n) => INTRO_DELAY + (i / n) * NODE_SPREAD
-const nodeArrive = (i, n) => nodeStart(i, n) + NODE_FLIGHT
+const NODE_JITTER = 0.8    // s, the nodes start within this window
+const FLIGHT_MIN = 0.6, FLIGHT_VAR = 0.5 // s, each node's own flight time
+const WOBBLE = 0.55        // how far a path bends away from the straight line (world units)
+const hash01 = (i) => (((i + 1) * 2654435761) % 4294967296) / 4294967296 // stable per index
+const nodeStart = (i) => INTRO_DELAY + hash01(i) * NODE_JITTER
+const nodeFlight = (i) => FLIGHT_MIN + hash01(i * 5 + 1) * FLIGHT_VAR
+const nodeArrive = (i) => nodeStart(i) + nodeFlight(i)
 const EDGE_GROW = 0.5 // s each edge needs to grow from one node to the other
-// the last edge starts when the last node arrives and then still needs to grow
-const introEnd = (n) => nodeArrive(n - 1, n) + EDGE_GROW
+const EDGE_WAIT = 0.25 // s, random pause after both ends have arrived
+const edgeStart = (e, a, b) => Math.max(nodeArrive(a), nodeArrive(b)) + hash01(e * 7 + 3) * EDGE_WAIT
+const introEnd = () => INTRO_DELAY + NODE_JITTER + FLIGHT_MIN + FLIGHT_VAR + EDGE_WAIT + EDGE_GROW
 
 // ── Shapes ──────────────────────────────────────────────────────
 // 'sphere' is a random network on a shell. The recognisable shapes are wireframes: each is a list
@@ -80,27 +85,29 @@ const extrude = (pts, z0, z1, k = 1) => {
   const sides = pts.filter((_, i) => i % k === 0).map((p) => [V(p.x, p.y, z0), V(p.x, p.y, z1)])
   return [f, b, ...sides]
 }
-const glyph = (lines, ox, oy, s, z0, z1) =>
-  lines.flatMap((l) => extrude(l.map(([x, y]) => V(ox + x * s, oy + y * s, 0)), z0, z1))
 
 // ── the five topic objects ──
 const SHAPES = {
-  // Web-Apps: a puffy 3D cloud (pillow-shaped slices of a bumpy outline) with code floating in front
-  cloud: () => {
-    const puffs = [[-0.72, -0.05, 0.5], [-0.2, 0.32, 0.62], [0.42, 0.22, 0.58], [0.86, -0.1, 0.44]]
-    const floor = -0.48
-    // outline: along the top of the puffs from left to right, then back along the flat base
-    const top = (x) => Math.max(floor, ...puffs.map(([px, py, r]) => (Math.abs(x - px) < r ? py + Math.sqrt(r * r - (x - px) ** 2) : -9)))
-    const x0 = Math.min(...puffs.map(([px, , r]) => px - r)) + 0.02, x1 = Math.max(...puffs.map(([px, , r]) => px + r)) - 0.02
-    const outline = []
-    for (let i = 0; i <= 36; i++) { const x = x0 + ((x1 - x0) * i) / 36; outline.push(V(x, top(x), 0)) }
-    for (let i = 1; i < 6; i++) outline.push(V(x1 - ((x1 - x0) * i) / 6, floor, 0))
-    outline.push(outline[0].clone())
-    // a slim, icon-like cloud: the outline extruded to a thin slab, with </> set into its face
-    const d = 0.13
-    const g = (l, x, y, sc, z) => glyph(l, x, y, sc, z, z - 0.08)
-    return [...extrude(outline, d, -d, 5),
-      ...g([[[-0.6, 0.45], [-1, 0], [-0.6, -0.45]], [[0.6, 0.45], [1, 0], [0.6, -0.45]], [[0.22, 0.6], [-0.22, -0.6]]], 0.04, 0.12, 0.5, d + 0.22)]
+  // Web-Apps: the WWW globe (latitude rings and meridians, tilted like an earth axis) with a browser
+  // window floating in front of it — title bar with the three dots, address bar, and </> on the page
+  web: () => {
+    const tilt = (p) => p.clone().applyAxisAngle(V(0, 0, 1), -0.32).applyAxisAngle(V(1, 0, 0), 0.22)
+    const sphere = globe([-0.28, 0.22, -0.2], 0.9, 4, 5, 18).map((l) => l.map(tilt))
+    const orbit = circle([0, 0, 0], 'y', 1.25, 24).map((p) => p.clone().applyAxisAngle(V(1, 0, 0), 0.38).applyAxisAngle(V(0, 0, 1), 0.28).add(V(-0.28, 0.22, -0.2)))
+    // browser window in front, lower right
+    const z = 0.95, cx = 0.42, cy = -0.4, W = 1.4, H = 0.95
+    const top = cy + H / 2, left = cx - W / 2
+    const bar = top - 0.2
+    const win = [
+      roundRect(cx, cy, W, H, 0.08, z, 2),
+      [V(left, bar, z), V(left + W, bar, z)],                                   // title bar
+      ...[0, 1, 2].map((i) => circle([left + 0.12 + i * 0.1, top - 0.1, z], 'z', 0.03, 5)), // traffic lights
+      roundRect(cx + 0.18, top - 0.1, 0.8, 0.09, 0.045, z, 1),                 // address bar
+    ]
+    // </> on the page, as flat strokes
+    const code = [[[-0.6, 0.45], [-1, 0], [-0.6, -0.45]], [[0.6, 0.45], [1, 0], [0.6, -0.45]], [[0.22, 0.6], [-0.22, -0.6]]]
+      .map((l) => l.map(([x, y]) => V(cx + x * 0.3, cy - 0.1 + y * 0.3, z)))
+    return [...sphere, orbit, ...win, ...code]
   },
   // 3D-Erlebnisse: an icosahedron inside two tilted orbit rings, like a gyroscope
   gem: () => {
@@ -204,10 +211,7 @@ function sphere() {
   }
   return { vecs, pairs }
 }
-function easeOutBack(p) {
-  const c1 = 1.4, c3 = c1 + 1
-  return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2)
-}
+
 // Cursor interaction: the points behave like a liquid. Each node sits on a spring around its
 // resting place; the cursor pushes nearby nodes away and drags them along with its movement, and
 // every node pulls on its linked neighbours, so a disturbance travels through the shape as a
@@ -262,7 +266,7 @@ function makeDotTexture() {
   return tex
 }
 
-export const SHAPE_KEYS = ['sphere', 'cloud', 'gem', 'phone', 'layers', 'robot']
+export const SHAPE_KEYS = ['sphere', 'web', 'gem', 'phone', 'layers', 'robot']
 
 // Morph between shapes: old links retract, every node flies to its nearest free spot in the new
 // shape (greedy shortest-distance matching, so it reads as a rebuild, not a shuffle), then the new
@@ -359,7 +363,7 @@ function BrainNet({ mouseRef, onBuilt, shape }) {
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
 
   // Skip the build-up for people who prefer reduced motion
-  useEffect(() => { if (reduced) intro.current.t = introEnd(n) }, [])
+  useEffect(() => { if (reduced) intro.current.t = introEnd() }, [])
 
   // writes edge e (node pair) into the buffer; k = how far it has grown from its first node
   const writeEdge = (buf, e, a, b, k, src) => {
@@ -374,28 +378,28 @@ function BrainNet({ mouseRef, onBuilt, shape }) {
     const it = intro.current
     it.t += dt
     const t = it.t
-    let started = 0
     for (let i = 0; i < n; i++) {
-      const p = Math.min(1, Math.max(0, (t - nodeStart(i, n)) / NODE_FLIGHT))
-      if (t >= nodeStart(i, n)) started = i + 1
-      const k = p >= 1 ? 1 : easeOutBack(p)
-      shown[i * 3] = local[i * 3] * k
-      shown[i * 3 + 1] = local[i * 3 + 1] * k
-      shown[i * 3 + 2] = local[i * 3 + 2] * k
+      const p = Math.min(1, Math.max(0, (t - nodeStart(i)) / nodeFlight(i)))
+      // nodes that haven't left yet are parked far off-screen instead of piling up in the core
+      if (t < nodeStart(i)) { shown[i * 3] = 0; shown[i * 3 + 1] = 1e4; shown[i * 3 + 2] = 0; continue }
+      const k = 1 - Math.pow(1 - p, 3) // ease-out, no overshoot
+      // a sideways bend that is zero at both ends: each node takes its own curved route
+      const bend = Math.sin(Math.PI * p) * WOBBLE
+      for (let d = 0; d < 3; d++) shown[i * 3 + d] = local[i * 3 + d] * k + (hash01(i * 3 + d + 11) - 0.5) * 2 * bend
     }
     nodeGeo.attributes.position.needsUpdate = true
-    nodeGeo.setDrawRange(0, started)
+    nodeGeo.setDrawRange(0, n)
     const buf = edgeGeo.attributes.position.array
     let drawn = 0
-    net.edges.forEach(([a, b]) => {
-      const start = nodeArrive(b, n)
+    net.edges.forEach(([a, b], e) => {
+      const start = edgeStart(e, a, b)
       if (t < start) return
       const p = Math.min(1, (t - start) / EDGE_GROW)
       writeEdge(buf, drawn++, a, b, 1 - (1 - p) * (1 - p), local)
     })
     edgeGeo.attributes.position.needsUpdate = true
     edgeGeo.setDrawRange(0, drawn * 2)
-    if (t >= introEnd(n)) {
+    if (t >= introEnd()) {
       it.done = true
       onBuilt?.()
       shown.set(local)
@@ -532,7 +536,14 @@ function BrainNet({ mouseRef, onBuilt, shape }) {
         cutU: new Float32Array(net.edges.length).fill(0.5), // where along the link it was cut
         cutW: new Float32Array(net.edges.length).fill(CUT_GAP_MIN), // how wide it opens
         sx: new Float32Array(n), sy: new Float32Array(n),
+        lead: new Int32Array(n).fill(-1),
       }
+      // the pool's filler nodes (no links, sitting on top of a real node) copy that node's motion,
+      // otherwise they stay behind as loose dots when a click or a cut moves the shape
+      const key = (i) => `${local[i * 3]},${local[i * 3 + 1]},${local[i * 3 + 2]}`
+      const owner = new Map()
+      for (let i = 0; i < n; i++) if (nb[i].length && !owner.has(key(i))) owner.set(key(i), i)
+      for (let i = 0; i < n; i++) if (!nb[i].length && owner.has(key(i))) fluid.current.lead[i] = owner.get(key(i))
     }
     const F = fluid.current
     const r = rect.current
@@ -626,6 +637,12 @@ function BrainNet({ mouseRef, onBuilt, shape }) {
       off[i] += vel[i] * dt
       // keep a hard edge on how far a point can be pushed
       off[i] = Math.max(-0.5, Math.min(0.5, off[i]))
+    }
+    for (let i = 0; i < n; i++) {
+      const l = F.lead[i]
+      if (l >= 0) for (let d = 0; d < 3; d++) { off[i * 3 + d] = off[l * 3 + d]; vel[i * 3 + d] = vel[l * 3 + d] }
+    }
+    for (let i = 0; i < n * 3; i++) {
       shown[i] = local[i] + off[i]
       energy += Math.abs(off[i]) + Math.abs(vel[i]) * 0.1
     }
@@ -657,8 +674,10 @@ function BrainNet({ mouseRef, onBuilt, shape }) {
   return (
     <>
       <group ref={groupRef}>
-        <lineSegments geometry={edgeGeo} material={edgeMat} />
-        <points geometry={nodeGeo} material={nodeMat} />
+        {/* no frustum culling: during the intro unstarted nodes are parked far away, which would
+            otherwise freeze a wrong bounding sphere and cull the whole object */}
+        <lineSegments geometry={edgeGeo} material={edgeMat} frustumCulled={false} />
+        <points geometry={nodeGeo} material={nodeMat} frustumCulled={false} />
       </group>
     </>
   )
