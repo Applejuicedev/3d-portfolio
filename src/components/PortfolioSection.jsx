@@ -86,12 +86,24 @@ function MiniWeb({ className }) {
   )
 }
 
+// **wichtig** in a story text → highlighted in the project's accent colour
+function Marked({ text, rgb }) {
+  return text.split('**').map((part, i) => (i % 2
+    ? <strong key={i} className="font-medium" style={{ color: `rgb(${rgb})`, filter: 'brightness(1.35)' }}>{part}</strong>
+    : part))
+}
+
 const PROJECTS = [
   {
     title: '3D Portfolio Website',
     category: 'Web Development',
     status: 'Live',
     desc: 'Dieses Portfolio — React, Three.js und GSAP. Ein 3D-Netz, das sich selbst aufbaut, und scroll-getriebene Animationen in jeder Section.',
+    story: [
+      ['problem', 'Viele Portfolios **behaupten Design und Code nur** in einem Satz. Ich wollte eine Seite, die **selbst die Arbeitsprobe** ist – gestaltet wie ein Designprojekt und gebaut wie eine Web-App.'],
+      ['lösung', 'Ein **durchgehendes IDE-Konzept**: Die Headline tippt sich selbst und korrigiert sich per Autocomplete, zu jedem Thema baut sich ein **3D-Objekt aus Knotenpunkten** auf. Der Werdegang erscheint als git log, der Tech Stack als Platine.'],
+      ['ergebnis', 'Wirkt auf dem Desktop wie ein Editor und **bleibt auf dem Handy leicht**: Three.js lädt nur auf großen Bildschirmen (~215 KB gespart), der längste Ladeblock sank von **470 auf 190 ms**.'],
+    ],
     tech: ['React', 'Three.js', 'GSAP', 'Tailwind'],
     github: 'https://github.com/Applejuicedev/3d-portfolio', demo: 'https://vincentfidanli.de',
     repo: 'Applejuicedev/3d-portfolio',
@@ -142,6 +154,11 @@ const PROJECTS = [
     category: 'Web Development',
     status: 'Live',
     desc: "Persönliches Tages-Journal mit Zeitplan, Garmin-Health-Dashboard (Schlaf, HRV, VO₂max, Body Battery), Hevy-Trainingsanalyse und Wochen-/Monatsplanung.",
+    story: [
+      ['problem', 'Tagesplanung, Reflexion und Training lagen bei mir **verteilt in verschiedenen Apps und Notizen**. Es fehlte ein Ort, an dem ich plane, reflektiere und sehe, **ob mein Training vorankommt**.'],
+      ['lösung', 'Ein **lokales Tagesjournal** (Next.js, SQLite): morgens Zeitplan per Ziehen wie im Kalender, abends Tagescheck und Reflexion, dazu Wochen- und Monatsplanung. Workouts kommen **automatisch über die Hevy-API**.'],
+      ['ergebnis', 'Ein **System, das ich selbst nutze**: Fortschrittsdiagramme pro Übung mit Bestleistungen, Tagescheck-Verlauf über 30 Tage und Zeitplan-Export für den Kalender. **Alle Daten bleiben lokal.**'],
+    ],
     tech: ['Next.js', 'TypeScript', 'Prisma', 'SQLite', 'Garmin API'],
     github: 'https://github.com/Applejuicedev/creators-journal',
     repo: 'Applejuicedev/creators-journal',
@@ -210,7 +227,12 @@ const PROJECTS = [
     title: 'Dienstzeit',
     category: 'Mobile Development',
     status: 'In Arbeit',
-    desc: 'App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto nach SAZV, Monatsübersicht als PDF wie die Buchungsliste und Datenblatt für den Urlaubsantrag. Alle Daten bleiben auf dem Gerät.',
+    desc: 'App für Soldaten: tägliche Dienstzeiterfassung mit Erinnerung, Stunden-, FvD- und Urlaubskonto nach SAZV und Monatsübersicht als PDF wie die Buchungsliste. Alle Daten bleiben auf dem Gerät.',
+    story: [
+      ['problem', 'Soldaten führen ihre **Dienstzeit meist auf Papier**, das Geschäftszimmer überträgt sie in die Buchungsliste. Ob Stunden-, FvD- und Urlaubskonto stimmen, ist nach SAZV und § 30c SG **kaum nachzurechnen**.'],
+      ['lösung', 'Eine iOS-App mit **täglicher Erfassung und Erinnerung**. 18 Buchungsarten vom Grundbetrieb bis zur Übung rechnen Pausen, Mehrarbeit und FvD-Tage **nach den echten Regeln**. Am Monatsende entsteht ein PDF im Layout der Buchungsliste.'],
+      ['ergebnis', 'Die **Konten sind jederzeit aktuell**, der Stundenzettel wird nur noch abgeschrieben. Die Rechenlogik ist **per Test gegen eine echte Buchungsliste** geprüft, alle Daten bleiben auf dem Gerät.'],
+    ],
     tech: ['React Native', 'Expo SDK 57', 'TypeScript', 'Expo Router', 'SQLite', 'Vitest'],
     github: null, demo: 'https://dienstzeit-app.de', demoLabel: 'Landingpage',
     repo: 'Applejuicedev/dienstzeit-app',
@@ -417,9 +439,21 @@ function PortfolioCard({ project, onMount, index }) {
             </p>
           )}
 
-          <p className="text-[13px] text-zinc-400 leading-relaxed flex-1">
-            {project.desc}
-          </p>
+          {/* problem → solution → result, labelled like code comments */}
+          {/* phones/tablets: the story sits in the card; on desktop it stands in the left column */}
+          {project.story ? (
+            <dl className="flex-1 space-y-2 text-[12.5px] leading-snug lg:hidden">
+              {project.story.map(([k, v]) => (
+                <div key={k} className="grid grid-cols-[78px_1fr] gap-2">
+                  <dt className="pt-[1px] whitespace-nowrap text-[10.5px] text-zinc-600" style={{ fontFamily: MONO }}>// {k}</dt>
+                  <dd className="text-zinc-400"><Marked text={v} rgb={project.accentRgb} /></dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="text-[13px] text-zinc-400 leading-relaxed flex-1">{project.desc}</p>
+          )}
+          {project.story && <div className="hidden lg:block flex-1" />}
 
           <div className="flex flex-wrap gap-1.5">
             {project.tech.map((t) => (
@@ -462,7 +496,7 @@ function SectionHeader() {
   return (
     <div
       ref={ref}
-      className="mb-16"
+      className="mb-16 lg:mb-0"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? 'translateY(0)' : 'translateY(20px)',
@@ -473,7 +507,8 @@ function SectionHeader() {
       <h2 className="text-[28px] md:text-[36px] font-bold text-white tracking-tight mb-4 leading-tight">
         Ausgewählte Projekte
       </h2>
-      <p className="text-[14px] text-zinc-400 max-w-md leading-relaxed">
+      {/* on desktop the project story below takes this place */}
+      <p className="text-[14px] text-zinc-400 max-w-md leading-relaxed lg:hidden">
         Eine Auswahl meiner Projekte — von Mobile Apps bis zur Web-Entwicklung.
       </p>
     </div>
@@ -482,22 +517,15 @@ function SectionHeader() {
 
 // Desktop: which project is currently on top of the stack; click jumps to it
 function ProjectIndex({ active, onSelect }) {
+  // compact rail to the right of the stack: numbers only, the active one with a longer bar
   return (
-    <ol className="hidden lg:flex flex-col gap-1 -ml-3">
+    <ol className="flex flex-col items-start gap-1" style={{ fontFamily: MONO }}>
       {PROJECTS.map((p, i) => (
         <li key={p.title}>
-          <button
-            onClick={() => onSelect(i)}
-            className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors duration-300 hover:bg-white/[0.03] ${
-              active === i ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'
-            }`}
-          >
-            <span className="text-[11px] font-medium tabular-nums tracking-wide">0{i + 1}</span>
-            <span
-              className="h-px bg-current transition-all duration-500 ease-out"
-              style={{ width: active === i ? 28 : 12, opacity: active === i ? 0.8 : 0.4 }}
-            />
-            <span className="text-[13px] font-medium tracking-tight">{p.title}</span>
+          <button onClick={() => onSelect(i)} title={p.title} aria-label={p.title} aria-current={active === i}
+            className={`flex items-center gap-2 py-1.5 text-[10.5px] tabular-nums transition-colors duration-300 ${active === i ? 'text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}>
+            <span className="h-px bg-current transition-all duration-500 ease-out" style={{ width: active === i ? 18 : 8, opacity: active === i ? 0.8 : 0.5 }} />
+            0{i + 1}
           </button>
         </li>
       ))}
@@ -505,16 +533,49 @@ function ProjectIndex({ active, onSelect }) {
   )
 }
 
-// Sticky offset of each card; later cards stop a bit lower so the edges of the ones below peek out
-const STACK_TOP = 96
-const STACK_STEP = 16
-const STACK_REST = 0.3 // scroll distance (share of the viewport) a card rests fully visible on top
+// Desktop: problem → solution → result of the card currently on top, next to the stack
+function ProjectStory({ active }) {
+  const ref = useRef()
+  useEffect(() => {
+    const shown = ref.current?.children[active]
+    if (!shown || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    gsap.fromTo(shown.children, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.06, ease: 'power2.out', overwrite: true })
+  }, [active])
+  // all stories share one grid cell, so the block always has the tallest one's height and the
+  // heading above never shifts when the project changes
+  return (
+    <div ref={ref} data-project-story className="hidden lg:grid max-w-lg border-l border-white/[0.07] pl-5">
+      {PROJECTS.map((project, i) => project.story && (
+        <dl key={project.title} aria-hidden={i !== active} className={`[grid-area:1/1] self-center space-y-3.5 ${i === active ? '' : 'invisible'}`}>
+          <div>
+            <p className="text-[11px] text-zinc-600" style={{ fontFamily: MONO }}>0{i + 1} / 0{PROJECTS.length}</p>
+            <p className="mt-1 text-[17px] font-medium tracking-tight text-white">{project.title}</p>
+          </div>
+          {project.story.map(([k, v]) => (
+            <div key={k}>
+              <dt className="mb-1 text-[11px] text-zinc-600" style={{ fontFamily: MONO }}>// {k}</dt>
+              <dd className="text-[14px] leading-[1.6] text-zinc-400"><Marked text={v} rgb={project.accentRgb} /></dd>
+            </div>
+          ))}
+        </dl>
+      ))}
+    </div>
+  )
+}
+
+// The stack, desktop: text, cards and number rail form one stage. It scrolls in as a whole, then
+// stays put (sticky) while the scroll moves the cards: each next card slides up over the previous
+// one, covered cards shrink and darken a little. Phones/small screens: a plain list.
+const STACK_STEP = 16    // later cards settle a bit lower, so the edges of the ones below peek out
+const STACK_SLIDE = 0.9  // scroll distance per card change (share of the viewport)
+const STACK_REST = 0.35  // scroll distance a settled card stays untouched (share of the viewport)
 
 export default function PortfolioSection() {
   const sectionRef = useRef()
+  const stageRef = useRef()
   const deckRef  = useRef()
   const cardRefs = useRef([])
-  const stackedRef = useRef(false)
+  const layoutRef = useRef({ stacked: false, unit: 0 })
   const activeRef = useRef(0)
   const [active, setActive] = useState(0)
 
@@ -525,80 +586,84 @@ export default function PortfolioSection() {
   useEffect(() => {
     const cards = cardRefs.current.filter(Boolean)
     const items = [...deckRef.current.children]
+    const section = sectionRef.current, stage = stageRef.current, deck = deckRef.current
     if (!cards.length) return
-
-    const ctx = gsap.context(() => {
-      // Each card fades up on its own as it scrolls in
-      cards.forEach((card) => {
-        gsap.fromTo(card,
-          { opacity: 0, y: 48, scale: 0.97 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.72, ease: 'power3.out',
-            scrollTrigger: { trigger: card, start: 'top 88%', once: true } },
-        )
-      })
-    })
-
+    const n = items.length
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let tl, fadeCtx
 
-    // Stacking: the cards are position: sticky, so they move 1:1 with the scroll — no pinning.
-    // We only scale + dim the cards that are being covered, based on how far the next one has come.
-    const update = () => {
-      if (!stackedRef.current) return
-      const vh = window.innerHeight
-      const progress = items.map((item, i) => {
-        if (!i) return 1
-        const stop = STACK_TOP + i * STACK_STEP
-        const top = item.getBoundingClientRect().top
-        return gsap.utils.clamp(0, 1, (vh - top) / (vh - stop))
-      })
-      items.forEach((item, i) => {
-        // how many cards (fractionally) lie on top of this one
-        const depth = progress.slice(i + 1).reduce((a, b) => a + b, 0)
-        // brightness instead of opacity: covered cards get darker but stay solid
-        gsap.set(item, { scale: 1 - depth * 0.05, filter: depth > 0.001 ? `brightness(${1 - Math.min(depth, 2) * 0.3})` : 'none' })
-      })
-      let next = 0
-      progress.forEach((p, i) => { if (p > 0.5) next = i })
-      if (next !== activeRef.current) { activeRef.current = next; setActive(next) }
-    }
+    const setActiveIdx = (i) => { if (i !== activeRef.current) { activeRef.current = i; setActive(i) } }
 
-    // Equal card heights (like in the grid) — and only stack when a card fits on screen,
-    // otherwise its lower part would end up hidden under the next card.
     const fit = () => {
+      tl?.scrollTrigger?.kill(); tl?.kill(); tl = null
+      fadeCtx?.revert(); fadeCtx = null
+      items.forEach((item) => gsap.set(item, { clearProps: 'all' }))
       items.forEach((item) => { item.style.height = '' })
       const h = Math.max(...items.map((item) => item.offsetHeight))
-      items.forEach((item) => { item.style.height = `${h}px` })
-      stackedRef.current = !reduced && h + STACK_TOP + (items.length - 1) * STACK_STEP + 24 < window.innerHeight
-      // While stacking, each card rests fully visible for a while before the next one slides over
-      // it — otherwise the next card covers its buttons (at the bottom of the card) almost at once
-      const rest = stackedRef.current ? `${Math.round(window.innerHeight * STACK_REST)}px` : ''
-      deckRef.current.style.rowGap = rest
-      // The section ends exactly when the last card has arrived: then its bottom edge sits on the
-      // bottom of the screen. From there the whole section stays put (sticky) and the contact
-      // section slides over it when scrolling on.
-      const section = sectionRef.current
-      if (stackedRef.current) {
-        const lastTop = STACK_TOP + (items.length - 1) * STACK_STEP
-        const padBottom = parseFloat(getComputedStyle(section).paddingBottom)
-        deckRef.current.style.paddingBottom = `${Math.max(0, window.innerHeight - lastTop - h - padBottom)}px`
-        section.style.position = 'sticky'
-        section.style.top = `${Math.min(0, window.innerHeight - section.offsetHeight)}px`
-      } else {
-        deckRef.current.style.paddingBottom = ''
-        section.style.position = ''
-        section.style.top = ''
+      const vh = window.innerHeight
+      const spread = (n - 1) * STACK_STEP
+      const stacked = !reduced && window.matchMedia('(min-width: 1024px)').matches && h + spread + 120 < vh
+      layoutRef.current.stacked = stacked
+      section.dataset.stacked = stacked ? '1' : ''
+
+      if (!stacked) {
+        // plain list: every card fades up as it scrolls in
+        section.style.height = ''; section.style.position = ''; section.style.top = ''
+        deck.style.height = ''
+        fadeCtx = gsap.context(() => cards.forEach((card) => gsap.fromTo(card,
+          { opacity: 0, y: 48, scale: 0.97 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.72, ease: 'power3.out', scrollTrigger: { trigger: card, start: 'top 88%', once: true } })))
+        return
       }
-      items.forEach((item, i) => {
-        item.style.position = stackedRef.current ? 'sticky' : 'relative'
-        item.style.top = `${STACK_TOP + i * STACK_STEP}px`
-        if (!stackedRef.current) gsap.set(item, { clearProps: 'transform,filter' })
+
+      // the cards themselves are visible; the first one fades up as the stage scrolls in
+      gsap.set(cards, { opacity: 1 })
+      fadeCtx = gsap.context(() => gsap.fromTo(cards[0], { opacity: 0, y: 48, scale: 0.97 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.72, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%', once: true } }))
+
+      // stage geometry: all cards stacked absolutely in a deck of card height + spread
+      items.forEach((item) => { item.style.height = `${h}px` })
+      deck.style.height = `${h + spread}px`
+      const unit = vh * STACK_SLIDE, rest = vh * STACK_REST
+      layoutRef.current.unit = unit + rest
+      const scrollLen = (n - 1) * (unit + rest) + rest
+      section.style.height = `${vh + scrollLen}px`
+      // at the end the section holds still and the contact section slides over it
+      section.style.position = 'sticky'
+      section.style.top = `${-scrollLen}px`
+
+      const below = vh - deck.getBoundingClientRect().top + stage.getBoundingClientRect().top + 40
+      // explicit start values: tweening a filter from 'none' would start at brightness(0) (black)
+      items.forEach((item, i) => gsap.set(item, { y: i ? below : 0, scale: 1, filter: 'brightness(1)', transformOrigin: 'top center' }))
+
+      tl = gsap.timeline({
+        defaults: { ease: 'none' },
+        scrollTrigger: {
+          trigger: section, start: 'top top', end: () => `+=${scrollLen}`, scrub: true,
+          onUpdate: (self) => {
+            const t = self.progress * scrollLen
+            setActiveIdx(Math.min(n - 1, Math.floor((t + unit * 0.5) / (unit + rest))))
+          },
+        },
       })
-      update()
+      tl.to({}, { duration: rest / 2 })
+      for (let i = 1; i < n; i++) {
+        const at = (i - 1) * (unit + rest) + rest / 2
+        tl.to(items[i], { y: i * STACK_STEP, duration: unit, ease: 'power1.out' }, at)
+        // everything already on the stack shrinks and darkens one step
+        for (let j = 0; j < i; j++) {
+          const depth = i - j
+          tl.to(items[j], { scale: 1 - depth * 0.05, filter: `brightness(${1 - Math.min(depth, 2) * 0.25})`, duration: unit }, at)
+        }
+      }
+      tl.to({}, { duration: rest / 2 })
+      setActiveIdx(0)
     }
     fit()
     document.fonts?.ready.then(fit)
-    window.addEventListener('resize', fit)
-    const st = ScrollTrigger.create({ trigger: deckRef.current, start: 'top bottom', end: 'bottom top', onUpdate: update })
+    let rt
+    const onResize = () => { clearTimeout(rt); rt = setTimeout(fit, 120) }
+    window.addEventListener('resize', onResize)
 
     // Stopper: when the last card has arrived, scrolling stops right there — leftover momentum from
     // the trackpad/mouse wheel can't carry on into the contact section. A new gesture moves on:
@@ -606,13 +671,12 @@ export default function PortfolioSection() {
     // notched mouse wheel (even, non-shrinking steps) counts as new input after a moment. The hold
     // also ends after a short pause, after at most HOLD_MAX, or when scrolling back up. It re-arms
     // only once the user is back among the cards (a screen height above the stop).
-    const section = sectionRef.current
     const stopY = () => section.offsetTop + section.offsetHeight - window.innerHeight
     const HOLD_PAUSE = 250, HOLD_MAX = 2000, NOTCH_AFTER = 350
     let held = false, passed = false, idle = 0, holdStart = 0, lastDelta = 0
     const release = () => { held = false; passed = true; clearTimeout(idle) }
     const wheel = (e) => {
-      if (!stackedRef.current) return
+      if (!layoutRef.current.stacked) return
       if (e.deltaY <= 0) { if (held) release(); return }
       if (held) {
         const heldFor = performance.now() - holdStart
@@ -640,30 +704,34 @@ export default function PortfolioSection() {
     window.addEventListener('scroll', rearm, { passive: true })
 
     return () => {
-      window.removeEventListener('resize', fit)
+      window.removeEventListener('resize', onResize)
       window.removeEventListener('wheel', wheel)
       window.removeEventListener('scroll', rearm)
-      clearTimeout(idle)
-      st.kill()
-      ctx.revert()
+      clearTimeout(idle); clearTimeout(rt)
+      tl?.scrollTrigger?.kill(); tl?.kill()
+      fadeCtx?.revert()
     }
   }, [])
 
   // Scroll so that card i has just settled on the stack
   const scrollToCard = useCallback((i) => {
-    const deck = deckRef.current
-    const first = deck.children[0]
-    const gap = parseFloat(getComputedStyle(deck).rowGap) || 0
-    const deckTop = deck.getBoundingClientRect().top + window.scrollY
-    const y = deckTop + i * (first.offsetHeight + gap) - (stackedRef.current ? STACK_TOP + i * STACK_STEP : STACK_TOP)
-    window.scrollTo({ top: y, behavior: 'smooth' })
+    const section = sectionRef.current
+    const top = section.getBoundingClientRect().top + window.scrollY
+    const { stacked, unit } = layoutRef.current
+    if (!stacked) {
+      const card = deckRef.current.children[i]
+      window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 96, behavior: 'smooth' })
+      return
+    }
+    const rest = window.innerHeight * STACK_REST
+    window.scrollTo({ top: top + (i ? (i - 1) * unit + unit - rest / 2 : 0), behavior: 'smooth' })
   }, [])
 
   return (
     <>
       <div className="h-px bg-white/[0.05]" />
 
-      <div id="portfolio" ref={sectionRef} className="relative bg-[#080808] py-32 overflow-clip">
+      <div id="portfolio" ref={sectionRef} className="group/stack relative bg-[#080808] overflow-clip">
         <GridPattern cell={PORTFOLIO_CELL} id="portfolio-grid" />
         <div aria-hidden className="absolute inset-0 pointer-events-none">
           <div className="sticky top-0 h-[100svh]">
@@ -671,19 +739,29 @@ export default function PortfolioSection() {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto px-8 relative z-10">
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-20 items-start">
-            <div className="lg:sticky lg:top-28">
-              <SectionHeader />
-              <ProjectIndex active={active} onSelect={scrollToCard} />
-            </div>
+        {/* the stage: on desktop one sticky screen holding text, stack and rail together */}
+        <div ref={stageRef} className="relative z-10 py-32 group-data-[stacked=1]/stack:sticky group-data-[stacked=1]/stack:top-0 group-data-[stacked=1]/stack:h-[100svh] group-data-[stacked=1]/stack:py-0 group-data-[stacked=1]/stack:flex group-data-[stacked=1]/stack:items-center">
+          <div className="max-w-6xl w-full mx-auto px-8">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-20 items-center">
+              {/* desktop: the story is centred on the card; the section heading sits above it */}
+              <div className="relative">
+                <div className="lg:absolute lg:bottom-full lg:left-0 lg:right-0 lg:mb-8"><SectionHeader /></div>
+                <ProjectStory active={active} />
+              </div>
 
-            <div ref={deckRef} className="flex flex-col gap-10 max-w-[440px] w-full mx-auto">
-              {PROJECTS.map((p, i) => (
-                <div key={p.title} className="origin-top">
-                  <PortfolioCard project={p} index={i} onMount={handleMount} />
+              <div className="relative">
+                {/* desktop: the project index as a small rail right of the stack, centred on it */}
+                <div aria-label="Projekte" className="hidden lg:flex items-center absolute inset-y-0 -right-16">
+                  <ProjectIndex active={active} onSelect={scrollToCard} />
                 </div>
-              ))}
+                <div ref={deckRef} data-deck className="relative flex flex-col gap-10 max-w-[440px] w-full mx-auto group-data-[stacked=1]/stack:block">
+                  {PROJECTS.map((p, i) => (
+                    <div key={p.title} className="group-data-[stacked=1]/stack:absolute group-data-[stacked=1]/stack:inset-x-0 group-data-[stacked=1]/stack:top-0" style={{ zIndex: i + 1 }}>
+                      <PortfolioCard project={p} index={i} onMount={handleMount} />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
