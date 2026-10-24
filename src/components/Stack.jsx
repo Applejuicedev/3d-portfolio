@@ -61,14 +61,14 @@ export default function Stack() {
 
   return (
     <section ref={ref} id="stack" aria-labelledby="stack-title" className="relative isolate frame section-y">
-      {/* the head and the stage share one box with the field, so the slider below starts where it ends */}
-      <div className="relative">
-      {/* a field behind the model, cut at a steep angle */}
-      <Accent className="right-[calc(50%-50vw)] w-[48vw] top-[34%] h-[66%]" strength={0.34}
-        shape="polygon(24% 0, 100% 0, 100% 100%, 0 72%)"
-        gradient="radial-gradient(90% 80% at 78% 55%, #000 0%, rgba(0,0,0,.5) 40%, transparent 78%)" />
+      {/* a field from the left edge under the lower end of the list, clear of the model */}
+      <Accent className="left-[calc(50%-50vw)] w-[40vw] bottom-0 h-[46%]" strength={0.3}
+        shape="polygon(0 18%, 62% 0, 100% 100%, 0 100%)"
+        gradient="radial-gradient(90% 85% at 12% 80%, #000 0%, rgba(0,0,0,.5) 40%, transparent 78%)" />
       <SectionHead n={3} label="Stack" file="stack.json" title={<span id="stack-title">Womit ich arbeite</span>} />
-      <div data-stage className="grid12 gap-y-6 mt-16 lg:mt-24 items-center">
+      {/* the tools at a glance, as a band right under the title; the list below reads them in order */}
+      <div className="mt-12 lg:mt-16"><Marquee items={GROUPS.flatMap((g) => g.items)} /></div>
+      <div data-stage className="grid12 gap-y-6 mt-12 lg:mt-16 items-center">
         <div data-stack-scene className="relative col-span-4 lg:col-start-8 lg:col-span-5 lg:row-start-1" style={{ '--light': 0.5 }}>
           {/* the floor: a perspective grid that opens up while the section scrolls past */}
           <div aria-hidden data-floor className="absolute inset-x-0 lg:inset-x-[-10%] bottom-[4%] h-[55%] origin-bottom pointer-events-none [perspective:600px]">
@@ -107,8 +107,6 @@ export default function Stack() {
           })}
         </ul>
       </div>
-      </div>
-      <div className="mt-6 sm:mt-8"><Marquee items={GROUPS.flatMap((g) => g.items)} /></div>
     </section>
   )
 }

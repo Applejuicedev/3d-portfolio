@@ -41,11 +41,20 @@ export function headingReveal(trigger, heading, extras = [], { type = 'lines', s
   let split, tl, alive = true
   document.fonts.ready.then(() => {
     if (!alive) return
-    // measured once the glow's padding is off ([data-revealing]): with it, the locked box kept the
-    // padding but lost the negative margin that offsets it — every heading stood ~0.3em taller while it waited, and the page below
-    // jumped up when the reveals ended. What is left (margins meeting a grid or a sibling) is
-    // squared against the parent, so the heading takes exactly the same room before, during, after
-    const host = heading.parentElement, room = host.getBoundingClientRect().height
+    // The heading must take exactly the same room before, during and after its reveal. Split, it
+    // loses the glow's padding and the negative margins that offset it ([data-revealing]), and
+    // how those margins act depends on where it stands (a grid cell, a sibling's margin) — so
+    // instead of predicting it, the split heading is squared against what it was: its text at the
+    // same height, and whatever follows (the next element, else the parent's end) at the same place.
+    const host = heading.parentElement
+    const glyphTop = () => {
+      let t = Infinity, n
+      const w = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT)
+      while ((n = w.nextNode())) { const r = document.createRange(); r.selectNodeContents(n); for (const q of r.getClientRects()) t = Math.min(t, q.top) }
+      return t
+    }
+    const next = () => (heading.nextElementSibling || host).getBoundingClientRect()[heading.nextElementSibling ? 'top' : 'bottom']
+    const g0 = glyphTop(), n0 = next()
     heading.setAttribute('data-revealing', '')
     const plain = heading.getBoundingClientRect().height
     split = SplitText.create(heading, { type, mask: type })
@@ -54,15 +63,17 @@ export function headingReveal(trigger, heading, extras = [], { type = 'lines', s
     // reveal too, instead of popping in when it ends
     ;(type === 'chars' ? split.chars : split.lines).forEach((el) => el.classList.add('glow'))
     heading.style.height = `${plain}px`
-    const off = room - host.getBoundingClientRect().height
-    if (Math.abs(off) > 0.5) heading.style.height = `${plain + off}px`
-    const done = () => { split?.revert(); heading.removeAttribute('data-revealing'); heading.style.height = '' }
+    const dy = g0 - glyphTop()
+    if (Math.abs(dy) > 0.5) heading.style.marginTop = `${dy}px`
+    const dn = n0 - next()
+    if (Math.abs(dn) > 0.5) heading.style.height = `${plain + dn}px`
+    const done = () => { split?.revert(); heading.removeAttribute('data-revealing'); heading.style.height = heading.style.marginTop = '' }
     tl = gsap.timeline({ scrollTrigger: { trigger, start, once: true }, onComplete: done })
     tl.from(type === 'chars' ? split.chars : split.lines, { yPercent: 110, duration: DUR.reveal + 0.2, stagger, ease: EASE.out })
     if (extras.length) tl.from(extras, { opacity: 0, y: 10, duration: DUR.reveal, ease: EASE.soft }, 0.15)
     ScrollTrigger.refresh()
   })
-  return () => { alive = false; tl?.scrollTrigger?.kill(); tl?.kill(); split?.revert(); heading.removeAttribute('data-revealing'); heading.style.height = '' }
+  return () => { alive = false; tl?.scrollTrigger?.kill(); tl?.kill(); split?.revert(); heading.removeAttribute('data-revealing'); heading.style.height = heading.style.marginTop = '' }
 }
 
 // Every section opens the same way: its number and name in the meta column, the title in the
