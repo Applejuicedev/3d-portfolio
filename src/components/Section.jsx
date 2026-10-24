@@ -41,14 +41,21 @@ export function headingReveal(trigger, heading, extras = [], { type = 'lines', s
   let split, tl, alive = true
   document.fonts.ready.then(() => {
     if (!alive) return
-    const plain = heading.getBoundingClientRect().height
+    // measured once the glow's padding is off ([data-revealing]): with it, the locked box kept the
+    // padding but lost the negative margin that offsets it — every heading stood ~0.3em taller while it waited, and the page below
+    // jumped up when the reveals ended. What is left (margins meeting a grid or a sibling) is
+    // squared against the parent, so the heading takes exactly the same room before, during, after
+    const host = heading.parentElement, room = host.getBoundingClientRect().height
     heading.setAttribute('data-revealing', '')
+    const plain = heading.getBoundingClientRect().height
     split = SplitText.create(heading, { type, mask: type })
-    heading.style.height = `${plain}px`
     // while split, each moving piece paints the pointer glow itself (a heading's own clipped
     // background isn't painted into transformed children) — so the glow is there during the
     // reveal too, instead of popping in when it ends
     ;(type === 'chars' ? split.chars : split.lines).forEach((el) => el.classList.add('glow'))
+    heading.style.height = `${plain}px`
+    const off = room - host.getBoundingClientRect().height
+    if (Math.abs(off) > 0.5) heading.style.height = `${plain + off}px`
     const done = () => { split?.revert(); heading.removeAttribute('data-revealing'); heading.style.height = '' }
     tl = gsap.timeline({ scrollTrigger: { trigger, start, once: true }, onComplete: done })
     tl.from(type === 'chars' ? split.chars : split.lines, { yPercent: 110, duration: DUR.reveal + 0.2, stagger, ease: EASE.out })
