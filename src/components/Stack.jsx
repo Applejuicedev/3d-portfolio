@@ -61,8 +61,10 @@ export default function Stack() {
 
   return (
     <section ref={ref} id="stack" aria-labelledby="stack-title" className="relative isolate frame section-y">
+      {/* the head and the stage share one box with the field, so the slider below starts where it ends */}
+      <div className="relative">
       {/* a field behind the model, cut at a steep angle */}
-      <Accent className="right-[calc(50%-50vw)] w-[48vw] top-[34%] h-[56%]" strength={0.34}
+      <Accent className="right-[calc(50%-50vw)] w-[48vw] top-[34%] h-[66%]" strength={0.34}
         shape="polygon(24% 0, 100% 0, 100% 100%, 0 72%)"
         gradient="radial-gradient(90% 80% at 78% 55%, #000 0%, rgba(0,0,0,.5) 40%, transparent 78%)" />
       <SectionHead n={3} label="Stack" file="stack.json" title={<span id="stack-title">Womit ich arbeite</span>} />
@@ -105,7 +107,8 @@ export default function Stack() {
           })}
         </ul>
       </div>
-      <div className="mt-16 sm:mt-20"><Marquee items={GROUPS.flatMap((g) => g.items)} /></div>
+      </div>
+      <div className="mt-6 sm:mt-8"><Marquee items={GROUPS.flatMap((g) => g.items)} /></div>
     </section>
   )
 }

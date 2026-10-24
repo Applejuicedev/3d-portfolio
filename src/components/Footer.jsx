@@ -21,7 +21,7 @@ const BUILD = `v${pkg.version} · react ${ver('react')} · gsap ${ver('gsap')}`
 // the address as the page's main button, the other channels as a short list.
 export default function Footer() {
   const ref = useRef(), mailRef = useRef()
-  useMotion(ref, (el) => headingReveal(el, el.querySelector('h2'), [], { type: 'chars', start: 'top 75%', stagger: 0.035 }), [], { idle: true })
+  useMotion(ref, (el) => headingReveal(el, el.querySelector('h2'), [], { start: 'top 75%' }), [], { idle: true })
 
   return (
     <footer ref={ref} id="kontakt" aria-labelledby="kontakt-title" className="relative isolate frame section-y pb-10">
