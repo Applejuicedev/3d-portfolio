@@ -61,10 +61,10 @@ export default function Stack() {
 
   return (
     <section ref={ref} id="stack" aria-labelledby="stack-title" className="relative isolate frame section-y">
-      {/* a field from the left edge under the lower end of the list, clear of the model */}
-      <Accent className="left-[calc(50%-50vw)] w-[40vw] bottom-0 h-[46%]" strength={0.3}
-        shape="polygon(0 18%, 62% 0, 100% 100%, 0 100%)"
-        gradient="radial-gradient(90% 85% at 12% 80%, #000 0%, rgba(0,0,0,.5) 40%, transparent 78%)" />
+      {/* a field from the top right edge, beside the title and clear of the model */}
+      <Accent className="right-[calc(50%-50vw)] w-[42vw] top-0 h-[40%]" strength={0.3}
+        shape="polygon(0 0, 100% 0, 100% 100%, 38% 80%)"
+        gradient="radial-gradient(90% 85% at 88% 18%, #000 0%, rgba(0,0,0,.5) 40%, transparent 78%)" />
       <SectionHead n={3} label="Stack" file="stack.json" title={<span id="stack-title">Womit ich arbeite</span>} />
       {/* the tools at a glance, as a band right under the title; the list below reads them in order */}
       <div className="mt-12 lg:mt-16"><Marquee items={GROUPS.flatMap((g) => g.items)} /></div>
