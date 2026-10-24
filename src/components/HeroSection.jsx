@@ -8,10 +8,11 @@ import HeroGrid from './HeroGrid'
 // three.js lives in its own chunk that only desktops load
 const NetworkOrb3D = lazy(() => import('./NetworkOrb3D'))
 import HeroTyper from './HeroTyper'
+import { orbBuilt, headlineDone } from './heroStage'
 import { GridPattern } from './BackgroundPatterns'
 
-// The second headline line says what I build; the badges below switch along with it
-// and show the matching tools
+// The third headline line says what I build. `skills` is only used by the local labs now: the
+// badge row under the headline is gone, the projects show the tools instead
 export const TOPICS = [
   { word: 'Web-Apps',      tab: 'Web', color: '#93c5fd', skills: [['React', SiReact, '#61DAFB'], ['Next.js', SiNextdotjs, '#e2e2e2'], ['TypeScript', SiTypescript, '#4C8DCA'], ['Tailwind CSS', SiTailwindcss, '#38BDF8']] },
   { word: '3D-Erlebnisse', tab: '3D', color: '#c4b5fd', skills: [['Three.js', SiThreedotjs, '#c0c0c0'], ['Blender', SiBlender, '#F5792A'], ['GSAP', SiGreensock, '#88CE02']] },
@@ -40,13 +41,6 @@ function Line({ n, active, clip = true, children }) {
     </span>
   )
 }
-
-const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-const ACTIONS = [
-  { label: 'projekte', key: 'P', target: 'portfolio' },
-  { label: 'über-mich', key: 'Ü', target: 'uber-mich' },
-]
-
 
 export function Badge({ label, Icon, color }) {
   return (
@@ -84,7 +78,6 @@ export default function HeroSection() {
     return () => { ro.disconnect(); window.removeEventListener('resize', measure) }
   }, [])
   const wordRef   = useRef()
-  const badgesRef = useRef()
   const [heroVisible, setHeroVisible] = useState(true)
   const [idx, setIdx] = useState(0)
   // the 3D object only exists on desktop (lg and up)
@@ -100,6 +93,7 @@ export default function HeroSection() {
   // The orb reports when it has finished building: the glow behind it swells in from its centre,
   // with a brief brighter flash that settles — the network "switches on"
   const glowOn = useCallback(() => {
+    orbBuilt.resolve()
     const el = glowRef.current
     if (!el) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { gsap.set(el, { '--glow': 0.08 }); return }
@@ -109,17 +103,9 @@ export default function HeroSection() {
   }, [])
   const firstTopic = useRef(true)
   const timeBarRef = useRef()
-
-  // The keys shown on the buttons work: P → projects, Ü → about (not while typing somewhere)
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, [contenteditable]')) return
-      const a = ACTIONS.find((x) => x.key.toLowerCase() === e.key.toLowerCase())
-      if (a) go(a.target)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  // the topics only start rotating once the headline has finished correcting itself
+  const [rotating, setRotating] = useState(false)
+  useEffect(() => { headlineDone.promise.then(() => setRotating(true)) }, [])
 
   // Pause the WebGL orb and the word rotation while the hero is scrolled out of view
   useEffect(() => {
@@ -145,14 +131,14 @@ export default function HeroSection() {
       gsap.timeline({ delay: 0.3 })
         .from('[data-intro="top"]', { opacity: 0, y: 10, duration: 0.6, stagger: 0.08, ease: 'power2.out' })
         .from('[data-intro="line"]', { yPercent: 110, duration: 1.1, ease: 'expo.out', stagger: 0.12 }, 0.15)
-        .from('[data-intro="bottom"]', { opacity: 0, y: 14, duration: 0.7, stagger: 0.1, ease: 'power2.out' }, 0.8)
+        .from('[data-intro="bottom"]', { opacity: 0, y: 14, duration: 0.7, ease: 'power2.out' }, 0.8)
     }, textRef)
     return () => ctx.revert()
   }, [])
 
-  // Word + badges leave together, then the next topic comes in
+  // The word leaves, then the next topic comes in
   useEffect(() => {
-    if (!heroVisible) return
+    if (!heroVisible || !rotating) return
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const next = () => setIdx((i) => (i + 1) % TOPICS.length)
     // the active topic tab's underline fills up over the hold time
@@ -168,16 +154,15 @@ export default function HeroSection() {
       if (reduced) return next()
       tl = gsap.timeline({ onComplete: next })
         .to(wordRef.current, { yPercent: -105, duration: 0.45, ease: 'power3.in' })
-        .to(badgesRef.current.children, { opacity: 0, y: -10, filter: 'blur(4px)', duration: 0.3, stagger: 0.05, ease: 'power2.in' }, 0)
     }, HOLD)
     return () => {
       clearTimeout(t); countdown.kill()
-      // interrupted mid-leave (tab click, scrolled away): put word and badges back instead of
-      // leaving them half moved out
-      if (tl?.isActive()) gsap.set([wordRef.current, ...badgesRef.current.children], { clearProps: 'transform,opacity,filter' })
+      // interrupted mid-leave (tab click, scrolled away): put the word back instead of leaving it
+      // half moved out
+      if (tl?.isActive()) gsap.set(wordRef.current, { clearProps: 'transform' })
       tl?.kill()
     }
-  }, [idx, heroVisible])
+  }, [idx, heroVisible, rotating])
 
   useLayoutEffect(() => {
     if (firstTopic.current) { firstTopic.current = false; return }
@@ -186,9 +171,6 @@ export default function HeroSection() {
     // half-transformed layer can leave stray glyph pieces under the line
     gsap.killTweensOf(wordRef.current)
     gsap.fromTo(wordRef.current, { yPercent: 130 }, { yPercent: 0, duration: 0.8, ease: 'expo.out', clearProps: 'transform' })
-    gsap.fromTo(badgesRef.current.children,
-      { opacity: 0, y: 12, filter: 'blur(4px)' },
-      { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.5, stagger: 0.07, delay: 0.15, ease: 'power2.out' })
   }, [idx])
 
   const topic = TOPICS[idx]
@@ -196,8 +178,8 @@ export default function HeroSection() {
   return (
     <div ref={heroRef} className="relative bg-[#0a0a0a] overflow-hidden" style={{ minHeight: '100svh' }}>
 
-      {/* Layer 1: Animated grid */}
-      <HeroGrid stars />
+      {/* Layer 1: star field — fades in once, then stands still */}
+      <HeroGrid stars particles={false} />
 
       {/* A small patch of the old grid only behind the text, fading out into the stars */}
       <div ref={patchRef} aria-hidden className="absolute pointer-events-none left-0 top-1/2 -translate-y-1/2 w-[min(900px,100%)] h-[940px]"
@@ -254,50 +236,23 @@ export default function HeroSection() {
             </Line>
           </h1>
 
-          {/* All badge sets sit invisibly in the same grid cell, so the row always has the height of
-              the tallest set and the centred text block never shifts when the topic changes */}
-          <div data-intro="bottom" className="grid mt-6">
-            {TOPICS.map((t) => (
-              <div key={t.word} aria-hidden className="invisible flex flex-wrap gap-2 [grid-area:1/1]">
-                {t.skills.map(([label, Icon, color]) => <Badge key={label} label={label} Icon={Icon} color={color} />)}
-              </div>
-            ))}
-            <div ref={badgesRef} className="flex flex-wrap content-start gap-2 [grid-area:1/1]">
-              {topic.skills.map(([label, Icon, color]) => (
-                <Badge key={`${idx}-${label}`} label={label} Icon={Icon} color={color} />
-              ))}
-            </div>
-          </div>
-
-          {/* The topics as small tab buttons, each with its colour dot. The active tab's background
-              fills up in its colour over the hold time, so it's clear how long it stays and what
-              comes next; a click jumps to a topic. */}
+          {/* The topics as small tabs, each with its colour dot. The active tab's background fills
+              up in its colour over the hold time, so it's clear how long it stays and what comes
+              next; a click jumps to a topic. Quiet on purpose: the headline above is the focus. */}
           <div data-intro="bottom" role="tablist" aria-label="Themen"
-            className="mt-7 inline-flex flex-wrap gap-1 rounded-lg border border-white/[0.07] bg-white/[0.015] p-1" style={{ fontFamily: MONO }}>
+            className="mt-12 -ml-3 flex flex-wrap gap-1" style={{ fontFamily: MONO }}>
             {TOPICS.map((t, i) => {
               const on = i === idx
               return (
                 <button key={t.word} type="button" role="tab" aria-selected={on} onClick={() => setIdx(i)}
-                  className={`relative overflow-hidden flex items-center gap-2 rounded-md px-3 py-1.5 text-[11.5px] transition-colors duration-200 ${
-                    on ? 'bg-white/[0.05] text-zinc-100' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]'}`}>
-                  {on && <span ref={timeBarRef} aria-hidden className="absolute inset-0 origin-left" style={{ background: t.color, opacity: 0.14, transform: 'scaleX(0)' }} />}
-                  <span aria-hidden className="relative w-1.5 h-1.5 rounded-full" style={{ background: t.color, opacity: on ? 1 : 0.45 }} />
+                  className={`relative overflow-hidden flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] transition-colors duration-200 ${
+                    on ? 'text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                  {on && <span ref={timeBarRef} aria-hidden className="absolute inset-0 origin-left" style={{ background: t.color, opacity: 0.1, transform: 'scaleX(0)' }} />}
+                  <span aria-hidden className="relative w-1.5 h-1.5 rounded-full" style={{ background: t.color, opacity: on ? 1 : 0.4 }} />
                   <span className="relative">{t.tab}</span>
                 </button>
               )
             })}
-          </div>
-
-          {/* Segment buttons with working shortcuts; the primary one only slightly lifted */}
-          <div data-intro="bottom" className="mt-6 flex w-fit gap-1 rounded-lg border border-white/[0.1] p-1" style={{ fontFamily: MONO }}>
-            {ACTIONS.map(({ label, key, target }, i) => (
-              <button key={target} onClick={() => go(target)} aria-keyshortcuts={key}
-                className={`inline-flex items-center gap-3 px-4 py-2 rounded-md text-[12.5px] transition-colors duration-150 active:opacity-60 ${
-                  i === 0 ? 'bg-white/[0.06] text-zinc-100 hover:bg-white/[0.1]' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05]'}`}>
-                <span><span className="text-zinc-600">~/</span>{label}</span>
-                <kbd className="text-[10.5px] text-zinc-500 px-1.5 py-[1px] rounded border border-white/[0.1]" style={{ fontFamily: MONO }}>{key}</kbd>
-              </button>
-            ))}
           </div>
         </div>
 

@@ -151,8 +151,9 @@ function drawStars(ctx, W, H, elapsed) {
 // The grid is static after its build-up, so it lives on its own canvas that is only
 // redrawn during the intro, on resize or on theme change. Only the particles animate.
 // `grid={false}` draws just the particles (snapped to a `cell` grid), for sections that draw the
-// grid lines themselves.
-export default function HeroGrid({ grid: withGrid = true, cell = CELL, stars = false }) {
+// grid lines themselves. `particles={false}` leaves only the static layer: once it has faded in,
+// nothing is drawn any more and the loop stops.
+export default function HeroGrid({ grid: withGrid = true, cell = CELL, stars = false, particles: withParticles = true }) {
   const gridRef = useRef()
   const fxRef   = useRef()
 
@@ -162,14 +163,14 @@ export default function HeroGrid({ grid: withGrid = true, cell = CELL, stars = f
     if (!grid || !fx) return
     const gctx = grid.getContext('2d')
     const fctx = fx.getContext('2d')
-    let animId
+    let animId = null
     let W = 0, H = 0, dpr = 1
     let staticDone = false
     let lastDark = null
     let lastT = performance.now()
     const startTime = Date.now()
 
-    const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
+    const particles = Array.from({ length: withParticles ? PARTICLE_COUNT : 0 }, (_, i) => {
       const p = makeParticle(window.innerWidth, window.innerHeight, cell)
       p.life = -i * 20
       p.prev = null // last drawn rect, cleared next frame
@@ -187,6 +188,8 @@ export default function HeroGrid({ grid: withGrid = true, cell = CELL, stars = f
       }
       particles.forEach(p => { p.prev = null })
       staticDone = false
+      // static-only: the loop may have stopped already, so redraw once
+      if (!withParticles && animId === 0) start()
     }
     const ro = new ResizeObserver(resize)
     ro.observe(grid)
@@ -255,10 +258,11 @@ export default function HeroGrid({ grid: withGrid = true, cell = CELL, stars = f
         fctx.globalAlpha = 1
       }
 
+      if (!withParticles && staticDone) { animId = 0; return }
       animId = requestAnimationFrame(draw)
     }
 
-    const start = () => { lastT = performance.now(); animId = requestAnimationFrame(draw) }
+    function start() { lastT = performance.now(); animId = requestAnimationFrame(draw) }
     start()
 
     // Stop drawing while the hero is scrolled out of view

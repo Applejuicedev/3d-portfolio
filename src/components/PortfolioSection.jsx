@@ -1,9 +1,8 @@
-import { SectionPath } from './AboutSection'
+import { SectionHeading } from './Section'
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { useInView } from 'framer-motion'
 import gsap from 'gsap'
 import { GridPattern } from './BackgroundPatterns'
-import HeroGrid from './HeroGrid'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -27,37 +26,8 @@ function ExternalLinkIcon() {
   )
 }
 
-const CATEGORY_STYLES = {
-  'Mobile Development': 'bg-amber-500/10 border-amber-500/20 text-amber-400',
-  'Web Development':    'bg-sky-500/10    border-sky-500/20    text-sky-400',
-  'UX/UI Design':       'bg-violet-500/10 border-violet-500/20 text-violet-400',
-}
-
-function CategoryBadge({ category }) {
-  const cls = CATEGORY_STYLES[category] || 'bg-zinc-500/10 border-zinc-500/20 text-zinc-400'
-  return (
-    <span className={`inline-flex items-center text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-md border ${cls}`}>
-      {category}
-    </span>
-  )
-}
-
-const STATUS_STYLES = {
-  'Abgeschlossen': { cls: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', dot: 'bg-emerald-400' },
-  'Live':          { cls: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', dot: 'bg-emerald-400 animate-pulse' },
-  'In Arbeit':     { cls: 'bg-amber-500/10   border-amber-500/20   text-amber-400',   dot: 'bg-amber-400' },
-  'Bald':          { cls: 'bg-zinc-800 border-zinc-700 text-zinc-500',                dot: 'bg-zinc-400' },
-}
-
-function StatusBadge({ status }) {
-  const s = STATUS_STYLES[status] || STATUS_STYLES['In Arbeit']
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md border ${s.cls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {status}
-    </span>
-  )
-}
+// Status as a coloured dot in the card's meta line, no pill
+const STATUS_DOT = { 'Abgeschlossen': 'bg-emerald-400', 'Live': 'bg-emerald-400', 'In Arbeit': 'bg-amber-400', 'Bald': 'bg-zinc-500' }
 
 // Miniature of the hero's Web-Apps object: a wire globe with an orbit ring and a browser window in
 // front. Every stroke is a faint line with dots along it, like the nodes of the real network.
@@ -311,179 +281,73 @@ const PROJECTS = [
 // screen-sized canvas that stays in view while the section scrolls
 const PORTFOLIO_CELL = 120
 
-// Hover effects avoid React state and only animate transform/opacity,
-// so mouse movement never re-renders the card or triggers layout/paint.
+// Hover only lifts the card a little and zooms the preview, via transform/opacity, so mouse
+// movement never re-renders the card or triggers layout/paint.
 function PortfolioCard({ project, onMount, index }) {
-  const wrapperRef   = useRef()
-  const liftRef      = useRef()
-  const tiltRef      = useRef()
-  const sweepRef     = useRef()
-  const spotlightRef = useRef()
-  const quickRef     = useRef(null)
-  const frameRef     = useRef(0)
-  const pointerRef   = useRef({ x: 0, y: 0 })
-
+  const wrapperRef = useRef()
   useEffect(() => { onMount?.(wrapperRef.current, index) }, [])
-
-  useEffect(() => {
-    gsap.set(tiltRef.current, { transformPerspective: 900 })
-    quickRef.current = {
-      rx: gsap.quickTo(tiltRef.current, 'rotateX', { duration: 0.22, ease: 'power2.out' }),
-      ry: gsap.quickTo(tiltRef.current, 'rotateY', { duration: 0.22, ease: 'power2.out' }),
-    }
-    return () => cancelAnimationFrame(frameRef.current)
-  }, [])
-
-  const update = useCallback(() => {
-    frameRef.current = 0
-    const rect = wrapperRef.current?.getBoundingClientRect()
-    if (!rect || !quickRef.current) return
-    const x = pointerRef.current.x - rect.left
-    const y = pointerRef.current.y - rect.top
-    spotlightRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`
-    quickRef.current.rx(-(y / rect.height - 0.5) * 2 * 3.5)
-    quickRef.current.ry( (x / rect.width  - 0.5) * 2 * 3.5)
-  }, [])
-
-  const handleMouseMove = useCallback((e) => {
-    if (e.pointerType !== 'mouse') return
-    pointerRef.current = { x: e.clientX, y: e.clientY }
-    if (!frameRef.current) frameRef.current = requestAnimationFrame(update)
-  }, [update])
-
-  const handleEnter = useCallback((e) => {
-    if (e.pointerType !== 'mouse') return
-    handleMouseMove(e)
-    gsap.to(liftRef.current, { y: -7, duration: 0.32, ease: 'power2.out', overwrite: 'auto' })
-    const el = sweepRef.current
-    if (el) {
-      el.style.transition = 'none'; el.style.transform = 'translate3d(0, 0, 0)'
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (!sweepRef.current) return
-        sweepRef.current.style.transition = 'transform 700ms cubic-bezier(0.25,0.46,0.45,0.94)'
-        sweepRef.current.style.transform = 'translate3d(390%, 0, 0)'
-      }))
-    }
-  }, [handleMouseMove])
-
-  const handleLeave = useCallback(() => {
-    cancelAnimationFrame(frameRef.current)
-    frameRef.current = 0
-    gsap.to(liftRef.current, { y: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' })
-    quickRef.current?.rx(0)
-    quickRef.current?.ry(0)
-  }, [])
 
   return (
     <div ref={wrapperRef} className="h-full" style={{ opacity: 0 }}>
-      <div
-        ref={liftRef}
-        onPointerMove={handleMouseMove}
-        onPointerEnter={handleEnter}
-        onPointerLeave={handleLeave}
-        className="relative group h-full"
-        style={{ willChange: 'transform' }}
-      >
-      {/* Hover shadow lives outside the clipped card and fades via opacity instead of animating box-shadow */}
-      <div className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{ boxShadow: `0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(${project.accentRgb},0.18)` }} />
-      <div
-        ref={tiltRef}
-        className={`relative card-noise rounded-2xl border flex flex-col overflow-hidden h-full
-          border-white/[0.07] bg-[#0d0d0d] transition-opacity duration-300
-          ${project.placeholder ? 'opacity-70 group-hover:opacity-100' : ''}
-        `}
-        style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.3)', willChange: 'transform' }}
-      >
-        <div className="card-corner tl" /><div className="card-corner tr" />
-        <div className="card-corner bl" /><div className="card-corner br" />
+      <div className="relative group h-full transition-transform duration-300 ease-out hover:-translate-y-1.5">
+        <div className="relative card-noise rounded-2xl border border-white/[0.07] bg-[#0d0d0d] flex flex-col overflow-hidden h-full transition-colors duration-300 group-hover:border-white/[0.14]"
+          style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.3)' }}>
 
-        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl" style={{ zIndex: 8 }}>
-          <div ref={sweepRef} className="absolute top-0 h-full pointer-events-none"
-            style={{ width: '45%', left: '-45%', background: 'linear-gradient(105deg, transparent 15%, rgba(255,255,255,0.05) 50%, transparent 85%)' }} />
-        </div>
-
-        <div className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-[250ms]" style={{ zIndex: 9 }}>
-          <div ref={spotlightRef} className="absolute pointer-events-none" style={{
-            width: 720, height: 720, left: -360, top: -360, willChange: 'transform',
-            background: `radial-gradient(circle closest-side, rgba(${project.accentRgb},0.10), transparent 65%)`,
-          }} />
-        </div>
-
-        <div className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
-          zIndex: 9,
-          boxShadow: `inset 0 0 0 1px rgba(${project.accentRgb},0.25)`,
-        }} />
-
-        <div className="relative h-48 overflow-hidden border-b border-white/[0.06] rounded-t-2xl bg-[#0a0a0a]">
-          <div className="w-full h-full transition-transform duration-[400ms] ease-[ease] group-hover:scale-[1.02]">
-            {project.visual}
-          </div>
-        </div>
-
-        <div className="relative p-5 flex flex-col gap-3 flex-1" style={{ zIndex: 10 }}>
-          <div className="flex items-center gap-2 flex-wrap">
-            <CategoryBadge category={project.category} />
-            <StatusBadge status={project.status} />
-          </div>
-
-          <h3 className="text-[16px] font-semibold text-white tracking-tight leading-snug">
-            {project.title}
-          </h3>
-          {/* repo and branch, like the header of a repository */}
-          {project.repo && (
-            <p className="-mt-2 flex items-center gap-2 text-[11.5px] text-zinc-600" style={{ fontFamily: MONO }}>
-              <span className="text-zinc-500">{project.repo}</span>
-              <span className="text-zinc-700">·</span>
-              <span>⎇ {project.branch ?? 'main'}</span>
-            </p>
-          )}
-
-          {/* problem → solution → result, labelled like code comments */}
-          {/* phones/tablets: the story sits in the card; on desktop it stands in the left column */}
-          {project.story ? (
-            <dl className="flex-1 space-y-2 text-[12.5px] leading-snug lg:hidden">
-              {project.story.map(([k, v]) => (
-                <div key={k} className="grid grid-cols-[78px_1fr] gap-2">
-                  <dt className="pt-[1px] whitespace-nowrap text-[10.5px] text-zinc-600" style={{ fontFamily: MONO }}>// {k}</dt>
-                  <dd className="text-zinc-400"><Marked text={v} rgb={project.accentRgb} /></dd>
-                </div>
-              ))}
-            </dl>
-          ) : (
-            <p className="text-[13px] text-zinc-400 leading-relaxed flex-1">{project.desc}</p>
-          )}
-          {project.story && <div className="hidden lg:block flex-1" />}
-
-          <div className="flex flex-wrap gap-1.5">
-            {project.tech.map((t) => (
-              <span key={t} className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.07] text-zinc-400">
-                {t}
-              </span>
-            ))}
-          </div>
-
-          {!project.placeholder && (
-            <div className="flex items-center gap-2 pt-1">
-              {project.github && (
-                <a href={project.github} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[12px] text-zinc-300 hover:border-white/[0.18] hover:text-white transition-all duration-150">
-                  <GitHubIcon />GitHub
-                </a>
-              )}
-              {project.demo && (
-                <a href={project.demo} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] text-white transition-all duration-150"
-                  style={{ background: `rgba(${project.accentRgb},0.15)`, border: `1px solid rgba(${project.accentRgb},0.25)` }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${project.accentRgb},0.27)` }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${project.accentRgb},0.15)` }}>
-                  <ExternalLinkIcon />{project.demoLabel ?? 'Live Demo'}
-                </a>
-              )}
+          <div className="relative h-60 overflow-hidden border-b border-white/[0.06] rounded-t-2xl bg-[#0a0a0a]">
+            <div className="w-full h-full transition-transform duration-500 ease-out group-hover:scale-[1.02]">
+              {project.visual}
             </div>
-          )}
+          </div>
+
+          <div className="relative p-6 flex flex-col gap-4 flex-1">
+            <div>
+              <h3 className="text-[18px] font-medium text-white tracking-tight leading-snug">{project.title}</h3>
+              {/* repo, branch and status in one meta line, like the header of a repository */}
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[11.5px] text-zinc-600" style={{ fontFamily: MONO }}>
+                {project.repo && <><span className="text-zinc-500">{project.repo}</span><span className="text-zinc-700">·</span><span>⎇ {project.branch ?? 'main'}</span><span className="text-zinc-700">·</span></>}
+                <span className="inline-flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[project.status] ?? 'bg-zinc-500'}`} />{project.status}</span>
+              </p>
+            </div>
+
+            {/* problem → solution → result, labelled like code comments */}
+            {/* phones/tablets: the story sits in the card; on desktop it stands in the left column */}
+            {project.story ? (
+              <dl className="flex-1 space-y-3 text-[13.5px] leading-relaxed lg:hidden">
+                {project.story.map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="mb-0.5 text-[11px] text-zinc-600" style={{ fontFamily: MONO }}>// {k}</dt>
+                    <dd className="text-zinc-400"><Marked text={v} rgb={project.accentRgb} /></dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="text-[13.5px] text-zinc-400 leading-relaxed flex-1">{project.desc}</p>
+            )}
+            {project.story && <div className="hidden lg:block flex-1" />}
+
+            {/* the tools as a quiet list instead of a row of chips */}
+            <p className="text-[12px] text-zinc-500 leading-relaxed" style={{ fontFamily: MONO }}>
+              {project.tech.join(' · ')}
+            </p>
+
+            {!project.placeholder && (
+              <div className="flex items-center gap-2">
+                {project.github && (
+                  <a href={project.github} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] text-[12px] text-zinc-300 hover:border-white/[0.2] hover:text-white transition-colors duration-150">
+                    <GitHubIcon />GitHub
+                  </a>
+                )}
+                {project.demo && (
+                  <a href={project.demo} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.05] text-[12px] text-white hover:bg-white/[0.1] transition-colors duration-150">
+                    <ExternalLinkIcon />{project.demoLabel ?? 'Live Demo'}
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   )
@@ -496,19 +360,15 @@ function SectionHeader() {
   return (
     <div
       ref={ref}
-      className="mb-16 lg:mb-0"
+      className="max-w-6xl mx-auto gutter pt-[var(--space-section)]"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? 'translateY(0)' : 'translateY(20px)',
         transition: 'opacity 0.6s ease, transform 0.6s ease',
       }}
     >
-      <SectionPath path="projekte" className="mb-4" />
-      <h2 className="text-[28px] md:text-[36px] font-bold text-white tracking-tight mb-4 leading-tight">
-        Ausgewählte Projekte
-      </h2>
-      {/* on desktop the project story below takes this place */}
-      <p className="text-[14px] text-zinc-400 max-w-md leading-relaxed lg:hidden">
+      <SectionHeading path="projekte" title="Ausgewählte Projekte" />
+      <p className="mt-6 text-[15px] text-zinc-400 max-w-md leading-relaxed">
         Eine Auswahl meiner Projekte — von Mobile Apps bis zur Web-Entwicklung.
       </p>
     </div>
@@ -544,17 +404,17 @@ function ProjectStory({ active }) {
   // all stories share one grid cell, so the block always has the tallest one's height and the
   // heading above never shifts when the project changes
   return (
-    <div ref={ref} data-project-story className="hidden lg:grid max-w-lg border-l border-white/[0.07] pl-5">
+    <div ref={ref} data-project-story className="hidden lg:grid max-w-[30rem]">
       {PROJECTS.map((project, i) => project.story && (
-        <dl key={project.title} aria-hidden={i !== active} className={`[grid-area:1/1] self-center space-y-3.5 ${i === active ? '' : 'invisible'}`}>
+        <dl key={project.title} aria-hidden={i !== active} className={`[grid-area:1/1] self-center space-y-6 ${i === active ? '' : 'invisible'}`}>
           <div>
-            <p className="text-[11px] text-zinc-600" style={{ fontFamily: MONO }}>0{i + 1} / 0{PROJECTS.length}</p>
-            <p className="mt-1 text-[17px] font-medium tracking-tight text-white">{project.title}</p>
+            <p className="text-[11.5px] text-zinc-600" style={{ fontFamily: MONO }}>0{i + 1} / 0{PROJECTS.length}</p>
+            <p className="mt-2 text-[24px] font-medium tracking-tight text-white">{project.title}</p>
           </div>
           {project.story.map(([k, v]) => (
             <div key={k}>
-              <dt className="mb-1 text-[11px] text-zinc-600" style={{ fontFamily: MONO }}>// {k}</dt>
-              <dd className="text-[14px] leading-[1.6] text-zinc-400"><Marked text={v} rgb={project.accentRgb} /></dd>
+              <dt className="mb-1.5 text-[11.5px] text-zinc-600" style={{ fontFamily: MONO }}>// {k}</dt>
+              <dd className="text-[15px] leading-[1.7] text-zinc-400"><Marked text={v} rgb={project.accentRgb} /></dd>
             </div>
           ))}
         </dl>
@@ -568,7 +428,8 @@ function ProjectStory({ active }) {
 // one, covered cards shrink and darken a little. Phones/small screens: a plain list.
 const STACK_STEP = 16    // later cards settle a bit lower, so the edges of the ones below peek out
 const STACK_SLIDE = 0.9  // scroll distance per card change (share of the viewport)
-const STACK_REST = 0.35  // scroll distance a settled card stays untouched (share of the viewport)
+const STACK_REST = 0.6   // scroll distance a settled card stays untouched (share of the viewport):
+                         // long enough to read its story before the next card comes
 
 export default function PortfolioSection() {
   const sectionRef = useRef()
@@ -602,7 +463,7 @@ export default function PortfolioSection() {
       const h = Math.max(...items.map((item) => item.offsetHeight))
       const vh = window.innerHeight
       const spread = (n - 1) * STACK_STEP
-      const stacked = !reduced && window.matchMedia('(min-width: 1024px)').matches && h + spread + 120 < vh
+      const stacked = !reduced && window.matchMedia('(min-width: 1024px)').matches && h + spread + 140 < vh
       layoutRef.current.stacked = stacked
       section.dataset.stacked = stacked ? '1' : ''
 
@@ -728,33 +589,27 @@ export default function PortfolioSection() {
   }, [])
 
   return (
-    <>
-      <div className="h-px bg-white/[0.05]" />
+    <div id="portfolio">
+      {/* the heading has its own moment and scrolls away before the stack pins */}
+      <SectionHeader />
 
-      <div id="portfolio" ref={sectionRef} className="group/stack relative bg-[#080808] overflow-clip">
-        <GridPattern cell={PORTFOLIO_CELL} id="portfolio-grid" />
-        <div aria-hidden className="absolute inset-0 pointer-events-none">
-          <div className="sticky top-0 h-[100svh]">
-            <HeroGrid grid={false} cell={PORTFOLIO_CELL} />
-          </div>
-        </div>
+      <div ref={sectionRef} className="group/stack relative bg-[#0a0a0a] overflow-clip">
+        {/* only the static grid stays as background; nothing moves behind the cards */}
+        <GridPattern cell={PORTFOLIO_CELL} id="portfolio-grid" line={0.035} marks={false} />
 
         {/* the stage: on desktop one sticky screen holding text, stack and rail together */}
-        <div ref={stageRef} className="relative z-10 py-32 group-data-[stacked=1]/stack:sticky group-data-[stacked=1]/stack:top-0 group-data-[stacked=1]/stack:h-[100svh] group-data-[stacked=1]/stack:py-0 group-data-[stacked=1]/stack:flex group-data-[stacked=1]/stack:items-center">
-          <div className="max-w-6xl w-full mx-auto px-8">
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-20 items-center">
-              {/* desktop: the story is centred on the card; the section heading sits above it */}
-              <div className="relative">
-                <div className="lg:absolute lg:bottom-full lg:left-0 lg:right-0 lg:mb-8"><SectionHeader /></div>
-                <ProjectStory active={active} />
-              </div>
+        <div ref={stageRef} className="relative z-10 pt-20 pb-[var(--space-section)] group-data-[stacked=1]/stack:sticky group-data-[stacked=1]/stack:top-0 group-data-[stacked=1]/stack:h-[100svh] group-data-[stacked=1]/stack:py-0 group-data-[stacked=1]/stack:flex group-data-[stacked=1]/stack:items-center">
+          <div className="max-w-6xl w-full mx-auto gutter">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-24 items-center">
+              {/* desktop: the story of the card on top, centred on the deck */}
+              <ProjectStory active={active} />
 
               <div className="relative">
                 {/* desktop: the project index as a small rail right of the stack, centred on it */}
                 <div aria-label="Projekte" className="hidden lg:flex items-center absolute inset-y-0 -right-16">
                   <ProjectIndex active={active} onSelect={scrollToCard} />
                 </div>
-                <div ref={deckRef} data-deck className="relative flex flex-col gap-10 max-w-[440px] w-full mx-auto group-data-[stacked=1]/stack:block">
+                <div ref={deckRef} data-deck className="relative flex flex-col gap-24 max-w-[460px] w-full mx-auto group-data-[stacked=1]/stack:block">
                   {PROJECTS.map((p, i) => (
                     <div key={p.title} className="group-data-[stacked=1]/stack:absolute group-data-[stacked=1]/stack:inset-x-0 group-data-[stacked=1]/stack:top-0" style={{ zIndex: i + 1 }}>
                       <PortfolioCard project={p} index={i} onMount={handleMount} />
@@ -766,6 +621,6 @@ export default function PortfolioSection() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }

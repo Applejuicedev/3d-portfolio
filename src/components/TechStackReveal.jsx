@@ -6,12 +6,14 @@ import {
   SiTailwindcss, SiFigma, SiGithub, SiNodedotjs,
 } from 'react-icons/si'
 
+import { SectionPath } from './Section'
+
 gsap.registerPlugin(ScrollTrigger)
 
 // ── Board switching on ──────────────────────────────────────────
 // While scrolling down, fine PCB traces draw out of the chip across the background (a short piece
 // of "current" glows at each tip) and the board's own traces draw from the cards to the chip. Once
-// everything has arrived, the chip and its lettering light up and the current pulses start.
+// everything has arrived, the chip and its lettering light up — then the board stands still.
 // Scrolling back up switches it all off again.
 const GRID = 24          // routing grid of the background traces
 const TRACES = 12
@@ -431,9 +433,6 @@ export default function TechStackReveal() {
   const chipLabelRef  = useRef()
   const svgRef        = useRef()
   const cardRefs      = useRef([])
-  const pulseRefs     = useRef([])
-  const decorAnimRefs = useRef([])
-  const allTweens     = useRef([])
 
   const [paths,   setPaths]   = useState([])
   const [decor,   setDecor]   = useState([])
@@ -476,48 +475,6 @@ export default function TechStackReveal() {
     return () => ro.disconnect()
   }, [])
 
-  // Animate card → chip pulses.
-  // Only every 3rd card (3 of 9) to reduce simultaneous tweens.
-  // No SVG blur filter — feGaussianBlur on animated paths is the primary GPU cost.
-  useEffect(() => {
-    if (!paths.length) return
-    const tweens = []
-    pulseRefs.current.forEach((el, i) => {
-      if (!el || i % 3 !== 0) return
-      const len = el.getTotalLength()
-      const dot = 40, gap = len + dot
-      gsap.set(el, { strokeDasharray: `${dot} ${gap}`, strokeDashoffset: dot })
-      tweens.push(gsap.to(el, {
-        strokeDashoffset: -gap,
-        duration: 3.2 + (i % 3) * 0.5,
-        repeat: -1, ease: 'none', delay: i * 0.4,
-      }))
-    })
-    allTweens.current.push(...tweens)
-    return () => tweens.forEach(t => t?.kill())
-  }, [paths])
-
-  // Animate decorative side pulses (no blur filter).
-  useEffect(() => {
-    if (!decor.length) return
-    const tweens = []
-    decor.forEach((d, i) => {
-      if (!d.anim) return
-      const el = decorAnimRefs.current[i]
-      if (!el) return
-      const len = el.getTotalLength()
-      const dot = 18, gap = len + dot
-      gsap.set(el, { strokeDasharray: `${dot} ${gap}`, strokeDashoffset: dot })
-      tweens.push(gsap.to(el, {
-        strokeDashoffset: -gap,
-        duration: 4.5 + i * 0.3,
-        repeat: -1, ease: 'none', delay: i * 0.9,
-      }))
-    })
-    allTweens.current.push(...tweens)
-    return () => tweens.forEach(t => t?.kill())
-  }, [decor])
-
   // Pixel substrate: progress comes from the scroll position (scrubbed both ways)
   useEffect(() => {
     const section = sectionRef.current, canvas = canvasRef.current
@@ -556,8 +513,7 @@ export default function TechStackReveal() {
   }, [])
 
   // The board itself switches on: its traces draw from the cards to the chip one after another, the
-  // vias appear, and once everything has arrived the chip and its lettering light up and the current
-  // pulses start running.
+  // vias appear, and once everything has arrived the chip and its lettering light up.
   useEffect(() => {
     if (!paths.length || !svgRef.current) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -576,31 +532,15 @@ export default function TechStackReveal() {
         .fromTo(chipTitleRef.current, { color: '#ffffff', textShadow: '0 0 0px rgba(129,140,248,0)' },
           { color: '#e0e7ff', textShadow: '0 0 18px rgba(129,140,248,0.75), 0 0 42px rgba(99,102,241,0.35)', duration: 0.25, ease: 'power2.out' }, 0.85)
         .fromTo(chipLabelRef.current, { color: '#3f3f46' }, { color: '#a5b4fc', duration: 0.25 }, 0.85)
-        .from(svg.querySelectorAll('[data-pulse]'), { autoAlpha: 0, duration: 0.15 }, 0.95)
     })
     return () => ctx.revert()
   }, [paths, decor])
 
-  // Pause all tweens when section is scrolled out of view — biggest energy saving.
-  useEffect(() => {
-    if (!sectionRef.current) return
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        allTweens.current.forEach(t => entry.isIntersecting ? t.resume() : t.pause())
-      },
-      { threshold: 0.05 }
-    )
-    io.observe(sectionRef.current)
-    return () => io.disconnect()
-  }, [])
-
   return (
     <>
-      <div className="h-px bg-white/[0.05]" />
-
       {/* At least a full screen tall with the board centred: while the long scroll animation runs,
           the whole board is on screen */}
-      <div ref={sectionRef} className="relative overflow-hidden bg-[#0a0a0a] py-40 lg:py-48 min-h-[100svh] flex flex-col justify-center">
+      <div id="stack" ref={sectionRef} className="relative overflow-hidden bg-[#0a0a0a] section-y min-h-[100svh] flex flex-col justify-center">
         <MotherboardTexture />
         {/* Pixel substrate, faded towards the edges */}
         <canvas
@@ -612,7 +552,8 @@ export default function TechStackReveal() {
             maskImage: 'radial-gradient(ellipse 58% 50% at 50% 52%, black 25%, transparent 100%)',
           }}
         />
-        <div className="relative w-full max-w-5xl mx-auto px-5 sm:px-8">
+        <div className="relative w-full max-w-5xl mx-auto gutter">
+          <SectionPath path="stack" className="relative z-10 mb-4 text-center" />
 
           {/* PCB board — pt-20 gives vertical room for upward decorative traces */}
           <div ref={containerRef} className="relative pt-20">
@@ -626,18 +567,9 @@ export default function TechStackReveal() {
                 style={{ zIndex: 1, overflow: 'visible' }}
               >
                 {/* ── Decorative static traces ── */}
-                {decor.map(({ d, circles, color, anim }, i) => (
+                {decor.map(({ d, circles, color }, i) => (
                   <g key={`decor-${i}`}>
                     <path data-base d={d} fill="none" stroke={color} strokeWidth="1" />
-                    {anim && (
-                      <path
-                        data-pulse
-                        ref={el => { decorAnimRefs.current[i] = el }}
-                        d={d} fill="none" stroke={anim}
-                        strokeWidth="1.5" strokeOpacity="0.7"
-                        strokeLinecap="round"
-                      />
-                    )}
                     {circles.map(([cx, cy], j) => (
                       <circle data-via key={j} cx={cx} cy={cy} r="3.5"
                         fill="none" stroke={color} strokeWidth="1" />
@@ -645,20 +577,9 @@ export default function TechStackReveal() {
                   </g>
                 ))}
 
-                {/* ── Card → chip animated traces ── */}
+                {/* ── Card → chip traces, in each tool's colour ── */}
                 {paths.map(({ d, color }, i) => (
-                  <g key={`path-${i}`}>
-                    <path data-base data-card d={d} fill="none" stroke={color} strokeWidth="1" strokeOpacity="0.08" />
-                    {i % 3 === 0 && (
-                      <path
-                        data-pulse
-                        ref={el => { pulseRefs.current[i] = el }}
-                        d={d} fill="none" stroke={color}
-                        strokeWidth="2" strokeOpacity="0.9"
-                        strokeLinecap="round"
-                      />
-                    )}
-                  </g>
+                  <path key={`path-${i}`} data-base data-card d={d} fill="none" stroke={color} strokeWidth="1" strokeOpacity="0.22" />
                 ))}
               </svg>
             )}

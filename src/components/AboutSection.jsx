@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import { Contours } from './BackgroundPatterns'
+import { SectionPath } from './Section'
 
 gsap.registerPlugin(ScrollTrigger, SplitText)
 
@@ -79,7 +80,7 @@ function Summary({ children }) {
     return () => mm.revert()
   }, [])
   return (
-    <p ref={ref} className="text-[20px] md:text-[24px] font-medium tracking-tight leading-[1.45] text-zinc-200 [&_[data-accent]]:text-indigo-300">
+    <p ref={ref} className="t-lead max-w-[38ch] text-zinc-200 [&_[data-accent]]:text-indigo-300">
       {children}
     </p>
   )
@@ -87,22 +88,13 @@ function Summary({ children }) {
 
 const MONO = "'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, monospace"
 
-// Section label as a path, like the prompt in the hero
-export function SectionPath({ path, className = 'mb-16' }) {
-  return (
-    <p className={`text-[12.5px] text-zinc-600 ${className}`} style={{ fontFamily: MONO }}>
-      ~/<span className="text-zinc-400">{path}</span>
-    </p>
-  )
-}
-
 // One paragraph of the full story, written like a commit: short hash (+ ref) and the chapter name,
 // with a commit dot sitting on the reading rail
 function Chapter({ label, hash, gitRef, children }) {
   return (
     <div data-chapter className="relative">
-      <span aria-hidden className="absolute -left-[27px] top-[3px] w-[7px] h-[7px] rounded-full border border-indigo-300/70 bg-[#0a0a0a]" />
-      <p data-kicker className="flex items-baseline gap-2.5 mb-2">
+      <span aria-hidden className="absolute -left-[31px] top-[3px] w-[7px] h-[7px] rounded-full border border-indigo-300/70 bg-[#0a0a0a]" />
+      <p data-kicker className="flex items-baseline gap-2.5 mb-3">
         <span className="text-[11.5px] text-zinc-600" style={{ fontFamily: MONO }}>{hash}</span>
         {gitRef && <span className="text-[11px] text-zinc-500" style={{ fontFamily: MONO }}>({gitRef})</span>}
         <span className="text-[10px] font-semibold tracking-[0.22em] uppercase text-indigo-300/70">{label}</span>
@@ -112,9 +104,9 @@ function Chapter({ label, hash, gitRef, children }) {
   )
 }
 
-// The full story. Each chapter's lines rise out of a mask as it scrolls in; while reading, the
-// chapter closest to the middle of the screen is fully lit, the others step back, and a thin rail
-// on the left fills up with the reading progress.
+// The full story. Each chapter fades up as it scrolls in; while reading, the chapter closest to
+// the middle of the screen is fully lit, the others step back, and a thin rail on the left fills
+// up with the reading progress — three parts of one reading motion.
 function Story({ children }) {
   const rootRef = useRef()
   const railRef = useRef()
@@ -124,21 +116,9 @@ function Story({ children }) {
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const chapters = gsap.utils.toArray('[data-chapter]', rootRef.current)
       chapters.forEach((ch) => {
-        let revealed = false
-        const reveal = { trigger: ch, start: 'top 85%', once: true }
-        gsap.from(ch.querySelector('[data-kicker]'), { opacity: 0, x: -10, duration: 0.6, ease: 'power2.out', scrollTrigger: reveal })
-        SplitText.create(ch.querySelector('[data-text]'), {
-          type: 'lines',
-          mask: 'lines',
-          autoSplit: true, // re-split on resize so the line breaks stay right
-          onSplit(self) {
-            if (revealed) return // a re-split after the reveal must not play it again
-            return gsap.from(self.lines, {
-              yPercent: 100, duration: 0.9, ease: 'expo.out', stagger: 0.03,
-              scrollTrigger: reveal,
-              onComplete: () => { revealed = true },
-            })
-          },
+        gsap.from(ch.children, {
+          opacity: 0, y: 16, duration: 0.8, stagger: 0.08, ease: 'power2.out',
+          scrollTrigger: { trigger: ch, start: 'top 85%', once: true },
         })
       })
 
@@ -167,14 +147,14 @@ function Story({ children }) {
   }, [])
 
   return (
-    <div ref={rootRef} data-story className="relative mt-10 pl-6 py-2">
-      <p aria-hidden className="mb-[33px] text-[12px] text-zinc-600" style={{ fontFamily: MONO }}>$ <span className="text-zinc-400">git log --reverse</span> <span className="text-zinc-700">story.md</span></p>
+    <div ref={rootRef} data-story className="relative pl-7 py-2">
+      <p aria-hidden className="mb-12 text-[12px] text-zinc-600" style={{ fontFamily: MONO }}>$ <span className="text-zinc-400">git log --reverse</span> <span className="text-zinc-700">story.md</span></p>
       {/* reading progress rail */}
       <div aria-hidden className="absolute left-0 top-2 bottom-2 w-px">
         <div className="absolute inset-0 bg-white/[0.06]" />
         <div ref={railRef} className="absolute inset-0 bg-gradient-to-b from-indigo-400/70 to-indigo-500/30 origin-top" style={{ transform: 'scaleY(0)' }} />
       </div>
-      <div className="space-y-[48px] text-[14.5px] leading-[1.8] text-zinc-300">{children}</div>
+      <div className="space-y-16 text-[15.5px] leading-[1.85] text-zinc-300">{children}</div>
     </div>
   )
 }
@@ -294,7 +274,8 @@ const MD_LINES = [
 function ProfileFile() {
   const ref = useRef()
   const [tab, setTab] = useState('ts')
-  const inView = useInView(ref, { once: true, margin: '-60px' })
+  // types only while the file is on screen
+  const inView = useInView(ref, { margin: '-60px' })
   const tool = useToolTyper(inView)
   const lines = [
     <><span className="text-violet-300/60">export const</span> <span className="text-zinc-200">vincent</span> <P>= {'{'}</P></>,
@@ -311,46 +292,12 @@ function ProfileFile() {
     <>  <K>verfügbar</K><P>:</P> <N>2029</N><P>,</P><C><span className="text-amber-300/60">●</span> Praktika & Werkstudentenstellen</C></>,
     <P>{'}'}</P>,
   ]
-  // Desktop: the file's bottom edge lines up with the bottom of the last timeline card. The space
-  // that takes is shared out so the gap summary → story and the gap story → file are the same.
-  // Re-checked whenever sizes change.
-  const wrapRef = useRef()
-  useEffect(() => {
-    const wrap = wrapRef.current
-    const section = wrap.closest('#uber-mich')
-    const story = section.querySelector('[data-story]')
-    const wide = window.matchMedia('(min-width: 1024px)')
-    let raf = 0
-    const align = () => {
-      const card = [...section.querySelectorAll('[data-tl-row]')].pop()?.querySelector('.rounded-xl.p-5')
-      if (!card || !wide.matches) { wrap.style.paddingTop = ''; story.style.marginTop = ''; return }
-      const top = parseFloat(story.style.marginTop || 0) ? parseFloat(story.style.marginTop) - 40 : 0 // mt-10 base
-      const bottom = parseFloat(wrap.style.paddingTop) || 0
-      const extra = Math.max(0, top + bottom + card.getBoundingClientRect().bottom - wrap.getBoundingClientRect().bottom)
-      // with no extra space the gap below the story is 8px larger than the one above it
-      const t = Math.max(0, Math.round((extra + 8) / 2))
-      const b = Math.max(0, Math.round(extra - t))
-      if (Math.abs(t - top) < 1 && Math.abs(b - bottom) < 1) return
-      story.style.marginTop = `${40 + t}px`
-      wrap.style.paddingTop = `${b}px`
-      ScrollTrigger.refresh()
-    }
-    const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(align) }
-    const ro = new ResizeObserver(schedule)
-    ro.observe(section.querySelector('[data-tl-row]').parentElement)
-    ro.observe(wrap.parentElement)
-    wide.addEventListener('change', schedule)
-    document.fonts?.ready.then(schedule)
-    schedule()
-    return () => { cancelAnimationFrame(raf); ro.disconnect(); wide.removeEventListener('change', schedule) }
-  }, [])
-
   return (
-    <div ref={wrapRef} className="mt-12">
+    <div>
     <Reveal>
       {/* heading for the summary: what follows is the story in short */}
       <p className="mb-2 text-[12px] text-zinc-600" style={{ fontFamily: MONO }}>$ <span className="text-zinc-400">cat</span> {tab === 'ts' ? 'vincent.ts' : 'story.md'}</p>
-      <h3 className="mb-5 text-[24px] font-medium tracking-tight text-zinc-100">Auf einen Blick</h3>
+      <h3 className="mb-8 text-[28px] font-medium tracking-tight text-zinc-100">Auf einen Blick</h3>
       <div ref={ref} className="rounded-lg border border-white/[0.07] bg-[#0b0b0d]/80 overflow-hidden" style={{ fontFamily: MONO }}>
         <div className="flex items-stretch border-b border-white/[0.06] text-[11.5px]">
           {[['ts', 'vincent.ts'], ['md', 'story.md']].map(([id, name]) => (
@@ -523,8 +470,8 @@ function TimelineCard({ item, inView }) {
       }`}
     >
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-md border ${cat.cls}`}>
-          <span className={`w-1 h-1 rounded-full ${cat.dot}`} />
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-widest uppercase text-zinc-500">
+          <span className={`w-1.5 h-1.5 rounded-full ${cat.dot}`} />
           {cat.label}
         </span>
         {item.dropout && (
@@ -813,7 +760,7 @@ function TimelineRow({ item, inView }) {
     <div data-tl-row className={`relative grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4 items-center ${item.roomy ? 'sm:py-12' : ''}`}>
       <div className={`${item.side === 'left' ? 'flex' : 'hidden sm:flex'} col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto justify-start sm:justify-end`}>
         {item.side === 'left' && (
-          <div className="w-full sm:max-w-[240px]">
+          <div className="w-full sm:max-w-[280px]">
             <TimelineCard item={item} inView={inView} />
           </div>
         )}
@@ -824,7 +771,7 @@ function TimelineRow({ item, inView }) {
       </div>
       <div className={`${item.side === 'right' ? 'flex' : 'hidden sm:flex'} col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto justify-start`}>
         {item.side === 'right' && (
-          <div className="w-full sm:max-w-[240px]">
+          <div className="w-full sm:max-w-[280px]">
             <TimelineCard item={item} inView={inView} />
           </div>
         )}
@@ -848,19 +795,27 @@ function ServiceContinues({ inView }) {
   )
 }
 
-function Bio() {
+// Scene 1: who — the name and the story in two sentences
+function Intro() {
   return (
-    <div className="flex flex-col h-full min-w-0">
+    <div className="scene">
+      <SectionPath path="über-mich" className="mb-10" />
       <Reveal as="h2" className="text-[15px] font-light text-zinc-500 mb-1">Mein Name ist</Reveal>
       <Name>Vincent Fidanli</Name>
-
       <Summary>
         Ich gestalte und entwickle digitale Anwendungen, an der Schnittstelle von Design und Code. Nach
         Ausbildung, Fachabitur und zwei Semestern Medieninformatik an der <span data-accent>THM</span> bin
         ich heute Zeitsoldat bei der <span data-accent>Bundeswehr</span>. Ab 2027 studiere ich nebenbei im
         Fernstudium an der <span data-accent>IU</span> weiter.
       </Summary>
+    </div>
+  )
+}
 
+// Scene 3: the long version, in a narrow reading column
+function FullStory() {
+  return (
+    <div className="scene max-w-[44rem]">
       <Story>
         <Chapter label="Die Anfänge" hash="a1c3f0e">Meine Leidenschaft für Technik und Gestaltung entstand während meiner schulischen Ausbildung. Dort habe ich das Fundament für Design, Medienproduktion und Softwareentwicklung gelegt.</Chapter>
         <Chapter label="Praktikum" hash="7be21d4">In einem sechsmonatigen Praktikum als Webentwickler bei einem Tech-Startup habe ich moderne Technologien und agile Arbeitsmethoden kennengelernt und direkt in der Praxis angewendet. Seitdem weiß ich: Ich möchte Anwendungen entwerfen und entwickeln, die Menschen wirklich nützen.</Chapter>
@@ -868,8 +823,6 @@ function Bio() {
         <Chapter label="Die Entscheidung" hash="3f8d6b1" gitRef="pause">Im ersten Semester konnte ich noch stark auf die Vorkenntnisse aus meiner schulischen Ausbildung zurückgreifen. Spätestens im zweiten Semester wurde der Stoff jedoch neu und anspruchsvoller, und mir wurde klar, dass sich Nachtschicht, Vorlesungen, Prüfungen und Testate auf Dauer nicht in der Qualität vereinbaren ließen, die ich von mir selbst erwarte. Nach reiflicher Überlegung habe ich mich deshalb entschieden, das Studium zu pausieren und meinen Dienst als Soldat anzutreten. Ich wollte mich finanziell und persönlich festigen und ein stabiles Fundament für meinen weiteren Lebensweg schaffen. Ursprünglich hatte ich geplant, das Studium nach meiner Dienstzeit mit Unterstützung des Berufsförderungsdienstes wieder aufzunehmen.</Chapter>
         <Chapter label="Heute" hash="e05c7f9" gitRef="HEAD → main">Im Laufe meiner Dienstzeit habe ich jedoch festgestellt, dass mir meine Aufgaben in der Mannschaftslaufbahn genug zeitlichen Freiraum lassen, um ein Teilzeit-Fernstudium neben dem Dienst zu bewältigen. Deshalb nehme ich zum 1. Januar 2027 den Bachelor of Science in Medieninformatik wieder auf, um mein Ziel, das ich schon so lange verfolge, endlich zu erreichen.</Chapter>
       </Story>
-
-      <ProfileFile />
     </div>
   )
 }
@@ -882,58 +835,7 @@ const ABOUT_HILLS = [
 ]
 
 export default function AboutSection() {
-  const sectionRef  = useRef()
-  const glowRef     = useRef()
   const timelineRef = useRef()
-  useEffect(() => {
-    const section = sectionRef.current
-    if (!section || !glowRef.current) return
-
-    const GLOW_RADIUS = 350
-
-    gsap.set(glowRef.current, {
-      xPercent: -50,
-      yPercent: -50,
-      x: section.offsetWidth  * 0.5,
-      y: section.offsetHeight * 0.35,
-    })
-
-    let lastClientX = window.innerWidth  * 0.5
-    let lastClientY = window.innerHeight * 0.5
-
-    // Short follow time keeps the glow nearly in sync with the cursor while staying smooth
-    const glowX = gsap.quickTo(glowRef.current, 'x', { duration: 0.12, ease: 'power2.out' })
-    const glowY = gsap.quickTo(glowRef.current, 'y', { duration: 0.12, ease: 'power2.out' })
-
-    const moveGlow = (clientX, clientY) => {
-      const rect = section.getBoundingClientRect()
-      // Clamp to ±GLOW_RADIUS beyond section edges so the glow peeks in
-      // from the border when cursor is just outside, but never chases the
-      // cursor across the entire page.
-      const x = Math.max(-GLOW_RADIUS, Math.min(rect.width  + GLOW_RADIUS, clientX - rect.left))
-      const y = Math.max(-GLOW_RADIUS, Math.min(rect.height + GLOW_RADIUS, clientY - rect.top))
-      glowX(x)
-      glowY(y)
-    }
-
-    const handleMove = (e) => {
-      lastClientX = e.clientX
-      lastClientY = e.clientY
-      moveGlow(e.clientX, e.clientY)
-    }
-
-    // Recalculate on scroll so the glow stays under the cursor even when
-    // the user scrolls without moving the mouse.
-    const handleScroll = () => moveGlow(lastClientX, lastClientY)
-
-    window.addEventListener('mousemove', handleMove)
-    window.addEventListener('scroll',    handleScroll, { passive: true })
-    return () => {
-      window.removeEventListener('mousemove', handleMove)
-      window.removeEventListener('scroll',    handleScroll)
-    }
-  }, [])
-
   const forkGeom = useForkGeometry(timelineRef)
   const geomRef = useRef(null)
   geomRef.current = forkGeom
@@ -966,49 +868,36 @@ export default function AboutSection() {
   useMotionValueEvent(tip, 'change', updateReached)
   useEffect(() => updateReached(tip.get()), [forkGeom, tip, updateReached])
 
+  // Four scenes one after another, each with its own space and one thing happening:
+  // who (summary is read while scrolling) → the timeline drawing itself → the full story in a
+  // reading column → the facts as a source file. Slides over the pinned project stack.
   return (
-    <>
-      <div className="h-px bg-white/[0.05]" />
+    <div id="uber-mich" className="relative z-10 bg-[#0a0a0a] section-y overflow-hidden shadow-[0_-24px_60px_rgba(0,0,0,0.55)]">
+      <Contours hills={ABOUT_HILLS} />
 
-      <div id="uber-mich" ref={sectionRef} className="relative bg-[#0a0a0a] py-28 overflow-hidden">
+      <div className="relative z-10 gutter max-w-6xl mx-auto">
+        <Intro />
 
-        <Contours hills={ABOUT_HILLS} />
-
-        {/* Cursor-following indigo spotlight */}
-        <div
-          ref={glowRef}
-          className="absolute pointer-events-none"
-          style={{
-            width: 700,
-            height: 700,
-            left: 0,
-            top: 0,
-            background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 62%)',
-            zIndex: 0,
-          }}
-        />
-
-        <div className="px-6 sm:px-10 lg:px-16 relative z-10">
-          <SectionPath path="über-mich" />
-
-          <div className="grid lg:grid-cols-[1fr_1.1fr] gap-20 items-start">
-
-            {/* Left: bio */}
-            <Bio />
-
-            {/* Right: alternating timeline. The line itself is drawn as an SVG path through the measured dots. */}
-            <div ref={timelineRef} className="relative">
-              {forkGeom && <StudyFork geom={forkGeom} tip={tip} />}
-
-              <div className="flex flex-col gap-10">
-                {TIMELINE.map((item, i) => (
-                  <TimelineRow key={i} item={item} inView={i < reached} />
-                ))}
-              </div>
+        {/* Scene 2: the timeline, centred, with the whole width to itself */}
+        <div className="scene">
+          <p className="mb-16 text-center text-[12px] text-zinc-600" style={{ fontFamily: MONO }}>$ <span className="text-zinc-400">git log --graph</span> <span className="text-zinc-700">werdegang</span></p>
+          <div ref={timelineRef} className="relative max-w-[760px] mx-auto">
+            {forkGeom && <StudyFork geom={forkGeom} tip={tip} />}
+            <div className="flex flex-col gap-14">
+              {TIMELINE.map((item, i) => (
+                <TimelineRow key={i} item={item} inView={i < reached} />
+              ))}
             </div>
           </div>
         </div>
+
+        <FullStory />
+
+        {/* Scene 4: at a glance */}
+        <div className="scene max-w-[44rem]">
+          <ProfileFile />
+        </div>
       </div>
-    </>
+    </div>
   )
 }

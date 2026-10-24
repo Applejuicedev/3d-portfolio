@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
-import { SectionPath } from './AboutSection'
+import { SectionPath } from './Section'
 
 gsap.registerPlugin(ScrollTrigger, SplitText)
 
@@ -48,10 +48,8 @@ const SOCIALS = [
   },
 ]
 
-const DIM = '#3f3f46'
-
-// Closing statement above the footer bar: the letters flip in once, and on desktop the ones
-// near the cursor lift and light up.
+// Closing statement above the footer bar: the letters flip in once as it scrolls in, then it
+// stands still and is fully readable.
 function ContactStatement() {
   const rootRef = useRef()
 
@@ -60,60 +58,26 @@ function ContactStatement() {
     const mm = gsap.matchMedia()
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const split = SplitText.create(root.querySelector('[data-statement]'), { type: 'chars,words' })
-      const color = gsap.utils.interpolate(DIM, '#c7d2fe')
       gsap.from(split.chars, {
         yPercent: 80, opacity: 0, rotateX: -90, stagger: 0.03, duration: 0.9, ease: 'back.out(2)',
         scrollTrigger: { trigger: root, start: 'top 80%', once: true },
       })
-      if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
-
-      let frame = 0
-      let pointer = { x: 0, y: 0 }
-      const update = () => {
-        frame = 0
-        split.chars.forEach((c) => {
-          const r = c.getBoundingClientRect()
-          const d = Math.hypot(pointer.x - (r.left + r.width / 2), pointer.y - (r.top + r.height / 2))
-          const k = Math.max(0, 1 - d / 220)
-          gsap.to(c, { y: -k * 22, scale: 1 + k * 0.12, color: color(k), duration: 0.4, ease: 'power3.out', overwrite: 'auto' })
-        })
-      }
-      const move = (e) => {
-        pointer = { x: e.clientX, y: e.clientY }
-        if (!frame) frame = requestAnimationFrame(update)
-      }
-      const leave = () => {
-        cancelAnimationFrame(frame)
-        frame = 0
-        gsap.to(split.chars, { y: 0, scale: 1, color: DIM, duration: 0.8, ease: 'elastic.out(1, 0.4)', stagger: 0.01, overwrite: 'auto' })
-      }
-      root.addEventListener('pointermove', move)
-      root.addEventListener('pointerleave', leave)
-      return () => {
-        cancelAnimationFrame(frame)
-        root.removeEventListener('pointermove', move)
-        root.removeEventListener('pointerleave', leave)
-      }
     })
     return () => mm.revert()
   }, [])
 
   return (
-    <div ref={rootRef} className="bg-[#0a0a0a] pt-28 pb-24 px-6 text-center cursor-default" style={{ perspective: 600 }}>
-      <SectionPath path="kontakt" className="mb-6" />
-      <p
-        data-statement
-        className="font-bold tracking-tight leading-none select-none"
-        style={{ fontSize: 'clamp(3rem, 10vw, 8rem)', color: DIM }}
-      >
+    <div id="kontakt" ref={rootRef} className="section-y gutter text-center" style={{ perspective: 600 }}>
+      <SectionPath path="kontakt" className="mb-8" />
+      <p data-statement className="font-medium tracking-[-0.04em] leading-none text-zinc-100" style={{ fontSize: 'clamp(3rem, 10vw, 8rem)' }}>
         Schreib mir.
       </p>
-      <p className="mt-8 text-[14px] text-zinc-500 max-w-md mx-auto leading-relaxed">
+      <p className="mt-10 text-[15px] text-zinc-400 max-w-md mx-auto leading-relaxed">
         Praktikum, Werkstudentenstelle oder eine Projektidee? Ich freue mich über deine Nachricht.
       </p>
       <a
         href="mailto:vincent@fidanli.de"
-        className="inline-block mt-4 text-[14px] text-zinc-400 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white"
+        className="inline-block mt-8 rounded-full border border-white/[0.14] px-6 py-3 text-[15px] text-zinc-100 transition-colors duration-150 hover:border-white/40 hover:text-white"
       >
         vincent@fidanli.de
       </a>
@@ -123,14 +87,11 @@ function ContactStatement() {
 
 export default function Footer() {
   return (
-    // Slides over the (sticky) portfolio section, so it needs its own layer and background
-    <div className="relative z-10 bg-[#0a0a0a] shadow-[0_-24px_60px_rgba(0,0,0,0.55)]">
-      <div className="h-px bg-white/[0.05]" />
+    <div className="relative z-10 bg-[#0a0a0a]">
       <ContactStatement />
-      <div className="h-px bg-white/[0.05]" />
 
-      <footer className="bg-[#0a0a0a] py-8">
-        <div className="max-w-7xl mx-auto px-8">
+      <footer className="border-t border-white/[0.05] py-8">
+        <div className="max-w-7xl mx-auto gutter">
           <div className="flex flex-col md:flex-row items-center justify-between gap-5">
 
             <div className="flex flex-wrap justify-center md:justify-start gap-0.5">

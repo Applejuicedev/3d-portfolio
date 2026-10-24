@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { orbBuilt, headlineDone } from './heroStage'
 
 const MONO = "'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, monospace"
 const SEL = 'rgba(129,140,248,0.16)'
@@ -37,6 +38,7 @@ export default function HeroTyper() {
       pre.current.textContent = FINAL
       pre.current.classList.add('typer-caret')
       setFinished(true)
+      headlineDone.resolve()
       return
     }
     let alive = true
@@ -80,6 +82,10 @@ export default function HeroTyper() {
       await type(pre.current, 'Design trifft ')
       await type(word.current, first)
       await type(post.current, '.')
+      if (!alive) return
+      // the correction is the hero's main moment, so it waits until the 3D object has finished
+      // building (desktop only; phones have none). Capped, in case WebGL never comes up.
+      if (window.matchMedia('(min-width: 1024px)').matches) await Promise.race([orbBuilt.promise, wait(3)])
       if (!alive) return
       // 1b. the editor flags the word: red squiggle, then the problem message below it
       await wait(0.35)
@@ -140,6 +146,7 @@ export default function HeroTyper() {
       // 5. settle: caret jumps to the end of the line and keeps blinking
       caretAfter(post.current)
       setFinished(true)
+      headlineDone.resolve()
     }
     run()
     return () => { alive = false; tweens.forEach((t) => t.kill()) }

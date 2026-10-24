@@ -3,7 +3,6 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Navbar from './components/Navbar'
 import HeroSection from './components/HeroSection'
-import SkillSlider from './components/SkillSlider'
 import AboutSection from './components/AboutSection'
 import TechStackReveal from './components/TechStackReveal'
 import PortfolioSection from './components/PortfolioSection'
@@ -12,8 +11,9 @@ import Footer from './components/Footer'
 gsap.registerPlugin(ScrollTrigger)
 
 // Everything below the hero mounts one section per idle slot after the hero has painted, so the
-// first load isn't one long blocking task while the hero intro is playing
-const BELOW = [SkillSlider, AboutSection, TechStackReveal, PortfolioSection, Footer]
+// first load isn't one long blocking task while the hero intro is playing.
+// Order: the work first, then who made it, then what it's built with, then contact.
+const BELOW = [PortfolioSection, AboutSection, TechStackReveal, Footer]
 
 function useStaged(total) {
   const [count, setCount] = useState(0)
