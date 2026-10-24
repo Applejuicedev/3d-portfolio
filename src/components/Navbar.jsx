@@ -1,81 +1,140 @@
-import { useState, useEffect, useRef } from 'react'
-import gsap from 'gsap'
-import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin'
+import { useEffect, useRef, useState } from 'react'
+import { Roll, Magnetic, Decode } from './ui'
+import { useMotion, gsap, EASE, prefersReduced } from './motion'
 
-gsap.registerPlugin(ScrambleTextPlugin)
-
-const MONO = "'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, monospace"
-
-const navItems = [
-  { id: 'portfolio', path: 'projekte' },
-  { id: 'uber-mich', path: 'über-mich' },
-  { id: 'stack', path: 'stack' },
+const NAV = [
+  { id: 'projekte', label: 'Projekte' },
+  { id: 'uber-mich', label: 'Über mich' },
+  { id: 'stack', label: 'Stack' },
+  { id: 'kontakt', label: 'Kontakt' },
 ]
 
-const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+// in-page jump: smooth (html scroll-behavior), interrupted by any wheel/touch input; the URL stays
+// clean, so a reload starts at the top again (see useDeepLink in App)
+const go = (id) => (e) => {
+  e.preventDefault()
+  document.getElementById(id)?.scrollIntoView()
+}
 
-// Each entry is always readable as the section's path (~/projekte, …), the same labels the sections
-// carry. On hover/focus the word decodes itself once more, random letters (darker) resolving into
-// it — a small acknowledgement, not something you need to discover the navigation.
-function NavItem({ id, path }) {
-  const ref = useRef()
-  useEffect(() => {
-    const btn = ref.current
-    const word = btn.querySelector('[data-word]')
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const enter = () => gsap.to(word, {
-      duration: 0.5, overwrite: true,
-      scrambleText: { text: path, chars: 'abcdefghijklmnopqrstuvwxyz', speed: 0.9, oldClass: 'text-zinc-600' },
-    })
-    btn.addEventListener('mouseenter', enter)
-    btn.addEventListener('focus', enter)
-    return () => { btn.removeEventListener('mouseenter', enter); btn.removeEventListener('focus', enter) }
-  }, [path])
-
+// The name — the only place it stands on the page. Each letter sits in its own mask: on load the
+// letters rise into place one after another (the surname a beat later); on hover or keyboard focus
+// they roll through once, letter by letter, and come back. Letters are inline-blocks of fixed
+// width, so nothing around them moves. Screen readers get the plain name (aria-label).
+const NAME = 'Vincent Fidanli'
+function NameMark({ onClick }) {
+  const ref = useRef(), busy = useRef(false)
+  const chars = () => ref.current.querySelectorAll('[data-ch]')
+  useMotion(ref, () => {
+    gsap.from(chars(), { yPercent: 115, duration: 0.9, ease: EASE.out, delay: 0.15, stagger: (i) => i * 0.035 + (i > 7 ? 0.08 : 0) })
+  })
+  const roll = () => {
+    if (busy.current || prefersReduced()) return
+    busy.current = true
+    const tl = gsap.timeline({ onComplete: () => { busy.current = false } })
+    // per letter: out at the top, back in from below — staggered, so a wave runs through the name
+    chars().forEach((ch, i) => tl.add(gsap.timeline()
+      .to(ch, { yPercent: -115, duration: 0.22, ease: 'power2.in' })
+      .set(ch, { yPercent: 115 })
+      .to(ch, { yPercent: 0, duration: 0.45, ease: EASE.out }), i * 0.025))
+  }
   return (
-    <button ref={ref} onClick={() => go(id)}
-      className="py-2 text-[12.5px] text-zinc-500 hover:text-white focus-visible:text-white focus-visible:outline-none transition-colors duration-150 whitespace-nowrap"
-      style={{ fontFamily: MONO }}>
-      <span className="hidden sm:inline text-zinc-700">~/</span><span data-word>{path}</span>
-    </button>
+    <a ref={ref} href="#start" onClick={onClick} onMouseEnter={roll} onFocus={roll} aria-label={`${NAME} – zum Anfang`}
+      className="text-[14px] font-medium tracking-tight text-ink whitespace-nowrap">
+      <span aria-hidden className="inline-flex">
+        {[...NAME].map((c, i) => (
+          <span key={i} className="inline-block overflow-hidden pb-[0.1em] -mb-[0.1em]">
+            <span data-ch className="inline-block">{c === ' ' ? '\u00a0' : c}</span>
+          </span>
+        ))}
+      </span>
+    </a>
   )
+}
+
+// Which section is under the middle of the screen — the nav marks it with the signal dot
+function useCurrentSection() {
+  const [current, setCurrent] = useState(null)
+  useEffect(() => {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) setCurrent(e.target.id) })
+    }, { rootMargin: '-50% 0px -50% 0px' })
+    // sections mount one after another (App), so look again until all are there
+    const observe = () => NAV.forEach(({ id }) => { const el = document.getElementById(id); if (el) io.observe(el) })
+    observe()
+    const t = setInterval(observe, 500)
+    const stop = setTimeout(() => clearInterval(t), 4000)
+    return () => { io.disconnect(); clearInterval(t); clearTimeout(stop) }
+  }, [])
+  return current
 }
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
+  const [open, setOpen] = useState(false) // small screens: the section links fold into a menu
+  const current = useCurrentSection()
+
+  // the menu closes on Escape and as soon as the page is scrolled
+  useEffect(() => {
+    if (!open) return
+    const key = (e) => { if (e.key === 'Escape') setOpen(false) }
+    const scroll = () => setOpen(false)
+    window.addEventListener('keydown', key)
+    window.addEventListener('scroll', scroll, { passive: true, once: true })
+    return () => { window.removeEventListener('keydown', key); window.removeEventListener('scroll', scroll) }
+  }, [open])
+  const jump = (id) => (e) => { setOpen(false); go(id)(e) }
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 24)
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   return (
-    <nav
-      // Border is always present and only its color fades — toggling the border itself
-      // briefly flashed Tailwind's light default border color while transitioning.
-      className={`fixed top-0 left-0 right-0 z-50 border-b transition-[background-color,border-color] duration-200 ${
-        scrolled
-          ? 'bg-[#0a0a0a]/60 backdrop-blur-xl backdrop-saturate-150 border-white/[0.05]'
-          : 'bg-transparent border-transparent'
-      }`}
-    >
-      <div className="gutter h-14 flex items-center justify-between gap-4">
-        <button onClick={() => go('start')} className="text-[13.5px] font-medium tracking-tight text-zinc-200 hover:text-white transition-colors duration-150 whitespace-nowrap">
-          Vincent Fidanli
-        </button>
-        <div className="flex items-center gap-4 sm:gap-7">
-          <div className="hidden md:flex items-center gap-7">
-            {navItems.map((item) => <NavItem key={item.id} {...item} />)}
-          </div>
-          {/* phones: only the projects link next to contact; the rest is one scroll away */}
-          <div className="md:hidden"><NavItem {...navItems[0]} /></div>
-          <button onClick={() => go('kontakt')}
-            className="rounded-full border border-white/[0.12] px-4 py-1.5 text-[12.5px] text-zinc-200 hover:border-white/30 hover:text-white transition-colors duration-150">
-            Kontakt
+    // solid surface and a hairline once the page moves under it — no blur, no glass
+    // select-none: clicking (and double-clicking) a link must not select its text
+    <nav aria-label="Hauptnavigation"
+      className={`select-none fixed top-0 inset-x-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300 ${open ? 'bg-bg border-line' : scrolled ? 'nav-glass border-line' : 'bg-transparent border-transparent'}`}>
+      <div className="frame h-14 flex items-center justify-between gap-6">
+        <NameMark onClick={go('start')} />
+        <div className="flex items-center gap-8">
+          <ul className="hidden md:flex items-center gap-7">
+            {NAV.slice(0, 3).map(({ id, label }) => (
+              <li key={id}>
+                <a href={`#${id}`} onClick={go(id)} aria-current={current === id ? 'location' : undefined}
+                  className={`group flex items-center gap-2 text-[13px] transition-colors duration-150 ${current === id ? 'text-ink' : 'text-muted hover:text-ink'}`}>
+                  <span aria-hidden className={`w-1 h-1 rounded-full transition-[background-color,transform] duration-[420ms] ease-sys ${current === id ? 'bg-signal scale-100' : 'bg-muted scale-0'}`} />
+                  <Decode>{label}</Decode>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="md:hidden press text-[13px] text-ink py-1.5" aria-expanded={open} aria-controls="nav-menu" onClick={() => setOpen((o) => !o)}>
+            {open ? 'Schließen' : 'Menü'}
           </button>
+          {/* contact is the one button in the bar */}
+          <Magnetic>
+            <a href="#kontakt" onClick={go('kontakt')} aria-current={current === 'kontakt' ? 'location' : undefined}
+              className="group press inline-flex items-center gap-2 rounded-full border border-line px-4 py-1.5 text-[13px] text-ink transition-colors duration-[420ms] ease-sys hover:border-signal">
+              <span aria-hidden className={`w-1.5 h-1.5 rounded-full bg-signal transition-transform duration-[420ms] ease-sys ${current === 'kontakt' ? 'scale-100' : 'scale-0 group-hover:scale-100'}`} />
+              <Roll>Kontakt</Roll>
+            </a>
+          </Magnetic>
         </div>
       </div>
+      {open && (
+        <ul id="nav-menu" className="md:hidden frame pb-5 pt-1 flex flex-col">
+          {NAV.slice(0, 3).map(({ id, label }) => (
+            <li key={id} className="border-t border-line">
+              <a href={`#${id}`} onClick={jump(id)} aria-current={current === id ? 'location' : undefined}
+                className={`flex items-center justify-between py-3.5 text-[17px] ${current === id ? 'text-ink' : 'text-muted'}`}>
+                {label}<span aria-hidden className="text-faint">↓</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </nav>
   )
 }

@@ -8,18 +8,19 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        mono: ['Cascadia Code', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
-      animation: {
-        blink: 'blink 1s step-end infinite',
-        float: 'float 3s ease-in-out infinite',
+      // the design tokens from index.css (same values), so utilities like text-muted or border-line exist
+      colors: {
+        bg: 'rgb(15 15 14 / <alpha-value>)',
+        raised: 'rgb(22 22 21 / <alpha-value>)',
+        line: 'rgb(255 255 255 / 0.08)',
+        ink: 'rgb(236 235 230 / <alpha-value>)',
+        muted: 'rgb(139 138 133 / <alpha-value>)',
+        faint: 'rgb(86 85 79 / <alpha-value>)',
+        signal: 'rgb(255 91 31 / <alpha-value>)',
       },
-      keyframes: {
-        blink: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } },
-        float: {
-          '0%,100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-12px)' },
-        },
-      },
+      transitionTimingFunction: { sys: 'cubic-bezier(0.2, 0.7, 0, 1)' },
     },
   },
   plugins: [],

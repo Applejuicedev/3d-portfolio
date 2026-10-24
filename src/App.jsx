@@ -1,46 +1,56 @@
-import { useEffect, useState } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Navbar from './components/Navbar'
 import HeroSection from './components/HeroSection'
-import AboutSection from './components/AboutSection'
-import TechStackReveal from './components/TechStackReveal'
 import PortfolioSection from './components/PortfolioSection'
+import AboutSection from './components/AboutSection'
+import Stack from './components/Stack'
 import Footer from './components/Footer'
+import Cursor from './components/Cursor'
+import Atmosphere from './components/Atmosphere'
+import StatusBar from './components/StatusBar'
+import { useGlowPointer } from './components/ui'
+import { useEffect } from 'react'
+import { ScrollTrigger } from './components/motion'
 
-gsap.registerPlugin(ScrollTrigger)
-
-// Everything below the hero mounts one section per idle slot after the hero has painted, so the
-// first load isn't one long blocking task while the hero intro is playing.
-// Order: the work first, then who made it, then what it's built with, then contact.
-const BELOW = [PortfolioSection, AboutSection, TechStackReveal, Footer]
-
-function useStaged(total) {
-  const [count, setCount] = useState(0)
+// One page, four numbered sections after the opening: the work first, then who made it, what it
+// is made with, and how to reach me.
+// Where a visit starts. A reload (or back/forward onto the page) always starts at the top of the
+// hero — the browser's own scroll restoration is off (index.html), and a hash left in the URL is
+// dropped, so an old #projekte can't pull the page down again. Only a fresh visit with an anchor
+// (a shared link like /#kontakt) jumps to it — and only once the fonts are in (final layout), since
+// the browser's own jump comes before React has rendered the sections. ScrollTrigger recalculates
+// its positions for that final layout either way.
+function useDeepLink() {
   useEffect(() => {
-    if (count >= total) {
-      // positions changed while sections were added; a deep link can only resolve now
+    let alive = true
+    const type = performance.getEntriesByType?.('navigation')[0]?.type
+    const id = type === 'navigate' ? decodeURIComponent(location.hash.slice(1)) : ''
+    if (!id && location.hash) history.replaceState(null, '', location.pathname + location.search)
+    document.fonts.ready.then(() => {
+      if (!alive) return
       ScrollTrigger.refresh()
-      if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView()
-      return
-    }
-    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 16))
-    const cancel = window.cancelIdleCallback || clearTimeout
-    const id = idle(() => setCount((c) => c + 1), { timeout: 400 })
-    return () => cancel(id)
-  }, [count, total])
-  return count
+      if (id) document.getElementById(id)?.scrollIntoView({ behavior: 'instant' })
+      else if (window.scrollY) window.scrollTo({ top: 0, behavior: 'instant' })
+    })
+    return () => { alive = false }
+  }, [])
 }
 
 export default function App() {
-  const shown = useStaged(BELOW.length)
+  useGlowPointer()
+  useDeepLink()
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <>
+      <Atmosphere />
       <Navbar />
-      <section id="start">
-        <HeroSection />
-      </section>
-      {BELOW.slice(0, shown).map((Section) => <Section key={Section.name} />)}
-    </div>
+      <main>
+        <section id="start" aria-label="Start"><HeroSection /></section>
+        <PortfolioSection />
+        <AboutSection />
+        <Stack />
+      </main>
+      <Footer />
+      <StatusBar />
+      <Cursor />
+    </>
   )
 }
