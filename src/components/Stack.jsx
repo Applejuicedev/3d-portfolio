@@ -3,6 +3,7 @@ import { SectionHead } from './Section'
 import { Slab, SlabScene } from './Slabs'
 import { useMotion, gsap } from './motion'
 import Accent from './Accent'
+import Marquee from './Marquee'
 
 // What I work with, grouped by what it is for, bottom layer first: the foundation (languages) up
 // to the tools on top. Plain names: the projects show what each one was used for.
@@ -104,6 +105,7 @@ export default function Stack() {
           })}
         </ul>
       </div>
+      <div className="mt-16 sm:mt-20"><Marquee items={GROUPS.flatMap((g) => g.items)} /></div>
     </section>
   )
 }
