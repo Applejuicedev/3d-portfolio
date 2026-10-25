@@ -85,7 +85,9 @@ export default function Preloader({ onRelease }) {
       }, 500)
     }
     raf = requestAnimationFrame(step)
-    return () => { alive = false; cancelAnimationFrame(raf); stage.emit = 1; release() }
+    // only stops this run's loop: React's StrictMode (dev) runs the effect twice, and releasing
+    // here let the page's motion go under the preloader — the hero then stood there finished
+    return () => { alive = false; cancelAnimationFrame(raf) }
   }, [onRelease])
 
   if (phase === 'gone') return null
