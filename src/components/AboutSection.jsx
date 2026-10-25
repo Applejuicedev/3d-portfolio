@@ -73,12 +73,14 @@ const STATIONS = [
 // Werdegang rail: the commit line in the meta column fills with the scroll, and each station lights
 // up when the line reaches it. The one scroll-driven sequence on the page — it tells the order of
 // things. Without motion the rail is simply full and every station lit.
+// Below lg there is no meta column: the rail and its dots run down the left edge of the list, the
+// stations indented beside them — the same line, the same triggers.
 function Stations() {
   const ref = useRef()
   useMotion(ref, (el) => {
     const rows = [...el.querySelectorAll('[data-station]')]
     rows.forEach((r) => r.classList.remove('is-reached'))
-    gsap.fromTo(el.querySelector('[data-rail]'), { scaleY: 0 }, {
+    gsap.fromTo(el.querySelectorAll('[data-rail]'), { scaleY: 0 }, {
       scaleY: 1, ease: 'none',
       scrollTrigger: { trigger: el, start: 'top 65%', end: 'bottom 65%', scrub: 0.4 },
     })
@@ -93,10 +95,15 @@ function Stations() {
           <span data-rail className="absolute right-[2.5px] top-8 bottom-8 w-px bg-signal origin-top" />
         </div>
       </div>
+      <div aria-hidden className="lg:hidden absolute inset-0 pointer-events-none">
+        <span className="absolute left-[2.5px] top-8 bottom-8 w-px bg-line" />
+        <span data-rail className="absolute left-[2.5px] top-8 bottom-8 w-px bg-signal origin-top" />
+      </div>
       <ol className="border-b border-line">
         {STATIONS.map((s) => (
-          <li key={s.title} data-station className="is-reached group/row grid12 gap-y-1 border-t border-line py-6">
-            <span aria-hidden className="hidden lg:flex col-span-2 justify-end pt-[0.45em]">
+          <li key={s.title} data-station className="is-reached group/row grid12 gap-y-1 border-t border-line py-6 max-lg:relative max-lg:pl-7">
+            {/* the dot: in the meta column (lg), on the rail at the left edge below it */}
+            <span aria-hidden className="flex max-lg:absolute max-lg:left-0 max-lg:top-6 col-span-2 justify-end pt-[0.45em]">
               <span className="w-1.5 h-1.5 rounded-full border border-faint bg-bg transition-colors duration-[420ms] group-[.is-reached]/row:bg-signal group-[.is-reached]/row:border-signal" />
             </span>
             <p className="col-span-4 lg:col-span-2 t-meta tabular-nums">{s.when}</p>
