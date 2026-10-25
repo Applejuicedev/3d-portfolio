@@ -69,6 +69,11 @@ void main() {
   vec3 side = normalize(vec3(-(B.y - C.y), B.x - C.x, 0.0));
   path += side * (sin(te * 9.0 - uTime * 3.0 + h1 * 0.6) * 0.07 + (h2 - 0.5) * 0.07) * uView.y * mid;
   path += (vec3(h1, h2, h3) - 0.5) * 0.045 * uView.y * mid;
+  // wilder: the whole strand flickers a little, and about one point in six breaks away from it
+  // on a loose path of its own (further the more it is mid-way), then falls back in at the end
+  vec3 wander = vec3(sin(uTime * 1.3 + h1 * 20.0), cos(uTime * 1.1 + h2 * 20.0), sin(uTime * 0.9 + h3 * 20.0));
+  float stray = smoothstep(0.8, 0.86, h3) * (0.35 + 0.65 * h1);
+  path += (wander * 0.03 + (side * (h2 - 0.5) * 1.4 + wander * 0.45) * stray) * uView.y * mid;
   mv.xyz = e < 1.0 ? path : B;
   vec4 cp = projectionMatrix * mv;
   vec2 ndc = cp.xy / cp.w;

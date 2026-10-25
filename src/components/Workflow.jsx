@@ -327,7 +327,7 @@ export default function Workflow({ rootRef, start }) {
       }
       if (alive) timer = gsap.delayedCall(40, run)
     }
-    timer = gsap.delayedCall(1.4, run)
+    timer = gsap.delayedCall(3, run)
     return () => {
       alive = false; timer?.kill(); tweens.forEach((t) => t.kill())
       restore(); cleanups.forEach((c) => c())

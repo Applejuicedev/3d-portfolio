@@ -195,8 +195,11 @@ html.custom-cursor :is(input, textarea, select, [contenteditable="true"]) { curs
   .typer-caret::after { display: none; }
 }
 
-/* while the preloader runs, only the bust's particles, the portal and the cursor are on screen (Preloader.jsx) */
-html[data-preloading] body * { visibility: hidden; }
-html[data-preloading] [data-bust], html[data-preloading] [data-bust] *,
-html[data-preloading] [data-preloader], html[data-preloading] [data-preloader] *,
-html[data-preloading] [data-cursor-ui], html[data-preloading] [data-cursor-ui] * { visibility: visible; }
+/* while the preloader runs, only the bust's particles, the console and the cursor are on screen
+   (Preloader.jsx). Hidden by opacity on a few containers — not visibility on every element: lifting
+   that re-styled the whole page in one frame and made the entrance stutter. The hero's own
+   contents are hidden by their entrance (gsap from() states). After it, the rest comes in one
+   after another (--enter), so the page doesn't land all at once. */
+html[data-preloading] [data-enter], html[data-preloading] main > section:not(#start), html[data-preloading] footer,
+html[data-preloading] #start h1 { opacity: 0; transition: none; }
+[data-enter] { transition: opacity 1.2s cubic-bezier(.2, .7, 0, 1) var(--enter, 0s); }

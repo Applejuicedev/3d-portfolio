@@ -30,15 +30,17 @@ function useLocalTime() {
   return t
 }
 
-// The opening, in a fixed order, so nothing competes for the first look:
-//   0.10  the headline rises line by line out of its masks; the last word is typed (Typer: a
+// The opening, after the preloader (which has built the bust), in a fixed order, so nothing
+// competes for the first look:
+//   0.45  the headline rises slowly line by line out of its masks; the last word is typed (Typer: a
 //         first draft, reconsidered, then completed by autocomplete)
-//   0.55  "Creative Fullstack Developer" decodes into place above it
-//   1.10  the bust starts to condense out of scattered particles (Bust3D paces its own start-up)
-//   1.25  the margins answer one by one, each its own way: the study line slides out of a mask,
+//   0.70  the orange field fades in (index.css [data-enter])
+//   1.00  "Creative Fullstack Developer" decodes into place above it
+//   1.50  the navigation fades in
+//   1.70  the margins answer one by one, each its own way: the study line slides out of a mask,
 //         the availability dot pops and its line slides in from the right
-//   1.70  the base row rises item by item; the arrow nods towards the projects
-//   then  the workflow (Workflow.jsx) begins once the word is complete
+//   2.40  the base row rises item by item; the arrow nods towards the projects
+//   then  the workflow (Workflow.jsx) begins a while after the word is complete
 export default function HeroSection() {
   const ref = useRef(), stageRef = useRef()
   const time = useLocalTime()
@@ -50,22 +52,24 @@ export default function HeroSection() {
     // the pointer glow stays on throughout: every word paints its own (.glow on each), so a word
     // rising with its line out of the mask, or moved by the workflow, carries its glow with it
     const masks = [...el.querySelectorAll('[data-mask]')]
-    gsap.timeline({ delay: 0.1, onComplete: () => { masks.forEach((m) => { m.style.overflow = 'visible' }) } })
-      .from('[data-line]', { yPercent: 108, duration: 1, stagger: 0.09, ease: EASE.out, clearProps: 'transform' })
-      .from('[data-kicker]', { duration: 1.1, scrambleText: { text: '', chars: 'lowerCase', speed: 0.6 }, ease: 'none' }, 0.45)
-      .fromTo('[data-kicker-mark]', { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: EASE.inOut }, 0.45)
-      .from('[data-meta="study"]', { yPercent: 110, duration: 0.8, ease: EASE.out }, 1.15)
-      .from('[data-dot]', { scale: 0, duration: 0.5, ease: 'back.out(3)' }, 1.25)
-      .from('[data-meta="r"]', { opacity: 0, x: 22, duration: 0.8, stagger: 0.14, ease: EASE.out }, 1.32)
-      .from('[data-base] > *', { opacity: 0, y: 16, duration: 0.75, stagger: 0.12, ease: EASE.out }, 1.7)
-      .fromTo('[data-base] a svg', { y: -5 }, { y: 0, duration: 0.9, ease: 'bounce.out' }, 2.1)
+    // after the preloader: the bust stands alone for a moment, then the headline rises slowly, and
+    // only then the margins — paced so the page arrives rather than lands
+    gsap.timeline({ delay: 0.45, onComplete: () => { masks.forEach((m) => { m.style.overflow = 'visible' }) } })
+      .from('[data-line]', { yPercent: 108, duration: 1.3, stagger: 0.14, ease: EASE.out, clearProps: 'transform' })
+      .from('[data-kicker]', { duration: 1.1, scrambleText: { text: '', chars: 'lowerCase', speed: 0.6 }, ease: 'none' }, 1.0)
+      .fromTo('[data-kicker-mark]', { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: EASE.inOut }, 1.0)
+      .from('[data-meta="study"]', { yPercent: 110, duration: 0.9, ease: EASE.out }, 1.7)
+      .from('[data-dot]', { scale: 0, duration: 0.5, ease: 'back.out(3)' }, 1.85)
+      .from('[data-meta="r"]', { opacity: 0, x: 22, duration: 0.9, stagger: 0.16, ease: EASE.out }, 1.9)
+      .from('[data-base] > *', { opacity: 0, y: 16, duration: 0.85, stagger: 0.14, ease: EASE.out }, 2.4)
+      .fromTo('[data-base] a svg', { y: -5 }, { y: 0, duration: 0.9, ease: 'bounce.out' }, 2.9)
   })
 
   return (
     <div ref={ref} className="relative isolate frame min-h-[100svh] flex flex-col justify-between pt-24 pb-8">
       {/* a cut field of sand-grain colour falling from the top left, behind the headline — the
           bust on the right stands on the dark ground, so it reads on its own */}
-      <Accent className="left-[calc(50%-50vw)] w-screen top-0 h-[78%]" strength={0.45}
+      <Accent className="left-[calc(50%-50vw)] w-screen top-0 h-[78%]" strength={0.45} enter="0.7s"
         shape="polygon(0 0, 56% 0, 30% 58%, 0 96%)"
         gradient="radial-gradient(90% 95% at 0% 0%, #000 0%, rgba(0,0,0,.55) 40%, transparent 78%)" />
       {three && <Suspense fallback={null}><Bust3D heroRef={ref} stageRef={stageRef} onFail={fail} /></Suspense>}
@@ -97,7 +101,7 @@ export default function HeroSection() {
           <span data-mask className="block overflow-hidden pb-[0.24em] -mb-[0.24em]"><span data-line className="block"><span className="glow inline-block">Ich</span> <span data-word="gestalte" className="glow inline-block">gestalte</span> <span data-w="und" className="glow inline-block">und</span></span></span>
           <span data-mask className="block overflow-hidden pb-[0.24em] -mb-[0.24em]"><span data-line className="block"><span data-word="entwickle" className="glow inline-block">entwickle</span> <span data-word="digitale" className="glow inline-block">digitale</span></span></span>
           {/* not masked: the suggestion list hangs below the line */}
-          <span className="block"><span data-word="anwendungen"><Typer {...HERO_TYPER} delay={0.75} onDone={() => setTyped(true)} /></span></span>
+          <span className="block"><span data-word="anwendungen"><Typer {...HERO_TYPER} delay={1.35} onDone={() => setTyped(true)} /></span></span>
         </h1>
         {/* the bust's stage: on desktop it stands here, beside the headline (drawn on the hero-wide
             canvas behind the text); below lg under it. Without WebGL the space stays calm. */}

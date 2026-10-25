@@ -49,7 +49,7 @@ function edgeMask(shape, w, h, px) {
 
 // shape: a polygon() of the cut; gradient: where the colour comes from; drift: px of scroll travel;
 // feather: px over which the inner edges fade
-export default function Accent({ className = '', shape, gradient, strength = 0.5, drift = 60, feather = 18 }) {
+export default function Accent({ className = '', shape, gradient, strength = 0.5, drift = 60, feather = 18, enter }) {
   const ref = useRef(), fieldRef = useRef()
   useEffect(() => {
     const el = ref.current
@@ -90,7 +90,8 @@ export default function Accent({ className = '', shape, gradient, strength = 0.5
   }, [], { idle: true })
 
   return (
-    <div ref={ref} aria-hidden className={`absolute pointer-events-none -z-10 overflow-clip ${className}`} style={{ clipPath: shape /* until the mask is set */ }}>
+    // enter: a delay for the entrance after the preloader (index.css [data-enter])
+    <div ref={ref} aria-hidden data-enter={enter ? '' : undefined} className={`absolute pointer-events-none -z-10 overflow-clip ${className}`} style={{ clipPath: shape /* until the mask is set */, '--enter': enter }}>
       <div ref={fieldRef} className="absolute inset-[-80px_0] isolate transition-opacity duration-700" style={{ opacity: 0 }}>
         <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, #ff7a3d 0%, #ff5b1f 45%, #b8380c 100%)' }} />
         <div data-light className="absolute inset-0 mix-blend-overlay [image-rendering:pixelated]" />

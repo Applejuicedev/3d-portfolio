@@ -46,7 +46,7 @@ export default function App() {
     <>
       <Preloader onRelease={release} />
       <Atmosphere />
-      <Navbar />
+      <div data-enter style={{ '--enter': '1.5s' }}><Navbar /></div>
       <main>
         <section id="start" aria-label="Start"><HeroSection /></section>
         <PortfolioSection />
@@ -54,7 +54,7 @@ export default function App() {
         <Stack />
       </main>
       <Footer />
-      <StatusBar />
+      <div data-enter style={{ '--enter': '2.3s' }}><StatusBar /></div>
       <Cursor />
     </>
   )
