@@ -55,7 +55,10 @@ export default function HeroSection() {
     // after the preloader: the bust stands alone for a moment, then the headline rises slowly, and
     // only then the margins — paced so the page arrives rather than lands
     gsap.timeline({ delay: 0.45, onComplete: () => { masks.forEach((m) => { m.style.overflow = 'visible' }) } })
-      .from('[data-line]', { yPercent: 108, duration: 1.3, stagger: 0.14, ease: EASE.out, clearProps: 'transform' })
+      .from('[data-line]', { yPercent: 135, duration: 1.3, stagger: 0.14, ease: EASE.out, clearProps: 'transform' })
+      // the third line is the typer (not masked, its suggestions hang below): its caret comes in
+      // with the line's turn instead of standing there before the words around it have risen
+      .from('[data-word="anwendungen"]', { opacity: 0, y: 24, duration: 0.9, ease: EASE.out }, 0.28)
       .from('[data-kicker]', { duration: 1.1, scrambleText: { text: '', chars: 'lowerCase', speed: 0.6 }, ease: 'none' }, 1.0)
       .fromTo('[data-kicker-mark]', { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: EASE.inOut }, 1.0)
       .from('[data-meta="study"]', { yPercent: 110, duration: 0.9, ease: EASE.out }, 1.7)

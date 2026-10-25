@@ -6,18 +6,20 @@ import { prefersReduced } from './motion'
 // The first seconds are the heaviest: fonts, the bust's points (worker), its renderer and shader,
 // the grain tiles, and every section preparing its reveals. Run under the hero's entrance, that
 // work made it stutter. So the page waits, and loading is shown as what it is: a large percentage
-// top left, and a console in the corner logs each step as it really finishes (fonts, points, shader), and then the particles
-// stream out of the bottom left corner as one strand and build the bust where it will stand —
-// the progress bar is the share of points already in place (stage.emit → the bust's shader).
+// top left, and a console in the corner logs each step as it really finishes (fonts, points,
+// shader). Behind it the particles are a sky of stars over the whole screen; at 100 % they fly
+// together into the bust where it will stand (stage.emit → the bust's shader).
 // While html[data-preloading] is set, everything else is hidden (index.css) but the cursor.
 // At 100 % the console goes, the page appears around the finished bust.
 // · All gsap motion waits: main.jsx pauses gsap's global timeline before anything mounts, and
 //   this lets it go at the end — the hero's timeline, the typer, the workflow all start from
 //   their beginning then. The console itself updates without gsap (rAF).
-// · It waits for the fonts and the bust (compiled, or given up), at most MAX; the points come
-//   out at most RATE per second, so the strand is always seen building the bust.
+// · Two phases. Loading: the percentage runs with the work (fonts, points, shader, first frame),
+//   at least MIN, at most MAX; the stars only twinkle. Forming, from 100 %: the console steps
+//   aside, and the stars fly into the bust over FORM — slowly at first, then ever faster (ease-in),
+//   so the shape doesn't appear at once; the page comes in as it nears completion.
 // · With reduced motion it is not there at all (nothing is paused or hidden then).
-const MAX = 5000, RATE = 0.55, BAR = 22
+const MIN = 1200, MAX = 5000, FORM = 2600, BAR = 22
 export const preloading = () => !prefersReduced()
 const pad = (s) => s.padEnd(8, ' ')
 
@@ -29,43 +31,62 @@ export default function Preloader({ onRelease }) {
   const barRef = useRef(), doneRef = useRef(), pctRef = useRef(), stateRef = useRef()
 
   useEffect(() => {
-    if (phase !== 'load') return
+    if (!preloading()) return
     const root = document.documentElement
     root.setAttribute('data-preloading', '')
     root.style.overflow = 'hidden'
-    let raf = 0, alive = true, last = performance.now(), bust = false
-    const t0 = last, seen = new Set()
+    let raf = 0, alive = true, bust = false, shown = 0, formFrom = 0, released = false
+    const t0 = performance.now(), seen = new Set()
     const add = (key, v = 'ok') => { if (!seen.has(key)) { seen.add(key); setDone((d) => ({ ...d, [key]: v })) } }
     document.fonts.ready.then(() => alive && add('fonts'))
     bustSettled.then(() => { bust = true })
     stage.emit = 0
+    const release = () => {
+      if (released) return
+      released = true
+      root.removeAttribute('data-preloading')
+      root.style.overflow = ''
+      onRelease?.()
+    }
     const step = (now) => {
-      const t = now - t0, dt = Math.min(0.05, (now - last) / 1000); last = now
+      const t = now - t0
+      if (formFrom) {
+        // ── forming: the stars fly into the bust, a few at first, then ever more (ease-in); the
+        // page comes in around it as it nears completion ──
+        const k = Math.min(1, (now - formFrom) / FORM)
+        stage.emit = Math.pow(k, 1.8)
+        if (k > 0.8) release()
+        if (k < 1) raf = requestAnimationFrame(step)
+        return
+      }
+      // ── loading: 0 → 100 % as the work really finishes (never ahead of the time) ──
       if (stage.sampled) add('points')
       if (stage.compiled) add('shader')
-      if (bust && !stage.compiled && !stage.ready) add('shader', 'none')
-      // the strand runs once the bust can draw (or straight away without WebGL, or after MAX)
-      const go = stage.ready || (bust && t > 300) || t > MAX
-      if (go) { stage.emit = Math.min(1, stage.emit + RATE * dt) }
-      pctRef.current.textContent = String(Math.floor(stage.emit * 100))
-      if (barRef.current) {
-        const n = Math.round(stage.emit * BAR)
-        barRef.current.textContent = `[${'█'.repeat(n)}${'░'.repeat(BAR - n)}] ${String(Math.floor(stage.emit * 100)).padStart(3, ' ')}%`
-      }
-      if (stage.emit < 1) { raf = requestAnimationFrame(step); return }
+      const noGL = bust && !stage.compiled && !stage.ready
+      if (noGL) add('shader', 'none')
+      const work = 0.1 + (seen.has('fonts') ? 0.2 : 0) + (stage.sampled ? 0.25 : 0) + (stage.ready || stage.compiled || noGL ? 0.45 : 0)
+      const target = t > MAX ? 1 : Math.min(work, t / MIN)
+      shown += (target - shown) * 0.1
+      if (target === 1 && shown > 0.995) shown = 1
+      const pct = Math.floor(shown * 100)
+      pctRef.current.textContent = String(pct)
+      const n = Math.round(shown * BAR)
+      barRef.current.textContent = `[${'█'.repeat(n)}${'░'.repeat(BAR - n)}] ${String(pct).padStart(3, '\u00a0')}%`
+      if (shown < 1) { raf = requestAnimationFrame(step); return }
+      // 100 %: the console says so, steps aside, and only then do the stars begin to move
       stateRef.current.textContent = 'bereit'
-      if (doneRef.current) doneRef.current.textContent = `bereit in ${((now - t0) / 1000).toFixed(2)} s`
+      doneRef.current.textContent = `bereit in ${(t / 1000).toFixed(2)} s`
       setTimeout(() => {
         if (!alive) return
-        root.removeAttribute('data-preloading')
-        root.style.overflow = ''
         setPhase('out')
-        onRelease?.()
-      }, 450)
+        // nothing to form without WebGL, or when the page opens further down (a deep link)
+        if (!stage.compiled || window.scrollY > innerHeight * 0.5) { stage.emit = 1; release(); return }
+        formFrom = performance.now(); raf = requestAnimationFrame(step)
+      }, 500)
     }
     raf = requestAnimationFrame(step)
-    return () => { alive = false; cancelAnimationFrame(raf); stage.emit = 1; root.removeAttribute('data-preloading'); root.style.overflow = '' }
-  }, [phase, onRelease])
+    return () => { alive = false; cancelAnimationFrame(raf); stage.emit = 1; release() }
+  }, [onRelease])
 
   if (phase === 'gone') return null
   const out = phase === 'out'
@@ -79,7 +100,7 @@ export default function Preloader({ onRelease }) {
         <span ref={stateRef} className="t-meta mt-2">lädt</span>
       </div></div>
       {/* on phones the bust stands low, so the console sits under the percentage there */}
-      <div className="frame h-full flex items-start pt-36 sm:pt-44 lg:items-end lg:pt-0 pb-8">
+      <div className="frame h-full flex items-start pt-36 sm:pt-44 lg:items-end lg:justify-end lg:pt-0 pb-8">
         <div
           className="w-full max-w-[440px] rounded-lg border border-line bg-[#0c0c0b]/85 backdrop-blur-sm overflow-hidden font-mono text-[12px] leading-[1.75]"
           style={{ transform: out ? 'translateY(12px)' : 'none', transition: 'transform .6s ease' }}>
@@ -98,7 +119,7 @@ export default function Preloader({ onRelease }) {
                 <span className={done[key] === 'ok' ? 'text-ink' : 'text-faint'}>{done[key] === 'ok' ? '✓' : done[key] ? '–' : '·'}</span> <span className="text-faint">{pad(k)}</span>{done[key] ? v : '…'}
               </div>
             ))}
-            <div><span className="text-signal">▸</span> <span className="text-faint">{pad('stream')}</span><span ref={barRef} className="text-ink">{`[${'░'.repeat(BAR)}]\u00a0\u00a0\u00a00%`}</span></div>
+            <div><span className="text-signal">▸</span> <span className="text-faint">{pad('load')}</span><span ref={barRef} className="text-ink">{`[${'░'.repeat(BAR)}]\u00a0\u00a0\u00a00%`}</span></div>
             <div><span ref={doneRef} className="text-signal" /><span className="inline-block w-[7px] h-[13px] bg-signal/80 align-[-2px] ml-1 animate-pulse" /></div>
           </div>
         </div>

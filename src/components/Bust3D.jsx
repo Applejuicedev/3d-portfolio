@@ -17,12 +17,12 @@ import { stage, markReady, settleBust } from './hero/stage'
 //   · the hero's workflow can select it (Blender's orange outline), turn it and change its colour.
 // Start-up runs under the preloader, and the bust is its picture: the points are sampled in a
 // worker, the renderer is created in an idle slot, the shader is compiled asynchronously; then the
-// canvas draws them — the only thing on screen while the page loads, streaming out of a corner as
-// one strand and building the bust up (stage.emit, driven by the preloader).
+// canvas draws them — the only thing on screen while the page loads: a sky of stars that flies
+// together into the bust (stage.emit, driven by the preloader).
 
 const VERT = /* glsl */ `
 uniform float uTime, uSpread, uSelect, uTint, uSize, uAspect, uFade, uHover, uEmit;
-uniform vec3 uCorner, uBustMid;
+uniform float uSky;
 uniform vec2 uView;
 uniform vec2 uMouse, uHead;
 uniform vec4 uShock;
@@ -48,32 +48,23 @@ void main() {
   // the loose cloud keeps turning slowly (the preloader's picture), still once assembled
   p = mix(p, rotY(s * (1.2 + aRand.w + uTime * 0.12)) * (p + away), s);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  // ── the preloader's strand (view space) ──
-  // While the page loads, the points come out of the bottom left corner of the screen as one
-  // strand and travel along a curve to their place in the bust — the shoulders first, the head
-  // last (ordered by height, a little shuffled), so the bust is built up as uEmit runs 0 → 1. On
-  // the way they spread around the curve (thickest mid-way) and ripple along it.
+  // ── the preloader's sky (view space) ──
+  // While the page loads, the points are stars spread over the whole screen, at different depths,
+  // twinkling and drifting a little. As uEmit runs 0 → 1 they leave their place — the shoulders'
+  // points first, the head's last (ordered by height, a little shuffled) — and fly on a gently
+  // bent path to their place in the bust: the bust forms out of the stars.
   float h1 = fract(aRand.w * 7.31 + aRand.x * 3.7 + 0.5), h2 = fract(aRand.w * 13.7 + aRand.y * 5.1 + 0.5);
   float h3 = fract(sin(aRand.w * 91.3 + aRand.z) * 43758.5);
-  float order = clamp((position.y + 2.85) / 4.11, 0.0, 1.0) * 0.8 + aRand.w * 0.2;
-  float e = clamp((uEmit * 1.3 - order) / 0.3, 0.0, 1.0);
+  float order = clamp((position.y + 2.85) / 4.11, 0.0, 1.0) * 0.75 + aRand.w * 0.25;
+  float e = clamp((uEmit * 1.35 - order) / 0.35, 0.0, 1.0);
   float te = e * e * (3.0 - 2.0 * e);
-  vec3 B = mv.xyz, C = uCorner;
-  vec3 K = vec3(mix(C.x, uBustMid.x, 0.3), mix(C.y, uBustMid.y, 0.95) + uView.y * 0.35, mix(C.z, uBustMid.z, 0.5));
-  // one strand: all points share the way to the bust's middle and only branch off to their own
-  // place at the end
-  vec3 M = uBustMid;
-  vec3 path = te < 0.82 ? mix(mix(C, K, te / 0.82), mix(K, M, te / 0.82), te / 0.82) : mix(M, B, smoothstep(0.82, 1.0, te));
-  // thin along the way, fanning out only on the last stretch into the bust
-  float mid = sin(3.14159 * te) * (1.0 - smoothstep(0.6, 1.0, te) * 0.6);
-  vec3 side = normalize(vec3(-(B.y - C.y), B.x - C.x, 0.0));
-  path += side * (sin(te * 9.0 - uTime * 3.0 + h1 * 0.6) * 0.07 + (h2 - 0.5) * 0.07) * uView.y * mid;
-  path += (vec3(h1, h2, h3) - 0.5) * 0.045 * uView.y * mid;
-  // wilder: the whole strand flickers a little, and about one point in six breaks away from it
-  // on a loose path of its own (further the more it is mid-way), then falls back in at the end
-  vec3 wander = vec3(sin(uTime * 1.3 + h1 * 20.0), cos(uTime * 1.1 + h2 * 20.0), sin(uTime * 0.9 + h3 * 20.0));
-  float stray = smoothstep(0.8, 0.86, h3) * (0.35 + 0.65 * h1);
-  path += (wander * 0.03 + (side * (h2 - 0.5) * 1.4 + wander * 0.45) * stray) * uView.y * mid;
+  vec3 B = mv.xyz;
+  vec3 S = vec3((h1 * 2.0 - 1.0) * 1.12 * uView.x + sin(uTime * 0.11 + h3 * 30.0) * 0.015 * uView.y,
+                (h2 * 2.0 - 1.0) * 1.12 * uView.y + cos(uTime * 0.09 + h1 * 30.0) * 0.015 * uView.y,
+                uSky + (h3 - 0.5) * uView.y * 1.2);
+  vec3 path = mix(S, B, te);
+  vec2 d = (B - S).xy;
+  path.xy += vec2(-d.y, d.x) * (h2 - 0.5) * 0.5 * sin(3.14159 * te);
   mv.xyz = e < 1.0 ? path : B;
   vec4 cp = projectionMatrix * mv;
   vec2 ndc = cp.xy / cp.w;
@@ -98,8 +89,9 @@ void main() {
   // the shoulders dissolves into the page
   float a = lit * mix(0.08, 1.0, smoothstep(-0.4, 0.0, facing)) * smoothstep(-2.83, -2.2, position.y);
   a *= (1.0 - s * 0.8) * uFade;
-  // in the strand: unlit, brighter, each point appearing as it leaves the corner
-  a = e < 1.0 ? (0.45 + 0.55 * h3) * smoothstep(0.0, 0.06, e) : a;
+  // as a star: faint and twinkling; brighter while it flies; lit once it is in the bust
+  float star = (0.12 + 0.45 * h3 * h3) * (0.65 + 0.35 * sin(uTime * (1.2 + h1 * 2.5) + h2 * 50.0));
+  a = e < 1.0 ? mix(star, 0.75, smoothstep(0.0, 0.25, e)) : a;
   vec3 ink = vec3(0.925, 0.92, 0.9), signal = vec3(1.0, 0.357, 0.122), select = vec3(1.0, 0.63, 0.24);
   vec3 col = mix(ink, signal, uTint * (0.55 + 0.45 * facing));
   col = mix(col, signal, clamp(m * 0.9 + ring, 0.0, 1.0));
@@ -150,7 +142,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       geo.setAttribute('aRand', new THREE.BufferAttribute(data.rnd, 4))
       const u = {
         uTime: { value: 0 }, uSpread: { value: reduced ? 0 : 1 }, uSelect: { value: 0 }, uTint: { value: 0 },
-        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit }, uCorner: { value: new THREE.Vector3() }, uBustMid: { value: new THREE.Vector3() }, uView: { value: new THREE.Vector2(1, 1) },
+        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit }, uSky: { value: -10 }, uView: { value: new THREE.Vector2(1, 1) },
         uMouse: { value: new THREE.Vector2(9, 9) }, uHead: { value: new THREE.Vector2() }, uShock: { value: new THREE.Vector4(0, 0, -99, 0) },
       }
       const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: u, transparent: true, depthWrite: false })
@@ -236,13 +228,11 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         u.uSelect.value = stage.select
         u.uEmit.value = stage.emit
         if (stage.emit < 1) {
-          // the strand's start: the bottom left corner of the screen, at the bust's depth
+          // the sky fills the screen at the bust's depth
           const z = tmpV.setFromMatrixPosition(bust.matrixWorld).applyMatrix4(camera.matrixWorldInverse).z
-          const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * -z, halfW = halfH * camera.aspect
-          u.uCorner.value.set(-halfW * 1.04, -halfH * 1.04, z)
-          u.uView.value.set(halfW, halfH)
-          // where the strand enters the bust: its chest, in view space
-          u.uBustMid.value.set(0, -1.2, 0.2).applyMatrix4(bust.matrixWorld).applyMatrix4(camera.matrixWorldInverse)
+          const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * -z
+          u.uSky.value = z
+          u.uView.value.set(halfH * camera.aspect, halfH)
         }
         u.uTint.value = stage.tint
         // whose pointer: the demo pointer while it acts (unless the real one moved more recently)
@@ -289,7 +279,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
 
       let ready = false
       // load: the particles condense into the bust
-      // (built by the preloader's strand — nothing left to assemble once the page shows)
+      // (formed by the preloader's sky — nothing left to assemble once the page shows)
       const assemble = () => {}
 
       // without the scroll decay (reduced motion) it stops drawing once the hero is out of view
