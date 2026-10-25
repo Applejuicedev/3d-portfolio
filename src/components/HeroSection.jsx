@@ -34,7 +34,7 @@ function useLocalTime() {
 // competes for the first look:
 //   0.45  the headline rises slowly line by line out of its masks; the last word is typed (Typer: a
 //         first draft, reconsidered, then completed by autocomplete)
-//   0.45  the orange field opens out of the top left corner
+//   0.45  the orange field turns into the top left corner
 //   1.00  "Creative Fullstack Developer" decodes into place above it
 //   1.50  the navigation fades in
 //   1.70  the margins answer one by one, each its own way: the study line slides out of a mask,
@@ -55,9 +55,12 @@ export default function HeroSection() {
     // after the preloader: the bust stands alone for a moment, then the headline rises slowly, and
     // only then the margins — paced so the page arrives rather than lands
     gsap.timeline({ delay: 0.45, onComplete: () => { masks.forEach((m) => { m.style.overflow = 'visible' }) } })
-      // the orange field opens out of the top left corner as a widening round wave, under the
-      // rising headline (on its inner field: the outer box's clip belongs to Accent)
-      .fromTo('[data-hero-accent] > div', { clipPath: 'circle(0% at 0% 0%)' }, { clipPath: 'circle(150% at 0% 0%)', duration: 2.4, ease: 'power2.inOut', clearProps: 'clipPath' }, 0)
+      // the orange field turns into its corner: the whole field, as one composited layer (only
+      // transform and opacity — nothing inside it is redrawn: its masked, blended grain is far too
+      // costly to re-raster every frame), swings in around the top left corner by a few degrees;
+      // the lift that comes with it keeps its hard top edge above the screen
+      .fromTo('[data-hero-accent]', { opacity: 0, rotate: 7, y: () => -innerWidth * 0.075, transformOrigin: '0% 0%', willChange: 'transform, opacity' },
+        { opacity: 1, rotate: 0, y: 0, duration: 2.6, ease: 'power3.out', clearProps: 'opacity,transform,willChange' }, 0)
       .from('[data-line]', { yPercent: 135, duration: 1.3, stagger: 0.14, ease: EASE.out, clearProps: 'transform' }, 0)
       // the third line is the typer (not masked, its suggestions hang below): its caret comes in
       // with the line's turn instead of standing there before the words around it have risen

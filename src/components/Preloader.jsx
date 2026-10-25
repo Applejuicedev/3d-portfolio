@@ -17,7 +17,7 @@ import { prefersReduced } from './motion'
 // · Two phases. Loading: the percentage runs with the work (fonts, points, shader, first frame),
 //   at least MIN, at most MAX; the stars only twinkle. Forming, from 100 %: the console steps
 //   aside, and the stars fly into the bust over FORM — slowly at first, then ever faster (ease-in),
-//   so the shape doesn't appear at once; the page comes in as it nears completion.
+//   so the shape doesn't appear at once; the page comes in once it stands.
 // · With reduced motion it is not there at all (nothing is paused or hidden then).
 const MIN = 1200, MAX = 5000, FORM = 2600, BAR = 22
 export const preloading = () => !prefersReduced()
@@ -34,7 +34,14 @@ export default function Preloader({ onRelease }) {
     if (!preloading()) return
     const root = document.documentElement
     root.setAttribute('data-preloading', '')
-    root.style.overflow = 'hidden'
+    // the scroll is held by catching its inputs, not by overflow: hidden — that took the scrollbar
+    // away and gave it back at the end, the page's width changed, and everything (the formed bust
+    // too) jumped sideways
+    const KEYS = new Set([' ', 'PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp'])
+    const hold = (e) => { if (e.type !== 'keydown' || KEYS.has(e.key)) e.preventDefault() }
+    const opts = { passive: false }
+    window.addEventListener('wheel', hold, opts); window.addEventListener('touchmove', hold, opts); window.addEventListener('keydown', hold)
+    const unhold = () => { window.removeEventListener('wheel', hold, opts); window.removeEventListener('touchmove', hold, opts); window.removeEventListener('keydown', hold) }
     let raf = 0, alive = true, bust = false, shown = 0, formFrom = 0, released = false
     const t0 = performance.now(), seen = new Set()
     const add = (key, v = 'ok') => { if (!seen.has(key)) { seen.add(key); setDone((d) => ({ ...d, [key]: v })) } }
@@ -45,18 +52,18 @@ export default function Preloader({ onRelease }) {
       if (released) return
       released = true
       root.removeAttribute('data-preloading')
-      root.style.overflow = ''
+      unhold()
       onRelease?.()
     }
     const step = (now) => {
       const t = now - t0
       if (formFrom) {
-        // ── forming: the stars fly into the bust, a few at first, then ever more (ease-in); the
-        // page comes in around it as it nears completion ──
+        // ── forming: the stars fly into the bust, a few at first, then ever more (ease-in) ──
         const k = Math.min(1, (now - formFrom) / FORM)
         stage.emit = Math.pow(k, 1.8)
-        if (k > 0.8) release()
-        if (k < 1) raf = requestAnimationFrame(step)
+        // the page comes in once the bust stands — not while the points are still flying, where
+        // the work of showing it would break their motion
+        if (k < 1) raf = requestAnimationFrame(step); else setTimeout(release, 120)
         return
       }
       // ── loading: 0 → 100 % as the work really finishes (never ahead of the time) ──
@@ -87,7 +94,7 @@ export default function Preloader({ onRelease }) {
     raf = requestAnimationFrame(step)
     // only stops this run's loop: React's StrictMode (dev) runs the effect twice, and releasing
     // here let the page's motion go under the preloader — the hero then stood there finished
-    return () => { alive = false; cancelAnimationFrame(raf) }
+    return () => { alive = false; cancelAnimationFrame(raf); unhold() }
   }, [onRelease])
 
   if (phase === 'gone') return null
@@ -104,7 +111,7 @@ export default function Preloader({ onRelease }) {
       {/* on phones the bust stands low, so the console sits under the percentage there */}
       <div className="frame h-full flex items-start pt-36 sm:pt-44 lg:items-end lg:justify-end lg:pt-0 pb-8">
         <div
-          className="w-full max-w-[440px] rounded-lg border border-line bg-[#0c0c0b]/85 backdrop-blur-sm overflow-hidden font-mono text-[12px] leading-[1.75]"
+          className="w-full max-w-[440px] rounded-lg border border-line bg-[#0c0c0b]/95 overflow-hidden font-mono text-[12px] leading-[1.75]"
           style={{ transform: out ? 'translateY(12px)' : 'none', transition: 'transform .6s ease' }}>
           <div className="flex items-center gap-1.5 px-3 py-2 border-b border-line text-faint">
             <span className="w-2 h-2 rounded-full bg-white/10" /><span className="w-2 h-2 rounded-full bg-white/10" /><span className="w-2 h-2 rounded-full bg-signal/70" />

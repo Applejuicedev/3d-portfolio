@@ -190,10 +190,14 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       const onDown = (e) => {
         if (e.pointerType === 'touch') return
         if (e.target.closest?.('a, button, input, textarea, select, [role="button"]')) return
+        // on the bust only — but while the preloader's stars fill the screen, anywhere
         const b = stage.screen?.box
-        if (!b || e.clientX < b.l || e.clientX > b.r || e.clientY < b.t || e.clientY > b.b) return
+        const sky = document.documentElement.hasAttribute('data-preloading')
+        if (!sky && (!b || e.clientX < b.l || e.clientX > b.r || e.clientY < b.t || e.clientY > b.b)) return
         u.uShock.value.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -(((e.clientY - rect.top) / rect.height) * 2 - 1), u.uTime.value, 1)
-        // and the head startles a little towards it
+        // and the head startles a little towards it — not under the preloader: gsap waits there, and
+        // the startles saved up would all play at once as it ends, a jump of the finished bust
+        if (sky) return
         gsap.fromTo(look, { y: look.y - 0.12 }, { y: look.y, duration: 0.9, ease: 'elastic.out(1, 0.5)' })
       }
       window.addEventListener('pointermove', onMove, { passive: true })

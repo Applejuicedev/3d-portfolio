@@ -33,7 +33,9 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 /* Dark page background so overscroll (rubber-banding) never reveals white */
 /* overflow-x: clip — objects drifting past the edge (the laptop, the stack floor) never widen the page */
-html { scroll-behavior: smooth; background-color: var(--bg); color-scheme: dark; overflow-x: clip; }
+/* scrollbar-gutter: the scrollbar's room is kept even while the preloader locks the scroll — else
+   the page widened under it and everything (the formed bust too) jumped left when it ended */
+html { scroll-behavior: smooth; background-color: var(--bg); color-scheme: dark; overflow-x: clip; scrollbar-gutter: stable; }
 /* the body is transparent: the fixed atmosphere layer (Atmosphere.jsx) paints the page behind it */
 /* no overflow on body: with html's overflow-x: clip it would not propagate to the viewport and
    instead make body a second scroll container (nested scrolling, broken position: sticky) */
