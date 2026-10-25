@@ -78,7 +78,11 @@ export default function HeroSection() {
     <div ref={ref} className="relative isolate frame min-h-[100svh] flex flex-col justify-between pt-24 pb-8">
       {/* a cut field of sand-grain colour falling from the top left, behind the headline — the
           bust on the right stands on the dark ground, so it reads on its own */}
+      {/* phones: the browser's own bar above the page (status bar, toolbar, the rubber band when
+          pulled down) is the page's dark, so the field's hard top edge read as cut off right above
+          the navigation — there it runs out of the dark behind the bar instead */}
       <Accent data-hero-accent className="left-[calc(50%-50vw)] w-screen top-0 h-[78%]" strength={0.45}
+        fade="max-lg:[-webkit-mask-image:linear-gradient(transparent,rgb(0_0_0/.6)_1.75rem,#000_4.5rem)] max-lg:[mask-image:linear-gradient(transparent,rgb(0_0_0/.6)_1.75rem,#000_4.5rem)]"
         shape="polygon(0 0, 56% 0, 30% 58%, 0 96%)"
         gradient="radial-gradient(90% 95% at 0% 0%, #000 0%, rgba(0,0,0,.55) 40%, transparent 78%)" />
       {three && <Suspense fallback={null}><Bust3D heroRef={ref} stageRef={stageRef} onFail={fail} /></Suspense>}
@@ -88,14 +92,16 @@ export default function HeroSection() {
         {/* the margins stay quiet (muted); only the local time is in the signal colour. These two
             lie on the orange field: a lighter grey there, the darkest that still holds 4.5:1 on its
             grain (measured 5.0:1) — muted would drop below it */}
-        <p className="col-span-2 lg:col-span-6 text-[#a8a7a1]">
-          <span className="relative inline-block">
+        {/* phones: side by side, both margins broke into three ragged lines — there each takes the
+            full width (the left one above, the right one below it), every line whole */}
+        <p className="col-span-2 max-sm:col-span-4 lg:col-span-6 text-[#a8a7a1]">
+          <span className="relative inline-block max-sm:whitespace-nowrap">
             <span data-kicker>Creative Fullstack Developer</span>
             <span data-kicker-mark aria-hidden className="absolute left-0 -bottom-[3px] h-px w-full bg-signal origin-left" />
           </span>
           <span className="block overflow-hidden"><span data-meta="study" className="block">Medieninformatik</span></span>
         </p>
-        <p className="col-span-2 lg:col-span-6 text-right">
+        <p className="col-span-2 max-sm:col-span-4 max-sm:mt-3 lg:col-span-6 text-right">
           <span data-meta="r" className="flex justify-end items-center gap-2"><span data-dot className="w-1.5 h-1.5 rounded-full bg-signal" />verfügbar ab 2029</span>
           <span data-meta="r" className="block">Praktika &amp; Werkstudentenstellen</span>
         </p>
@@ -106,7 +112,9 @@ export default function HeroSection() {
             bust; the visible words may be edited by the workflow, the label is the real sentence */}
         {/* the glow (pointer light) is painted by each word itself, not by the headline:
             background-clip text isn't painted into moved (transformed) children */}
-        <h1 aria-label="Ich gestalte und entwickle digitale Anwendungen." className="col-span-4 lg:col-span-8 t-display text-ink lg:text-[clamp(3rem,6vw,6rem)]">
+        {/* below lg it never grows past the width of its longest line ("entwickle digitale" ≈ 7.6 em):
+            three lines on a phone too, and the typed word (nowrap) never runs out of the screen */}
+        <h1 aria-label="Ich gestalte und entwickle digitale Anwendungen." className="col-span-4 lg:col-span-8 t-display text-ink max-lg:text-[min(clamp(3rem,8vw,7.5rem),calc((100vw_-_2_*_var(--gutter))_/_7.7))] lg:text-[clamp(3rem,6vw,6rem)]">
           <span data-mask className="block overflow-hidden pb-[0.24em] -mb-[0.24em]"><span data-line className="block"><span className="glow inline-block">Ich</span> <span data-word="gestalte" className="glow inline-block">gestalte</span> <span data-w="und" className="glow inline-block">und</span></span></span>
           <span data-mask className="block overflow-hidden pb-[0.24em] -mb-[0.24em]"><span data-line className="block"><span data-word="entwickle" className="glow inline-block">entwickle</span> <span data-word="digitale" className="glow inline-block">digitale</span></span></span>
           {/* not masked: the suggestion list hangs below the line */}
