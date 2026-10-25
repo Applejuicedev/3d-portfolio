@@ -109,8 +109,9 @@ export default function Preloader({ onRelease }) {
         <span className="t-display text-ink tabular-nums leading-none"><span ref={pctRef}>0</span><span className="text-signal">%</span></span>
         <span ref={stateRef} className="t-meta mt-2">lädt</span>
       </div></div>
-      {/* on phones the bust stands low, so the console sits under the percentage there */}
-      <div className="frame h-full flex items-start pt-36 sm:pt-44 lg:items-end lg:justify-end lg:pt-0 pb-8">
+      {/* bottom right; below lg at the bottom across the width, apart from the percentage — clear
+          of the home indicator / toolbar (safe area). The bust only forms once it has gone. */}
+      <div className="frame h-full flex items-end lg:justify-end pb-8 max-lg:pb-[max(2rem,calc(env(safe-area-inset-bottom)+1rem))]">
         <div
           className="w-full max-w-[440px] rounded-lg border border-line bg-[#0c0c0b]/95 overflow-hidden font-mono text-[12px] leading-[1.75]"
           style={{ transform: out ? 'translateY(12px)' : 'none', transition: 'transform .6s ease' }}>
