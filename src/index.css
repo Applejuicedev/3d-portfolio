@@ -201,5 +201,7 @@ html.custom-cursor :is(input, textarea, select, [contenteditable="true"]) { curs
    but the bust is hidden too (its margins would flash before their entrance sets in). After it, the rest comes in one
    after another (--enter), so the page doesn't land all at once. */
 html[data-preloading] [data-enter], html[data-preloading] main > section:not(#start), html[data-preloading] footer,
-html[data-preloading] #start > div > :not([data-bust]) { opacity: 0; transition: none; }
+html[data-preloading] #start > div > :not([data-bust]) { opacity: 0; transition: none; pointer-events: none; }
+/* nothing hidden answers the pointer either (no text caret or ring over the invisible hero) */
+html[data-preloading] main, html[data-preloading] footer, html[data-preloading] [data-enter] { pointer-events: none; }
 [data-enter] { transition: opacity 1.2s cubic-bezier(.2, .7, 0, 1) var(--enter, 0s); }

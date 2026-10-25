@@ -34,7 +34,7 @@ function useLocalTime() {
 // competes for the first look:
 //   0.45  the headline rises slowly line by line out of its masks; the last word is typed (Typer: a
 //         first draft, reconsidered, then completed by autocomplete)
-//   0.70  the orange field fades in (index.css [data-enter])
+//   0.45  the orange field opens out of the top left corner
 //   1.00  "Creative Fullstack Developer" decodes into place above it
 //   1.50  the navigation fades in
 //   1.70  the margins answer one by one, each its own way: the study line slides out of a mask,
@@ -55,7 +55,10 @@ export default function HeroSection() {
     // after the preloader: the bust stands alone for a moment, then the headline rises slowly, and
     // only then the margins — paced so the page arrives rather than lands
     gsap.timeline({ delay: 0.45, onComplete: () => { masks.forEach((m) => { m.style.overflow = 'visible' }) } })
-      .from('[data-line]', { yPercent: 135, duration: 1.3, stagger: 0.14, ease: EASE.out, clearProps: 'transform' })
+      // the orange field opens out of the top left corner as a widening round wave, under the
+      // rising headline (on its inner field: the outer box's clip belongs to Accent)
+      .fromTo('[data-hero-accent] > div', { clipPath: 'circle(0% at 0% 0%)' }, { clipPath: 'circle(150% at 0% 0%)', duration: 2.4, ease: 'power2.inOut', clearProps: 'clipPath' }, 0)
+      .from('[data-line]', { yPercent: 135, duration: 1.3, stagger: 0.14, ease: EASE.out, clearProps: 'transform' }, 0)
       // the third line is the typer (not masked, its suggestions hang below): its caret comes in
       // with the line's turn instead of standing there before the words around it have risen
       .from('[data-word="anwendungen"]', { opacity: 0, y: 24, duration: 0.9, ease: EASE.out }, 0.28)
@@ -72,7 +75,7 @@ export default function HeroSection() {
     <div ref={ref} className="relative isolate frame min-h-[100svh] flex flex-col justify-between pt-24 pb-8">
       {/* a cut field of sand-grain colour falling from the top left, behind the headline — the
           bust on the right stands on the dark ground, so it reads on its own */}
-      <Accent className="left-[calc(50%-50vw)] w-screen top-0 h-[78%]" strength={0.45} enter="0.7s"
+      <Accent data-hero-accent className="left-[calc(50%-50vw)] w-screen top-0 h-[78%]" strength={0.45}
         shape="polygon(0 0, 56% 0, 30% 58%, 0 96%)"
         gradient="radial-gradient(90% 95% at 0% 0%, #000 0%, rgba(0,0,0,.55) 40%, transparent 78%)" />
       {three && <Suspense fallback={null}><Bust3D heroRef={ref} stageRef={stageRef} onFail={fail} /></Suspense>}
