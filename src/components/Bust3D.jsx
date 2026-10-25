@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { gsap, ScrollTrigger, prefersReduced } from './motion'
-import { stage, markReady } from './hero/stage'
+import { stage, markReady, settleBust } from './hero/stage'
 
 // ── The hero's object: a bust made of light ─────────────────────
 // ~64 000 points (24 000 on phones) on the surface of an anonymous human bust (hero/bustGeometry.js), drawn as
@@ -15,18 +15,21 @@ import { stage, markReady } from './hero/stage'
 //     the decay starts after a stretch of scroll and runs until the projects header nears the top
 //     (scrubbed: it follows the scroll both ways and reassembles when scrolling back),
 //   · the hero's workflow can select it (Blender's orange outline), turn it and change its colour.
-// Start-up is paced so the headline's entrance never stutters: the points are sampled in a worker,
-// the renderer is created in an idle slot after the lines have risen, the shader is compiled
-// asynchronously, and only then does the canvas draw and the bust assemble.
+// Start-up runs under the preloader, and the bust is its picture: the points are sampled in a
+// worker, the renderer is created in an idle slot, the shader is compiled asynchronously; then the
+// canvas draws them as a loose cloud — the only thing on screen while the page loads. The assembly
+// is a gsap tween, so it waits until the preloader lets the page's motion go: then the cloud
+// condenses into the bust.
 
 const VERT = /* glsl */ `
-uniform float uTime, uSpread, uSelect, uTint, uSize, uAspect, uFade, uHover;
+uniform float uTime, uSpread, uSelect, uTint, uSize, uAspect, uFade, uHover, uEmit;
 uniform vec2 uMouse, uHead;
 uniform vec4 uShock;
 attribute vec3 aNormal;
 attribute vec4 aRand;
 varying vec4 vColor;
 const vec3 PIVOT = vec3(0.0, -0.85, -0.06);
+const vec3 PORTAL = vec3(0.0, -0.55, 0.0); // the preloader's portal sits on the bust's origin
 mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0., -s, 0., 1., 0., s, 0., c); }
 mat3 rotX(float a) { float c = cos(a), s = sin(a); return mat3(1., 0., 0., 0., c, s, 0., -s, c); }
 void main() {
@@ -42,7 +45,13 @@ void main() {
   float s = smoothstep(0.0, 1.0, clamp(uSpread * 1.25 - aRand.w * 0.25, 0.0, 1.0));
   vec3 away = normalize(n * 0.8 + aRand.xyz) * (0.9 + aRand.w * 2.6);
   away.y += s * aRand.w * 0.8;
-  p = mix(p, rotY(s * (1.2 + aRand.w)) * (p + away), s);
+  // the loose cloud keeps turning slowly (the preloader's picture), still once assembled
+  p = mix(p, rotY(s * (1.2 + aRand.w + uTime * 0.12)) * (p + away), s);
+  // out of the portal: while the page loads, the points leave it one after another (in their random
+  // order, as far as uEmit has come) and spiral out to their place in the cloud
+  float e = clamp((uEmit - aRand.w * 0.8) / 0.2, 0.0, 1.0);
+  float ee = 1.0 - pow(1.0 - e, 3.0);
+  p = PORTAL + rotY((1.0 - ee) * 2.6) * (p - PORTAL) * ee;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   vec4 cp = projectionMatrix * mv;
   vec2 ndc = cp.xy / cp.w;
@@ -66,7 +75,7 @@ void main() {
   // only what really faces away fades (the far side would show through the face); the bottom of
   // the shoulders dissolves into the page
   float a = lit * mix(0.08, 1.0, smoothstep(-0.4, 0.0, facing)) * smoothstep(-2.83, -2.2, position.y);
-  a *= (1.0 - s * 0.8) * uFade;
+  a *= (1.0 - s * 0.8) * uFade * smoothstep(0.0, 0.1, e);
   vec3 ink = vec3(0.925, 0.92, 0.9), signal = vec3(1.0, 0.357, 0.122), select = vec3(1.0, 0.63, 0.24);
   vec3 col = mix(ink, signal, uTint * (0.55 + 0.45 * facing));
   col = mix(col, signal, clamp(m * 0.9 + ring, 0.0, 1.0));
@@ -94,7 +103,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
     const reduced = prefersReduced()
     const small = !window.matchMedia('(min-width: 1024px)').matches
     let alive = true, renderer, worker, raf = 0, visible = true, cleanup = []
-    const fail = () => { if (alive) onFail?.() }
+    const fail = () => { settleBust(); if (alive) onFail?.() }
 
     const start = (data) => {
       if (!alive) return
@@ -117,7 +126,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       geo.setAttribute('aRand', new THREE.BufferAttribute(data.rnd, 4))
       const u = {
         uTime: { value: 0 }, uSpread: { value: reduced ? 0 : 1 }, uSelect: { value: 0 }, uTint: { value: 0 },
-        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 },
+        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit },
         uMouse: { value: new THREE.Vector2(9, 9) }, uHead: { value: new THREE.Vector2() }, uShock: { value: new THREE.Vector4(0, 0, -99, 0) },
       }
       const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: u, transparent: true, depthWrite: false })
@@ -176,7 +185,8 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       // created earlier, a trigger that fires at once on an already scrolled page called kick()
       // before it was defined and aborted the start-up)
       let scroll = 0
-      const intro = { spread: reduced ? 0 : 1 }
+      // starts as a loose cloud around the bust's place — dense enough to read as one thing
+      const intro = { spread: reduced ? 0 : 0.48 }
       // ── per frame ──
       const v = new THREE.Vector3()
       const toScreen = (x, y, z) => { v.set(x, y, z).applyMatrix4(bust.matrixWorld).project(camera); return { x: rect.left + (v.x + 1) / 2 * rect.width, y: rect.top + (1 - v.y) / 2 * rect.height } }
@@ -198,6 +208,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         u.uSpread.value = Math.max(intro.spread, Math.pow(THREE.MathUtils.smoothstep(sc, 0.12, 1), 1.35))
         u.uFade.value = 1 - THREE.MathUtils.smoothstep(sc, 0.78, 1)
         u.uSelect.value = stage.select
+        u.uEmit.value = stage.emit
         u.uTint.value = stage.tint
         // whose pointer: the demo pointer while it acts (unless the real one moved more recently)
         const real = mouse.t > 0 && (!stage.demo || now - mouse.t < 1500)
@@ -220,7 +231,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         const o = toScreen(0, -0.55, 0), sz = 0.85
         const top = toScreen(0, BUST_TOP, 0), bot = toScreen(0, BUST_BOTTOM, 0), l = toScreen(-1.5, -1.9, 0), r = toScreen(1.5, -1.9, 0)
         stage.screen = { origin: o, axes: { x: toScreen(sz, -0.55, 0), y: toScreen(0, -0.55, -sz), z: toScreen(0, -0.55 + sz, 0) }, box: { l: l.x, r: r.x, t: top.y, b: bot.y } }
-        if (!ready) { ready = true; markReady(); wrap.style.opacity = '1'; assemble() }
+        if (!ready) { ready = true; markReady(); settleBust(); wrap.style.opacity = '1'; assemble() }
         if (visible && !reduced) raf = requestAnimationFrame(frame)
       }
       const kick = () => { if (!raf && visible) raf = requestAnimationFrame(frame) }
@@ -258,13 +269,15 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       cleanup.push(() => { geo.dispose(); mat.dispose(); renderer.dispose(); canvas.remove() })
 
       // compile off the critical path (KHR_parallel_shader_compile where available), then draw
-      const go = () => { if (alive) kick() }
+      // settled for the preloader once compiled — off screen (a deep link) it may not draw for a while
+      const go = () => { settleBust(); if (alive) kick() }
       if (renderer.compileAsync) renderer.compileAsync(scene, camera).then(go, go)
       else idle(go)
     }
 
     // ── pacing: sample in a worker now; build the renderer once the headline has risen ──
     const count = small ? 24000 : 64000
+    stage.count = count
     let data = null, due = false
     const maybeStart = () => { if (data && due) idle(() => start(data)) }
     try {
@@ -273,7 +286,8 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       worker.onerror = () => { worker.terminate(); import('./hero/bustGeometry').then(({ sampleBust }) => { data = sampleBust(count); maybeStart() }) }
       worker.postMessage({ count })
     } catch { import('./hero/bustGeometry').then(({ sampleBust }) => { data = sampleBust(count); maybeStart() }) }
-    const t = setTimeout(() => { due = true; maybeStart() }, reduced ? 0 : 1100)
+    // the preloader covers the start-up now: built right away, while nothing else moves
+    const t = setTimeout(() => { due = true; maybeStart() }, 0)
 
     return () => { alive = false; clearTimeout(t); worker?.terminate(); cancelAnimationFrame(raf); cleanup.forEach((c) => c()); stage.screen = null; stage.ready = false }
   }, [heroRef, stageRef, onFail])
@@ -281,5 +295,5 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
   // behind the text (negative z inside the hero's isolated stacking context), above the accent field
   // fixed behind the page (negative z inside the hero's isolated stacking context: under the text,
   // above the accent field and the page ground); the sections after the hero paint over it
-  return <div ref={wrapRef} aria-hidden className="fixed inset-0 -z-[5] pointer-events-none opacity-0 transition-opacity duration-700" />
+  return <div ref={wrapRef} aria-hidden data-bust className="fixed inset-0 -z-[5] pointer-events-none opacity-0 transition-opacity duration-700" />
 }

@@ -9,7 +9,8 @@ import Atmosphere from './components/Atmosphere'
 import StatusBar from './components/StatusBar'
 import { useGlowPointer } from './components/ui'
 import { useEffect } from 'react'
-import { ScrollTrigger } from './components/motion'
+import { ScrollTrigger, gsap } from './components/motion'
+import Preloader from './components/Preloader'
 
 // One page, four numbered sections after the opening: the work first, then who made it, what it
 // is made with, and how to reach me.
@@ -35,11 +36,15 @@ function useDeepLink() {
   }, [])
 }
 
+// the preloader lets the page's motion go (main.jsx paused it)
+const release = () => gsap.globalTimeline.resume()
+
 export default function App() {
   useGlowPointer()
   useDeepLink()
   return (
     <>
+      <Preloader onRelease={release} />
       <Atmosphere />
       <Navbar />
       <main>

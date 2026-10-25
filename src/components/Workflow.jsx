@@ -303,7 +303,10 @@ export default function Workflow({ rootRef, start }) {
     const rest = async () => {
       gsap.to(stage, { select: 0, duration: 0.4 })
       gsap.to(stage, { yaw: 0, tint: 0, duration: 1.4, ease: 'power2.inOut', delay: 0.3 })
-      const out = [$.props, $.outliner, $.tools, $.gizmo, $.origin, $.sel, $.suggest, $.undo, $.frame, $.ide, $.align, $.guide, $.measure, $.insert]
+      const out = [$.props, $.outliner, $.tools, $.gizmo, $.origin, $.sel, $.suggest, $.undo, $.frame, $.ide, $.align, $.guide, $.measure, $.insert, ...($.handles?.length !== undefined ? $.handles : [$.handles])].filter(Boolean)
+      // a phase cut short (scrolled away) may still be fading its pieces in — stop that first, or
+      // those tweens win over the fade-out and leave the frame, handles and rulers standing
+      tweens.splice(0).forEach((t) => t.kill()); gsap.killTweensOf(out)
       gsap.to(out, { autoAlpha: 0, duration: 0.3, stagger: 0.05 })
       gsap.to(root.querySelector('[data-base]'), { autoAlpha: 1, duration: 0.3 })
       const sw = $.props.querySelector('[data-swatch]'); gsap.to(sw, { backgroundColor: '#ecebe6', duration: 0.3, delay: 0.6 })

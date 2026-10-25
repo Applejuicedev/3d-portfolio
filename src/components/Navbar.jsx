@@ -59,7 +59,8 @@ function useCurrentSection() {
       entries.forEach((e) => { if (e.isIntersecting) setCurrent(e.target.id) })
     }, { rootMargin: '-50% 0px -50% 0px' })
     // sections mount one after another (App), so look again until all are there
-    const observe = () => NAV.forEach(({ id }) => { const el = document.getElementById(id); if (el) io.observe(el) })
+    // the hero too: back at the top, no link is marked (it has none)
+    const observe = () => ['start', ...NAV.map((n) => n.id)].forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el) })
     observe()
     const t = setInterval(observe, 500)
     const stop = setTimeout(() => clearInterval(t), 4000)

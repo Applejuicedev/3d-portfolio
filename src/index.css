@@ -194,3 +194,8 @@ html.custom-cursor :is(input, textarea, select, [contenteditable="true"]) { curs
   .group:hover .caret-hover::after { animation: none; }
   .typer-caret::after { display: none; }
 }
+
+/* while the preloader runs, only the bust's particles and the counter are on screen (Preloader.jsx) */
+html[data-preloading] body * { visibility: hidden; }
+html[data-preloading] [data-bust], html[data-preloading] [data-bust] *,
+html[data-preloading] [data-preloader], html[data-preloading] [data-preloader] * { visibility: visible; }

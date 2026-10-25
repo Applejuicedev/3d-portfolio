@@ -9,6 +9,9 @@ export const stage = {
   yaw: 0,         // extra turn around the vertical axis, radians (the workflow's "R Z")
   demo: null,     // { x, y } client px of the demo pointer while it acts, else null
   screen: null,   // { origin: {x,y}, axes: {x,y,z: {x,y}}, box: {l,t,r,b} } client px
+  count: 0,       // how many points the bust is made of (the preloader counts them up)
+  // 0..1 share of the points out of the preloader's portal (1 at once with reduced motion)
+  emit: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 0,
 }
 
 // the bust calls this once it is on screen; the workflow waits for it before its 3D phase
@@ -18,3 +21,8 @@ export const markReady = () => { stage.ready = true; resolveReady() }
 
 // dev only: lets the layout scripts turn and inspect the bust
 if (import.meta.env.DEV) window.__stage = stage
+
+// the preloader waits for the bust to be settled: drawn its first frame, or given up (no WebGL)
+let resolveSettled
+export const bustSettled = new Promise((r) => { resolveSettled = r })
+export const settleBust = () => resolveSettled()
