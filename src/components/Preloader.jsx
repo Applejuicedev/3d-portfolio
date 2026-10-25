@@ -56,7 +56,8 @@ export default function Preloader({ onRelease }) {
       onRelease?.()
     }
     const step = (now) => {
-      const t = now - t0
+      // a frame's timestamp can lie a little before t0 (it is the frame's start): never negative
+      const t = Math.max(0, now - t0)
       if (formFrom) {
         // ── forming: the stars fly into the bust, a few at first, then ever more (ease-in) ──
         const k = Math.min(1, (now - formFrom) / FORM)
