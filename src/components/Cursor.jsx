@@ -66,7 +66,7 @@ export default function Cursor() {
     let sm = null
     const record = (rx, ry, t = performance.now()) => {
       if (!sm || t - sm.t > 120) sm = { x: rx, y: ry, t }
-      const k = 1 - Math.exp(-Math.max(1, t - sm.t) / 10)
+      const k = 1 - Math.exp(-Math.max(1, t - sm.t) / 4)
       sm = { x: sm.x + (rx - sm.x) * k, y: sm.y + (ry - sm.y) * k, t }
       const px = sm.x, py = sm.y
       const now = performance.now(), last = pts[pts.length - 1]
@@ -78,10 +78,20 @@ export default function Cursor() {
       if (!traf) traf = requestAnimationFrame(trail)
     }
     const show = (v) => { visible = v; el.style.opacity = v ? '1' : '0'; root.classList.toggle('custom-cursor', v) }
+    // as close to the hardware pointer as a drawn cursor gets: written at once (not on the next
+    // frame), from the browser's predicted position where it offers one (it estimates where the
+    // pointer will be when the frame shows), and from pointerrawupdate where available — those
+    // arrive as soon as the hardware reports, not batched to the frame
+    const place = (e) => {
+      const pr = e.getPredictedEvents?.()
+      const p = pr && pr.length ? pr[pr.length - 1] : e
+      x = p.clientX; y = p.clientY
+      draw()
+    }
+    const raw = (e) => { if (visible) place(e) }
     const move = (e) => {
       try {
-        x = e.clientX; y = e.clientY
-        if (!raf) raf = requestAnimationFrame(draw)
+        place(e)
         if (!visible) show(true)
         const m = modeFor(e.target)
         setMode(m)
@@ -97,6 +107,7 @@ export default function Cursor() {
     window.addEventListener('resize', size)
     const press = () => setDown(true), release = () => setDown(false)
     window.addEventListener('pointermove', move, { passive: true })
+    if ('onpointerrawupdate' in window) window.addEventListener('pointerrawupdate', raw, { passive: true })
     window.addEventListener('pointerdown', press)
     window.addEventListener('pointerup', release)
     root.addEventListener('pointerleave', leave)
@@ -105,6 +116,7 @@ export default function Cursor() {
       cancelAnimationFrame(raf); cancelAnimationFrame(traf)
       window.removeEventListener('resize', size)
       window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerrawupdate', raw)
       window.removeEventListener('pointerdown', press)
       window.removeEventListener('pointerup', release)
       root.removeEventListener('pointerleave', leave)
@@ -123,8 +135,8 @@ export default function Cursor() {
   }[mode]
   return (
     <>
-    <canvas ref={trailRef} aria-hidden className="fixed inset-0 w-screen h-screen z-[79] pointer-events-none" />
-    <div ref={ref} aria-hidden className="fixed left-0 top-0 z-[80] pointer-events-none opacity-0 transition-opacity duration-150">
+    <canvas ref={trailRef} aria-hidden data-cursor-ui className="fixed inset-0 w-screen h-screen z-[209] pointer-events-none" />
+    <div ref={ref} aria-hidden data-cursor-ui className="fixed left-0 top-0 z-[210] pointer-events-none opacity-0 transition-opacity duration-150">
       <div className={`-translate-x-1/2 -translate-y-1/2 grid place-items-center transition-[width,height,background-color,border-color,transform] duration-200 ease-sys ${shape} ${down ? 'scale-75' : ''}`}>
         {mode === 'demo' && <span className="font-mono text-[10.5px] text-bg whitespace-nowrap">demo</span>}
       </div>

@@ -22,14 +22,14 @@ import { stage, markReady, settleBust } from './hero/stage'
 // condenses into the bust.
 
 const VERT = /* glsl */ `
-uniform float uTime, uSpread, uSelect, uTint, uSize, uAspect, uFade, uHover, uEmit;
+uniform float uTime, uSpread, uSelect, uTint, uSize, uAspect, uFade, uHover, uEmit, uGalaxy, uGalR;
+uniform vec3 uPortal;
 uniform vec2 uMouse, uHead;
 uniform vec4 uShock;
 attribute vec3 aNormal;
 attribute vec4 aRand;
 varying vec4 vColor;
 const vec3 PIVOT = vec3(0.0, -0.85, -0.06);
-const vec3 PORTAL = vec3(0.0, -0.55, 0.0); // the preloader's portal sits on the bust's origin
 mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0., -s, 0., 1., 0., s, 0., c); }
 mat3 rotX(float a) { float c = cos(a), s = sin(a); return mat3(1., 0., 0., 0., c, s, 0., -s, c); }
 void main() {
@@ -47,12 +47,31 @@ void main() {
   away.y += s * aRand.w * 0.8;
   // the loose cloud keeps turning slowly (the preloader's picture), still once assembled
   p = mix(p, rotY(s * (1.2 + aRand.w + uTime * 0.12)) * (p + away), s);
-  // out of the portal: while the page loads, the points leave it one after another (in their random
-  // order, as far as uEmit has come) and spiral out to their place in the cloud
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  // ── the preloader's galaxy (view space, around the portal in the middle of the screen) ──
+  // While the page loads, the points leave the portal one after another (in their random order,
+  // as far as uEmit has come), spiral out and drift as a tilted milky way: a thin disc with a few
+  // loose arms, the inner part turning faster than the outer, so they stream past each other
+  // instead of holding a shape. uGalaxy 1 → 0 then pulls them, staggered, into the bust.
+  float h1 = fract(aRand.w * 7.31 + aRand.x * 3.7 + 0.5), h2 = fract(aRand.w * 13.7 + aRand.y * 5.1 + 0.5);
+  float h3 = fract(sin(aRand.w * 91.3 + aRand.z) * 43758.5);
   float e = clamp((uEmit - aRand.w * 0.8) / 0.2, 0.0, 1.0);
   float ee = 1.0 - pow(1.0 - e, 3.0);
-  p = PORTAL + rotY((1.0 - ee) * 2.6) * (p - PORTAL) * ee;
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  // each point also wanders on its own (radius and height breathing at its own pace), and the arms
+  // are only loose tendencies — a swarm drifting past each other, not a drawn spiral
+  float wob = sin(uTime * (0.6 + h2 * 0.9) + h1 * 40.0);
+  // radius: an exponential falloff, so the swarm thins out softly instead of ending at a rim
+  float gr = (0.04 + min(-log(1.0 - h1 * 0.985) * 0.3, 1.25) + wob * 0.07) * uGalR * ee;
+  float ga = floor(h2 * 3.0) * 2.094 + gr / uGalR * 2.4 + (h3 - 0.5) * 2.6 - uTime * 0.5 / (0.35 + gr / uGalR * 2.0) - (1.0 - ee) * 3.5;
+  // volume: a round bulge in the middle, a disc that is thick, not a sheet (heights spread like a bell)
+  float bell = (h3 + h2 + h1 - 1.5) / 1.5;
+  // (thickness grows with the radius near the middle, so the bulge is a ball, not a column)
+  float thick = 0.12 * uGalR * smoothstep(0.0, 0.25 * uGalR, gr) + 0.9 * gr * exp(-gr / uGalR * 4.0);
+  vec3 gp = vec3(cos(ga) * gr, bell * thick + cos(uTime * 0.7 + h2 * 30.0) * 0.03 * uGalR * ee, sin(ga) * gr);
+  gp = rotX(0.85) * gp;                                             // tilted well towards the viewer: round
+  gp.xy = mat2(cos(0.32), sin(0.32), -sin(0.32), cos(0.32)) * gp.xy; // and lying a little diagonal
+  float gk = smoothstep(0.0, 1.0, clamp(uGalaxy * 1.35 - aRand.w * 0.35, 0.0, 1.0));
+  mv.xyz = mix(mv.xyz, uPortal + gp, gk);
   vec4 cp = projectionMatrix * mv;
   vec2 ndc = cp.xy / cp.w;
   vec3 nv = normalize(normalMatrix * n);
@@ -75,7 +94,9 @@ void main() {
   // only what really faces away fades (the far side would show through the face); the bottom of
   // the shoulders dissolves into the page
   float a = lit * mix(0.08, 1.0, smoothstep(-0.4, 0.0, facing)) * smoothstep(-2.83, -2.2, position.y);
-  a *= (1.0 - s * 0.8) * uFade * smoothstep(0.0, 0.1, e);
+  a *= (1.0 - s * 0.8) * uFade;
+  // in the galaxy: no lighting, a brighter core, each point appearing as it leaves the portal
+  a = mix(a, (0.3 + 0.7 * h3) * (0.35 + 1.0 * exp(-gr / uGalR * 2.5)) * smoothstep(0.0, 0.1, e), gk);
   vec3 ink = vec3(0.925, 0.92, 0.9), signal = vec3(1.0, 0.357, 0.122), select = vec3(1.0, 0.63, 0.24);
   vec3 col = mix(ink, signal, uTint * (0.55 + 0.45 * facing));
   col = mix(col, signal, clamp(m * 0.9 + ring, 0.0, 1.0));
@@ -126,7 +147,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       geo.setAttribute('aRand', new THREE.BufferAttribute(data.rnd, 4))
       const u = {
         uTime: { value: 0 }, uSpread: { value: reduced ? 0 : 1 }, uSelect: { value: 0 }, uTint: { value: 0 },
-        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit },
+        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit }, uGalaxy: { value: reduced ? 0 : 1 }, uGalR: { value: 3 }, uPortal: { value: new THREE.Vector3() },
         uMouse: { value: new THREE.Vector2(9, 9) }, uHead: { value: new THREE.Vector2() }, uShock: { value: new THREE.Vector4(0, 0, -99, 0) },
       }
       const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: u, transparent: true, depthWrite: false })
@@ -166,10 +187,13 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       // ── input ──
       const mouse = { x: -1e4, y: -1e4, t: -1 } // client px, time of the last real move
       const look = { x: 0, y: 0 }                 // current head turn (yaw, pitch)
+      const tmpV = new THREE.Vector3()
       const REST_YAW = -0.42                      // at rest the bust looks three-quarters towards the headline
       let hover = 0
-      const onMove = (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = performance.now() }
+      // a mouse or pen only: on a phone, a finger scrolling the page must not turn, swell or shake it
+      const onMove = (e) => { if (e.pointerType === 'touch') return; mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = performance.now() }
       const onDown = (e) => {
+        if (e.pointerType === 'touch') return
         if (e.target.closest?.('a, button, input, textarea, select, [role="button"]')) return
         const b = stage.screen?.box
         if (!b || e.clientX < b.l || e.clientX > b.r || e.clientY < b.t || e.clientY > b.b) return
@@ -185,8 +209,8 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       // created earlier, a trigger that fires at once on an already scrolled page called kick()
       // before it was defined and aborted the start-up)
       let scroll = 0
-      // starts as a loose cloud around the bust's place — dense enough to read as one thing
-      const intro = { spread: reduced ? 0 : 0.48 }
+      // starts as the preloader's galaxy, which then condenses into the bust
+      const intro = { spread: 0, galaxy: reduced ? 0 : 1 }
       // ── per frame ──
       const v = new THREE.Vector3()
       const toScreen = (x, y, z) => { v.set(x, y, z).applyMatrix4(bust.matrixWorld).project(camera); return { x: rect.left + (v.x + 1) / 2 * rect.width, y: rect.top + (1 - v.y) / 2 * rect.height } }
@@ -209,6 +233,14 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         u.uFade.value = 1 - THREE.MathUtils.smoothstep(sc, 0.78, 1)
         u.uSelect.value = stage.select
         u.uEmit.value = stage.emit
+        u.uGalaxy.value = intro.galaxy
+        if (intro.galaxy > 0) {
+          // the portal: the middle of the screen, at the bust's depth; the galaxy fills the width
+          const z = tmpV.setFromMatrixPosition(bust.matrixWorld).applyMatrix4(camera.matrixWorldInverse).z
+          const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * -z
+          u.uPortal.value.set(0, 0, z)
+          u.uGalR.value = Math.min(halfH * camera.aspect * 0.95, halfH * 1.9)
+        }
         u.uTint.value = stage.tint
         // whose pointer: the demo pointer while it acts (unless the real one moved more recently)
         const real = mouse.t > 0 && (!stage.demo || now - mouse.t < 1500)
@@ -254,7 +286,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
 
       let ready = false
       // load: the particles condense into the bust
-      const assemble = () => { if (!reduced) gsap.to(intro, { spread: 0, duration: 2.4, ease: 'power3.out', onUpdate: kick }) }
+      const assemble = () => { if (!reduced) gsap.to(intro, { galaxy: 0, duration: 2.1, ease: 'power3.inOut', onUpdate: kick }) }
 
       // without the scroll decay (reduced motion) it stops drawing once the hero is out of view
       const io = new IntersectionObserver(([e]) => { if (reduced) { visible = e.isIntersecting && !document.hidden; kick() } })

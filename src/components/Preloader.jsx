@@ -7,9 +7,10 @@ import { prefersReduced } from './motion'
 // the grain tiles, and every section preparing its reveals. Run under the hero's entrance, that
 // work made it stutter. So the page waits, and the particles are the loading screen: while
 // html[data-preloading] is set, everything but the bust's canvas and this portal is hidden
-// (index.css). The portal opens where the bust will stand and shows how far the page is; the
-// points stream out of it as it fills (stage.emit → the bust's shader) and gather as a loose
-// cloud. At 100 % the portal closes, the page appears, and the cloud condenses into the bust.
+// (index.css), and the cursor. The portal opens in the middle of the screen and shows how far the
+// page is; the points stream out of it as it fills (stage.emit → the bust's shader) and drift
+// as a milky way around it. At 100 % the portal closes, the page appears, and the points
+// condense into the bust.
 // · All gsap motion waits: main.jsx pauses gsap's global timeline before anything mounts, and
 //   this lets it go at the end — the hero's timeline, the typer, the bust's assembly all start
 //   from their beginning then. The portal itself moves without gsap (rAF + CSS).
@@ -21,7 +22,7 @@ export const preloading = () => !prefersReduced()
 
 export default function Preloader({ onRelease }) {
   const [phase, setPhase] = useState(preloading() ? 'load' : 'gone')
-  const portalRef = useRef(), pctRef = useRef(), countRef = useRef()
+  const pctRef = useRef(), countRef = useRef()
 
   useEffect(() => {
     if (phase !== 'load') return
@@ -29,7 +30,6 @@ export default function Preloader({ onRelease }) {
     root.setAttribute('data-preloading', '')
     root.style.overflow = 'hidden'
     let fonts = false, bust = false, raf = 0, alive = true, last = performance.now()
-    const pos = { x: innerWidth * 0.72, y: innerHeight * 0.48 }
     document.fonts.ready.then(() => { fonts = true })
     bustSettled.then(() => { bust = true })
     const t0 = last
@@ -44,10 +44,6 @@ export default function Preloader({ onRelease }) {
       const pct = Math.floor(stage.emit * 100)
       pctRef.current.textContent = `${pct}%`
       countRef.current.textContent = `${Math.round(stage.emit * (stage.count || 64000)).toLocaleString('de-DE')} Partikel`
-      // the portal sits on the bust's origin once it is on screen
-      const o = stage.screen?.origin
-      if (o) { const k = 1 - Math.exp(-dt / 0.12); pos.x += (o.x - pos.x) * k; pos.y += (o.y - pos.y) * k }
-      portalRef.current.style.transform = `translate(${pos.x}px, ${pos.y}px)`
       if (stage.emit < 1) { raf = requestAnimationFrame(step); return }
       setTimeout(() => {
         if (!alive) return
@@ -65,7 +61,7 @@ export default function Preloader({ onRelease }) {
   const out = phase === 'out'
   return (
     <div data-preloader role="status" aria-label="Seite lädt" className="fixed inset-0 z-[200] pointer-events-none select-none">
-      <div ref={portalRef} className="absolute left-0 top-0 will-change-transform">
+      <div className="absolute left-1/2 top-1/2">
         <div onTransitionEnd={(e) => { if (out && e.propertyName === 'opacity') setPhase('gone') }}
           className="absolute -translate-x-1/2 -translate-y-1/2 grid place-items-center"
           style={{ opacity: out ? 0 : 1, scale: out ? '0.15' : '1', transition: 'opacity .7s ease, scale .8s cubic-bezier(.7,0,.2,1)' }}>
