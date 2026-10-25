@@ -92,16 +92,18 @@ export default function HeroSection() {
         {/* the margins stay quiet (muted); only the local time is in the signal colour. These two
             lie on the orange field: a lighter grey there, the darkest that still holds 4.5:1 on its
             grain (measured 5.0:1) — muted would drop below it */}
-        {/* phones: side by side, both margins broke into three ragged lines — there each takes the
-            full width (the left one above, the right one below it), every line whole */}
+        {/* phones keep one margin line only: the role. The study, the availability details and the
+            local time are desktop margins — on a phone they took a third of the first screen and
+            stood between the visitor and the headline; the availability comes back short in the
+            base row (below) */}
         <p className="col-span-2 max-sm:col-span-4 lg:col-span-6 text-[#a8a7a1]">
           <span className="relative inline-block max-sm:whitespace-nowrap">
             <span data-kicker>Creative Fullstack Developer</span>
             <span data-kicker-mark aria-hidden className="absolute left-0 -bottom-[3px] h-px w-full bg-signal origin-left" />
           </span>
-          <span className="block overflow-hidden"><span data-meta="study" className="block">Medieninformatik</span></span>
+          <span className="block overflow-hidden max-sm:hidden"><span data-meta="study" className="block">Medieninformatik</span></span>
         </p>
-        <p className="col-span-2 max-sm:col-span-4 max-sm:mt-3 lg:col-span-6 text-right">
+        <p className="col-span-2 max-sm:hidden lg:col-span-6 text-right">
           <span data-meta="r" className="flex justify-end items-center gap-2"><span data-dot className="w-1.5 h-1.5 rounded-full bg-signal" />verfügbar ab 2029</span>
           <span data-meta="r" className="block">Praktika &amp; Werkstudentenstellen</span>
         </p>
@@ -135,7 +137,9 @@ export default function HeroSection() {
           </ArrowLink>
         </span>
         <p className="hidden lg:block lg:col-span-4 text-center">Web · iOS · Interfaces</p>
-        <p className="col-span-2 lg:col-span-4 text-right tabular-nums">lokal <span className="text-signal">{time}</span></p>
+        <p className="col-span-2 max-sm:hidden lg:col-span-4 text-right tabular-nums">lokal <span className="text-signal">{time}</span></p>
+        {/* phones: in place of the local time, the one detail that matters to whoever is hiring */}
+        <p className="sm:hidden col-span-2 flex justify-end items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-signal" />verfügbar ab 2029</p>
       </div>
     </div>
   )
