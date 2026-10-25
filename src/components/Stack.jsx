@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { SectionHead } from './Section'
 import { Slab, SlabScene } from './Slabs'
-import { useMotion, gsap } from './motion'
+import { useMotion, gsap, finePointer, prefersReduced } from './motion'
 import Accent from './Accent'
 import Marquee from './Marquee'
 
@@ -28,14 +28,43 @@ function useSlabSize() {
   return s
 }
 
+// Touch screens can't hover, so there the scroll does it: the row passing through a band just below
+// the middle of the screen is selected, exactly as if hovered (its layer lifts out of the model, the
+// other rows dim) — one row at a time, in the order they are read, down and up. Rows are taller
+// than the band, so the selection only moves on when the next row has really arrived. Leaving the
+// list lets the model settle. One observer for the rows; nothing with reduced motion (a tap still
+// selects). Devices with a real pointer keep their hover and never get it.
+function useScrollSelect(listRef, select) {
+  useEffect(() => {
+    if (finePointer() || prefersReduced()) return
+    const inside = new Set()
+    let current = null
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        const i = Number(e.target.dataset.row)
+        if (e.isIntersecting) { inside.add(i); current = i } else inside.delete(i)
+      })
+      if (!inside.has(current)) current = inside.size ? [...inside].pop() : null
+      select(current)
+    }, { rootMargin: '-45% 0px -40% 0px' })
+    listRef.current.querySelectorAll('[data-row]').forEach((r) => io.observe(r))
+    return () => io.disconnect()
+  }, [listRef, select])
+}
+
 // The model enters once (the layers settle one after another), then turns a few degrees with the
 // scroll — no pinning, no restacking — while light slides across the top faces. Below it a
-// perspective grid opens up as the section passes. Hover/focus/tap select a layer at any time.
+// perspective grid opens up as the section passes. Hover/focus/tap select a layer at any time; on
+// touch screens the scroll selects too (useScrollSelect).
 export default function Stack() {
-  const ref = useRef()
+  const ref = useRef(), listRef = useRef()
   const size = useSlabSize()
   const [hovered, setHovered] = useState(null)
   const active = hovered
+  // a touch reaches the rows as emulated mouseenter/focus right before its click, which then
+  // toggled the selection straight off again: there only the tap (and keyboard focus) selects
+  const [touch] = useState(() => !finePointer())
+  useScrollSelect(listRef, setHovered)
 
   useMotion(ref, (el) => {
     const scene = el.querySelector('[data-stack-scene]')
@@ -84,14 +113,15 @@ export default function Stack() {
           </SlabScene>
           </div>
         </div>
-        <ul className="col-span-4 lg:col-start-3 lg:col-span-5 lg:row-start-1 border-b border-line" onMouseLeave={() => setHovered(null)}>
+        <ul ref={listRef} className="col-span-4 lg:col-start-3 lg:col-span-5 lg:row-start-1 border-b border-line" onMouseLeave={() => setHovered(null)}>
           {[...GROUPS].reverse().map((g) => {
             const i = GROUPS.indexOf(g)
             const on = active === i
             return (
-              <li key={g.label} className="border-t border-line">
+              <li key={g.label} data-row={i} className="border-t border-line">
                 <button type="button" aria-pressed={on}
-                  onMouseEnter={() => setHovered(i)} onFocus={() => setHovered(i)} onBlur={() => setHovered(null)}
+                  onMouseEnter={touch ? undefined : () => setHovered(i)}
+                  onFocus={(e) => { if (!touch || e.target.matches(':focus-visible')) setHovered(i) }} onBlur={() => setHovered(null)}
                   onClick={() => setHovered((a) => (a === i ? null : i))}
                   className="group w-full text-left py-5 grid grid-cols-[2.25rem_1fr] gap-x-3 focus-visible:outline-offset-[-1px]">
                   <span className={`t-meta tabular-nums pt-[0.15em] transition-colors duration-150 ${on ? 'text-signal' : ''}`}>{String(i + 1).padStart(2, '0')}</span>
