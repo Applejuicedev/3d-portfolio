@@ -270,7 +270,8 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         // somewhere (a turn of a fraction of a second), holds for a few seconds, looks elsewhere or
         // back ahead, sometimes with a slight nod; between glances it drifts on slow waves that
         // never line up, so nothing reads as a loop
-        if (living) {
+        // (not while the hero's workflow acts: then it watches the fingertip)
+        if (living && !stage.demo) {
           const t = now / 1000
           if (now > glance.next) {
             const ahead = Math.random() < 0.35

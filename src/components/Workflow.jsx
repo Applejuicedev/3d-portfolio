@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap, prefersReduced } from './motion'
 import { stage, bustReady } from './hero/stage'
 
@@ -17,8 +17,11 @@ import { stage, bustReady } from './hero/stage'
 //   5 rest    everything it brought fades back out; the headline stands alone again
 // Every overlay is placed from the measured positions of what it refers to, so it fits at any
 // window size. One sequence of awaited tweens with a shared abort flag: unmounting stops it and
-// restores the text. Desktop with motion only (decorative: aria-hidden; the headline's real text
-// is untouched for assistive tech). Runs once, then again after 40 s while the hero is in view.
+// restores the text. With motion only (decorative: aria-hidden; the headline's real text is
+// untouched for assistive tech). Runs once, then again after 40 s while the hero is in view.
+// Below lg the same story, fitted to a phone: a fingertip instead of the mouse pointer, every
+// panel kept inside the screen, a narrower editor with shorter JSX, the 3D panels slimmer and
+// beside the bust where it stands there (under the headline).
 
 const FIGMA = '#0d99ff', GUIDE = '#f24822'
 const AX = { x: '#ff3352', y: '#8bdc00', z: '#2890ff' }
@@ -29,15 +32,27 @@ const CODE = [
   [['  ', 't'], ['<', 'p'], ['Typer', 'c'], [' word', 'a'], ['=', 'p'], ['"Anwendungen."', 's'], [' typed', 'a'], ['=', 'p'], ['"Anw"', 's'], [' />', 'p']],
   [['</', 'p'], ['h1', 'k'], ['>', 'p']],
 ]
+// below lg: the same headline, without the classNames, so the lines fit a phone's width
+const CODE_SM = [
+  [['<', 'p'], ['h1', 'k'], ['>', 'p']],
+  [['  Ich ', 't'], ['<', 'p'], ['span', 'k'], ['>', 'p'], ['gestalte', 't'], ['</', 'p'], ['span', 'k'], ['>', 'p'], [' und', 't']],
+  [['  ', 't'], ['<', 'p'], ['span', 'k'], ['>', 'p'], ['entwickle', 't'], ['</', 'p'], ['span', 'k'], ['>', 'p'], [' digitale', 't']],
+  [['  ', 't'], ['<', 'p'], ['Typer', 'c'], [' word', 'a'], ['=', 'p'], ['"Anwendungen."', 's'], [' />', 'p']],
+  [['</', 'p'], ['h1', 'k'], ['>', 'p']],
+]
 const TONE = { p: 'text-faint', k: 'text-[#c8a7ff]', a: 'text-[#8fd3ff]', s: 'text-[#ffb77a]', t: 'text-[#c9c7bf]', c: 'text-[#7fd6b8]' }
 
 export default function Workflow({ rootRef, start }) {
   const L = useRef({}) // overlay elements by name
   const set = (name) => (el) => { L.current[name] = el }
+  const [small] = useState(() => !window.matchMedia('(min-width: 1024px)').matches)
 
   useEffect(() => {
-    if (!start || prefersReduced() || !window.matchMedia('(min-width: 1024px)').matches) return
+    if (!start || prefersReduced()) return
     const root = rootRef.current, $ = L.current
+    const rootW = root.getBoundingClientRect().width
+    // below lg: keeps a panel of width w inside the hero (8 px from either edge)
+    const fit = (x, w) => (small ? Math.max(8, Math.min(x, rootW - w - 8)) : x)
     let alive = true, timer
     const tweens = []
     const h1 = root.querySelector('h1')
@@ -49,7 +64,8 @@ export default function Workflow({ rootRef, start }) {
     const ok = () => alive && window.scrollY < window.innerHeight * 0.5
     // the demo pointer, and where the bust should look while it acts
     const ptr = $.ptr
-    const syncDemo = () => { const r = ptr.getBoundingClientRect(); stage.demo = { x: r.left + 3, y: r.top + 2 } }
+    // the arrow's tip (desktop), the fingertip's centre (below lg)
+    const syncDemo = () => { const r = ptr.getBoundingClientRect(); stage.demo = small ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: r.left + 3, y: r.top + 2 } }
     const moveTo = (x, y, d = 0.75, ease = 'power3.inOut') => tw(ptr, { x, y, duration: d, ease, onUpdate: syncDemo })
     const click = async () => {
       gsap.fromTo($.ripple, { x: gsap.getProperty(ptr, 'x') - 12, y: gsap.getProperty(ptr, 'y') - 12, scale: 0.3, autoAlpha: 0.9 }, { scale: 1.4, autoAlpha: 0, duration: 0.45, ease: 'power2.out' })
@@ -80,7 +96,7 @@ export default function Workflow({ rootRef, start }) {
     const textPhase = async () => {
       const dig = word('digitale'); remember(dig)
       let r = rel(dig)
-      gsap.set(ptr, { x: r.x + r.w + 140, y: r.y + r.h + 90, autoAlpha: 0, scale: 1 })
+      gsap.set(ptr, { x: small ? rootW * 0.8 : r.x + r.w + 140, y: r.y + r.h + 90, autoAlpha: 0, scale: 1 })
       await tw(ptr, { autoAlpha: 1, duration: 0.3 })
       await moveTo(r.x + r.w * 0.55, r.y + r.h * 0.62, 0.9)
       await click(); await click()
@@ -93,7 +109,7 @@ export default function Workflow({ rootRef, start }) {
       await wait(0.45); if (!ok()) return false
       // autocorrect: the suggestion list hangs under the word
       r = rel(dig)
-      gsap.set($.suggest, { x: r.x, y: r.y + r.h + 8 })
+      gsap.set($.suggest, { x: fit(r.x, $.suggest.offsetWidth), y: r.y + r.h + 8 })
       await show($.suggest)
       const first = $.suggest.querySelector('[data-opt]'), fr = rel(first)
       await moveTo(fr.x + 40, fr.y + fr.h / 2, 0.55)
@@ -127,7 +143,7 @@ export default function Workflow({ rootRef, start }) {
       await wait(0.7); if (!ok()) return false
       // ⌘Z
       const pr = { x: gsap.getProperty(ptr, 'x'), y: gsap.getProperty(ptr, 'y') }
-      gsap.set($.undo, { x: pr.x + 18, y: pr.y + 20 })
+      gsap.set($.undo, { x: fit(pr.x + 18, $.undo.offsetWidth), y: pr.y + 20 })
       await show($.undo)
       await wait(0.35)
       await Promise.all([
@@ -151,7 +167,8 @@ export default function Workflow({ rootRef, start }) {
       gsap.set($.frame, { borderColor: FIGMA, backgroundColor: 'rgba(13,153,255,0)' })
       $.size.textContent = `${Math.round(r.w)} × ${Math.round(r.h)}`
       gsap.set($.handles, { autoAlpha: 1 })
-      gsap.set($.align, { x: r.x + r.w + 18, y: r.y + r.h / 2 - 16 }) // beside the layer, never over the line above
+      // beside the layer, never over the line above; below lg there is no room beside it: under it
+      gsap.set($.align, small ? { x: r.x, y: r.y + r.h + 34 } : { x: r.x + r.w + 18, y: r.y + r.h / 2 - 16 })
       await Promise.all([show($.frame, { scale: 0.985 }), show($.align)])
       await wait(0.35); if (!ok()) return false
       // drag off the left edge: the distance to the other lines' edge counts live
@@ -163,8 +180,8 @@ export default function Workflow({ rootRef, start }) {
       }
       gsap.set($.measure, { autoAlpha: 1 })
       await Promise.all([
-        tw(drag, { dx: 64, duration: 0.9, ease: 'power2.inOut', onUpdate: follow }),
-        moveTo(r.x + r.w * 0.45 + 64, r.y + r.h * 0.55, 0.9, 'power2.inOut'),
+        tw(drag, { dx: small ? 40 : 64, duration: 0.9, ease: 'power2.inOut', onUpdate: follow }),
+        moveTo(r.x + r.w * 0.45 + (small ? 40 : 64), r.y + r.h * 0.55, 0.9, 'power2.inOut'),
       ])
       await wait(0.35)
       await Promise.all([
@@ -193,7 +210,8 @@ export default function Workflow({ rootRef, start }) {
       const hr = rel(h1), base = rel(root.querySelector('[data-base]'))
       // the editor opens under the headline; if the window is short it may overlap the base row,
       // which steps back meanwhile
-      const w = Math.min(600, hr.w * 0.86), h = 236
+      // below lg the editor takes the content width, without the explorer (shorter JSX, CODE_SM)
+      const w = small ? hr.w : Math.min(600, hr.w * 0.86), h = small ? 196 : 236
       const y = Math.min(hr.y + hr.h + 26, base.y + base.h - h)
       const target = { x: hr.x, y, width: w, height: h }
       hide($.align, 0.2); gsap.set($.handles, { autoAlpha: 0 }); $.size.textContent = ''
@@ -259,19 +277,25 @@ export default function Workflow({ rootRef, start }) {
       gsap.ticker.add(tick); cleanups.push(() => gsap.ticker.remove(tick))
       const s0 = stage.screen
       const o = fromClient(s0.origin), headY = fromClient({ x: 0, y: s0.box.t }).y
-      const rootW = root.getBoundingClientRect().width
+      const bh = fromClient({ x: 0, y: s0.box.b }).y - headY // the bust's height on screen
       // panels around the head, kept inside the hero: tools on its left, outliner and properties
-      // on its right (Blender's own sides)
+      // on its right (Blender's own sides). Below lg the bust fills the width: the tools stand at
+      // the left edge, the properties (slimmer) at the right beside the neck, no outliner
       const py = Math.max(84, headY + 20)
-      gsap.set($.tools, { x: o.x - 250, y: py + 60 })
-      gsap.set($.outliner, { x: Math.min(o.x + 250, rootW - 214), y: py })
-      gsap.set($.props, { x: Math.min(o.x + 250, rootW - 214), y: py + 108 })
+      if (small) {
+        gsap.set($.tools, { x: 8, y: headY + bh * 0.08 })
+        gsap.set($.props, { x: rootW - $.props.offsetWidth - 8, y: headY + bh * 0.42 })
+      } else {
+        gsap.set($.tools, { x: o.x - 250, y: py + 60 })
+        gsap.set($.outliner, { x: Math.min(o.x + 250, rootW - 214), y: py })
+        gsap.set($.props, { x: Math.min(o.x + 250, rootW - 214), y: py + 108 })
+      }
       // to the head, select it
-      await moveTo(o.x + 10, o.y - 160, 1.0)
+      await moveTo(o.x + 10, small ? headY + bh * 0.2 : o.y - 160, 1.0)
       await click()
       tw(stage, { select: 1, duration: 0.35, ease: 'power2.out' })
       gsap.set($.gizmo, { autoAlpha: 0 }); tick()
-      await Promise.all([show($.origin, { scale: 0.5 }), show($.gizmo, { scale: 1 }), show($.tools, { x: -8 }), show($.outliner, { x: 8 })])
+      await Promise.all([show($.origin, { scale: 0.5 }), show($.gizmo, { scale: 1 }), show($.tools, { x: -8 }), small ? null : show($.outliner, { x: 8 })])
       await show($.props, { x: 8 })
       await wait(0.3); if (!ok()) return false
       // the rotate tool
@@ -281,10 +305,11 @@ export default function Workflow({ rootRef, start }) {
       $.tools.querySelectorAll('[data-tool]').forEach((t) => t.classList.toggle('bg-[#4772b3]', t === rot))
       $.mode.textContent = 'Drehen · Z'
       // and an arc around the bust: it turns with the pointer, the value counts
-      await moveTo(o.x + 120, o.y - 60, 0.5)
+      const arc = small ? 0.6 : 1
+      await moveTo(o.x + 120 * arc, o.y - 60 * arc, 0.5)
       await Promise.all([
         tw(stage, { yaw: 0.62, duration: 1.4, ease: 'power2.inOut' }),
-        tw(ptr, { x: o.x - 100, y: o.y - 90, duration: 1.4, ease: 'power2.inOut', onUpdate: syncDemo }),
+        tw(ptr, { x: o.x - 100 * arc, y: o.y - 90 * arc, duration: 1.4, ease: 'power2.inOut', onUpdate: syncDemo }),
       ])
       await wait(0.3); if (!ok()) return false
       // material colour
@@ -335,14 +360,13 @@ export default function Workflow({ rootRef, start }) {
       gsap.killTweensOf(Object.values(L.current))
       gsap.set(Object.values(L.current).filter((el) => el && el !== L.current.ptr), { autoAlpha: 0 })
     }
-  }, [start, rootRef])
+  }, [start, rootRef, small])
 
   const box = 'absolute left-0 top-0 invisible pointer-events-none'
   const panel = `${box} rounded-[5px] border border-white/10 bg-[#1d1d1c]/95 shadow-[0_14px_36px_rgba(0,0,0,.5)] font-mono text-[11.5px] text-[#c9c7bf]`
   return (
-    // desktop only (the sequence never runs below lg); clipped to the hero, so a hidden panel can
-    // never widen the page
-    <div aria-hidden className="hidden lg:block absolute inset-0 z-40 pointer-events-none overflow-clip">
+    // clipped to the hero, so a hidden panel can never widen the page
+    <div aria-hidden className="absolute inset-0 z-40 pointer-events-none overflow-clip">
       {/* text */}
       <div ref={set('sel')} className={`${box} rounded-[3px] bg-[rgb(236_235_230/0.16)]`} />
       <div ref={set('suggest')} className={`${panel} min-w-[13rem] py-1 text-[12.5px]`}>
@@ -379,15 +403,15 @@ export default function Workflow({ rootRef, start }) {
         <div className="flex items-center border-b border-white/10 text-[10.5px]">
           <span className="px-3 py-1.5 text-ink border-t-2 border-signal bg-white/[0.03]">HeroSection.jsx</span>
           <span className="px-3 py-1.5 text-faint">Typer.jsx</span>
-          <span className="px-3 py-1.5 text-faint">Bust3D.jsx</span>
+          {!small && <span className="px-3 py-1.5 text-faint">Bust3D.jsx</span>}
         </div>
         <div className="flex flex-1 min-h-0">
-          <div className="w-[118px] shrink-0 border-r border-white/10 py-1.5 text-[10.5px] text-muted">
+          <div className="max-lg:hidden w-[118px] shrink-0 border-r border-white/10 py-1.5 text-[10.5px] text-muted">
             <p className="px-2.5">▾ src</p><p className="pl-5">▾ components</p>
             <p className="pl-8 bg-white/[0.06] text-ink">HeroSection.jsx</p><p className="pl-8">Typer.jsx</p><p className="pl-8">Bust3D.jsx</p><p className="pl-8">Workflow.jsx</p>
           </div>
           <div ref={set('code')} className="flex-1 py-1.5 pr-2 overflow-hidden whitespace-pre">
-            {CODE.map((ln, i) => (
+            {(small ? CODE_SM : CODE).map((ln, i) => (
               <p key={i} data-code className="flex">
                 <span className="w-8 shrink-0 pr-2 text-right text-faint tabular-nums">{204 + i}</span>
                 <span>
@@ -426,7 +450,7 @@ export default function Workflow({ rootRef, start }) {
         <p className="px-2.5 pl-10 text-muted">● Material.Partikel</p>
         <p className="px-2.5 pl-6 text-muted">◎ Kamera</p>
       </div>
-      <div ref={set('props')} className={`${panel} w-[210px] py-1.5`}>
+      <div ref={set('props')} className={`${panel} w-[210px] max-lg:w-[190px] py-1.5`}>
         <p className="flex justify-between px-2.5 pb-1 text-[10px] text-faint"><span>Objekt · Büste</span><span ref={set('mode')}>Objektmodus</span></p>
         <p className="flex justify-between px-2.5"><span className="text-muted">Rotation Z</span><span ref={set('rotZ')} className="tabular-nums text-ink">0.0°</span></p>
         <p className="flex justify-between px-2.5"><span className="text-muted">Skalierung</span><span className="tabular-nums">1.000</span></p>
@@ -434,9 +458,12 @@ export default function Workflow({ rootRef, start }) {
       </div>
       {/* the pointer and its click */}
       <span ref={set('ripple')} className={`${box} w-6 h-6 rounded-full border border-white/70`} />
-      <svg ref={set('ptr')} width="20" height="20" viewBox="0 0 22 22" className={box} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))' }}>
-        <path d="M3 2 L3 18 L7.2 14.2 L10 20.5 L12.6 19.4 L9.9 13.2 L15.6 13.2 Z" fill="#fff" stroke="#000" strokeWidth="1.1" strokeLinejoin="round" />
-      </svg>
+      {/* below lg a fingertip (a soft touch circle) — a mouse arrow makes no sense on a phone */}
+      {small
+        ? <span ref={set('ptr')} className={`${box} -ml-[13px] -mt-[13px] w-[26px] h-[26px] rounded-full bg-white/25 ring-1 ring-white/70 shadow-[0_2px_8px_rgba(0,0,0,.5)]`} />
+        : <svg ref={set('ptr')} width="20" height="20" viewBox="0 0 22 22" className={box} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))' }}>
+            <path d="M3 2 L3 18 L7.2 14.2 L10 20.5 L12.6 19.4 L9.9 13.2 L15.6 13.2 Z" fill="#fff" stroke="#000" strokeWidth="1.1" strokeLinejoin="round" />
+          </svg>}
     </div>
   )
 }
