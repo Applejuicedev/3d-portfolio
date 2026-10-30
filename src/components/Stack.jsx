@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { SectionHead } from './Section'
 import { Slab, SlabScene } from './Slabs'
-import { useMotion, gsap, finePointer, prefersReduced } from './motion'
+import { useMotion, gsap, ScrollTrigger, finePointer, prefersReduced } from './motion'
 import Accent from './Accent'
 import Marquee from './Marquee'
 
@@ -28,29 +28,23 @@ function useSlabSize() {
   return s
 }
 
-// Touch screens can't hover, so there the scroll does it: the row passing through a band low on
-// the screen is selected, exactly as if hovered (its layer lifts out of the model, the other rows
-// dim) — low, so a row is picked as soon as it comes up into view, while the model above the list
-// is still on screen to show it. One row at a time, in the order they are read, down and up. Rows
-// are taller than the band, so the selection only moves on when the next row has arrived. Leaving the
-// list lets the model settle. One observer for the rows; nothing with reduced motion (a tap still
-// selects). Devices with a real pointer keep their hover and never get it.
-function useScrollSelect(listRef, select) {
+// Touch screens can't hover, so there the scroll does it — driven by the model, not the list
+// (on a phone the list stands below the model, so a row-driven selection lifted layers that had
+// already left the screen): from the moment the model comes up into view until it nears the top,
+// its layers are selected one after another, top plate first, exactly as if their rows were hovered
+// (the layer lifts out, the other rows dim) — down and up with the scroll. Before and after, the
+// model rests. One ScrollTrigger; nothing with reduced motion (a tap still selects). Devices with a
+// real pointer keep their hover and never get it.
+function useScrollSelect(sceneRef, select, count) {
   useEffect(() => {
     if (finePointer() || prefersReduced()) return
-    const inside = new Set()
-    let current = null
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        const i = Number(e.target.dataset.row)
-        if (e.isIntersecting) { inside.add(i); current = i } else inside.delete(i)
-      })
-      if (!inside.has(current)) current = inside.size ? [...inside].pop() : null
-      select(current)
-    }, { rootMargin: '-78% 0px -8% 0px' })
-    listRef.current.querySelectorAll('[data-row]').forEach((r) => io.observe(r))
-    return () => io.disconnect()
-  }, [listRef, select])
+    const st = ScrollTrigger.create({
+      trigger: sceneRef.current, start: 'top 68%', end: 'top 8%',
+      onUpdate: (self) => select(count - 1 - Math.min(count - 1, Math.floor(self.progress * count))),
+      onLeave: () => select(null), onLeaveBack: () => select(null),
+    })
+    return () => st.kill()
+  }, [sceneRef, select, count])
 }
 
 // The model enters once (the layers settle one after another), then turns a few degrees with the
@@ -58,14 +52,14 @@ function useScrollSelect(listRef, select) {
 // perspective grid opens up as the section passes. Hover/focus/tap select a layer at any time; on
 // touch screens the scroll selects too (useScrollSelect).
 export default function Stack() {
-  const ref = useRef(), listRef = useRef()
+  const ref = useRef(), sceneRef = useRef()
   const size = useSlabSize()
   const [hovered, setHovered] = useState(null)
   const active = hovered
   // a touch reaches the rows as emulated mouseenter/focus right before its click, which then
   // toggled the selection straight off again: there only the tap (and keyboard focus) selects
   const [touch] = useState(() => !finePointer())
-  useScrollSelect(listRef, setHovered)
+  useScrollSelect(sceneRef, setHovered, GROUPS.length)
 
   useMotion(ref, (el) => {
     const scene = el.querySelector('[data-stack-scene]')
@@ -99,7 +93,7 @@ export default function Stack() {
       {/* the tools at a glance, as a band right under the title; the list below reads them in order */}
       <div className="mt-12 lg:mt-16"><Marquee items={GROUPS.flatMap((g) => g.items)} /></div>
       <div data-stage className="grid12 gap-y-6 mt-12 lg:mt-16 items-center">
-        <div data-stack-scene className="relative col-span-4 lg:col-start-8 lg:col-span-5 lg:row-start-1" style={{ '--light': 0.5 }}>
+        <div ref={sceneRef} data-stack-scene className="relative col-span-4 lg:col-start-8 lg:col-span-5 lg:row-start-1" style={{ '--light': 0.5 }}>
           {/* the floor: a perspective grid that opens up while the section scrolls past */}
           <div aria-hidden data-floor className="absolute inset-x-0 lg:inset-x-[-10%] bottom-[4%] h-[55%] origin-bottom pointer-events-none [perspective:600px]">
             <div className="absolute inset-0 [transform:rotateX(62deg)] [transform-origin:bottom]"
@@ -114,12 +108,12 @@ export default function Stack() {
           </SlabScene>
           </div>
         </div>
-        <ul ref={listRef} className="col-span-4 lg:col-start-3 lg:col-span-5 lg:row-start-1 border-b border-line" onMouseLeave={() => setHovered(null)}>
+        <ul className="col-span-4 lg:col-start-3 lg:col-span-5 lg:row-start-1 border-b border-line" onMouseLeave={() => setHovered(null)}>
           {[...GROUPS].reverse().map((g) => {
             const i = GROUPS.indexOf(g)
             const on = active === i
             return (
-              <li key={g.label} data-row={i} className="border-t border-line">
+              <li key={g.label} className="border-t border-line">
                 <button type="button" aria-pressed={on}
                   onMouseEnter={touch ? undefined : () => setHovered(i)}
                   onFocus={(e) => { if (!touch || e.target.matches(':focus-visible')) setHovered(i) }} onBlur={() => setHovered(null)}
