@@ -187,6 +187,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       const look = { x: 0, y: 0 }                 // current head turn (yaw, pitch)
       const tmpV = new THREE.Vector3()
       const REST_YAW = -0.42                      // at rest the bust looks three-quarters towards the headline
+      const glance = { x: 0, y: 0, cx: 0, cy: 0, next: 0 } // touch: where the idle head is looking
       let hover = 0
       // a mouse or pen only: on a phone, a finger scrolling the page must not turn, swell or shake it
       const onMove = (e) => { if (e.pointerType === 'touch') return; mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = performance.now() }
@@ -228,8 +229,13 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         // by a frame, and the bust shook
         const sc = scroll
         const shift = small ? 0 : Math.max(0, window.scrollY - heroTop0) * (reduced ? 1 : 0.72)
-        bust.position.set(base.x, base.y + shift * upx, 0)
-        bust.rotation.set(sc * 0.25, REST_YAW + stage.yaw + Math.sin(now / 3200) * (reduced ? 0 : 0.05) - sc * 0.6, 0)
+        // at rest on a touch screen the body lives a little too: it breathes (the shoulders rise
+        // and settle, ~4.5 s a breath) and shifts its weight now and then (a slow lean)
+        const living = touch && !reduced
+        const breath = living ? (Math.sin(now / 1000 * 1.4) * 0.5 + 0.5) ** 2 * 0.012 * BUST_H * base.s : 0
+        const lean = living ? Math.sin(now / 1000 * 0.11) * 0.018 + Math.sin(now / 1000 * 0.29 + 1.7) * 0.006 : 0
+        bust.position.set(base.x, base.y + shift * upx + breath, 0)
+        bust.rotation.set(sc * 0.25, REST_YAW + stage.yaw + Math.sin(now / 3200) * (reduced ? 0 : 0.05) - sc * 0.6, lean)
         bust.updateMatrixWorld()
         // the decay begins after the first stretch of scroll and draws out over the rest
         u.uSpread.value = Math.max(intro.spread, Math.pow(THREE.MathUtils.smoothstep(sc, 0.12, 1), 1.35))
@@ -260,12 +266,22 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         const head = toScreen(0, 0.35, 0.4)
         let tx = Math.max(-1, Math.min(1, (px - head.x) / 700)) * 0.6
         let ty = Math.max(-1, Math.min(1, (py - head.y) / 600)) * 0.32
-        // no pointer to follow (touch): the gaze wanders on its own, slowly and a little — a few
-        // slow waves that never line up, so it reads as looking around, not as a loop
-        if (touch && !reduced) {
+        // no pointer to follow (touch): the head behaves like a person's at rest — it glances
+        // somewhere (a turn of a fraction of a second), holds for a few seconds, looks elsewhere or
+        // back ahead, sometimes with a slight nod; between glances it drifts on slow waves that
+        // never line up, so nothing reads as a loop
+        if (living) {
           const t = now / 1000
-          tx += Math.sin(t * 0.21) * 0.16 + Math.sin(t * 0.53 + 1.3) * 0.06
-          ty += Math.sin(t * 0.17 + 0.7) * 0.06 + Math.sin(t * 0.41 + 2.1) * 0.025
+          if (now > glance.next) {
+            const ahead = Math.random() < 0.35
+            glance.x = ahead ? 0 : (Math.random() * 2 - 1) * 0.26
+            glance.y = ahead ? 0 : (Math.random() * 2 - 1) * 0.1 + (Math.random() < 0.25 ? 0.06 : 0)
+            glance.next = now + 2600 + Math.random() * 4200
+          }
+          const kg = 1 - Math.exp(-dt / 0.45)
+          glance.cx += (glance.x - glance.cx) * kg; glance.cy += (glance.y - glance.cy) * kg
+          tx += glance.cx + Math.sin(t * 0.21) * 0.05 + Math.sin(t * 0.53 + 1.3) * 0.025
+          ty += glance.cy + Math.sin(t * 0.17 + 0.7) * 0.025 + Math.sin(t * 0.41 + 2.1) * 0.012
         }
         const kl = reduced ? 1 : 1 - Math.exp(-dt / 0.22)
         look.x += (tx - look.x) * kl; look.y += (ty - look.y) * kl
