@@ -22,7 +22,7 @@ import { stage, markReady, settleBust } from './hero/stage'
 
 const VERT = /* glsl */ `
 uniform float uTime, uSpread, uSelect, uTint, uSize, uAspect, uFade, uHover, uEmit;
-uniform float uSky, uSkyY;
+uniform float uSky, uSkyY, uSwell;
 uniform vec2 uView;
 uniform vec2 uMouse, uHead;
 uniform vec4 uShock;
@@ -76,7 +76,8 @@ void main() {
   float st = uTime - uShock.z;
   vec2 ds = ndc - uShock.xy; ds.x *= uAspect;
   float ring = st > 0.0 ? exp(-pow(length(ds) - st * 0.9, 2.0) / 0.003) * exp(-st * 1.5) * uShock.w : 0.0;
-  mv.xyz += nv * (m * 0.16 + ring * 0.3) + vec3(0.0, 0.0, m * 0.08);
+  // (uSwell: how far the points give way — less on a phone, where the bust is small on screen)
+  mv.xyz += nv * (m * 0.16 * uSwell + ring * 0.3) + vec3(0.0, 0.0, m * 0.08 * uSwell);
   gl_Position = projectionMatrix * mv;
   float facing = nv.z;
   float rim = 1.0 - abs(facing);
@@ -84,7 +85,7 @@ void main() {
   // along the silhouette
   float key = max(dot(nv, normalize(vec3(-0.55, 0.5, 0.7))), 0.0);
   float lit = 0.07 + 1.12 * pow(key, 1.45) + 0.3 * pow(rim, 6.0) * step(-0.05, facing);
-  gl_PointSize = uSize * (0.7 + aRand.w * 0.7) * (10.0 / -mv.z) * (1.0 + m * 0.6 + ring * 0.8);
+  gl_PointSize = uSize * (0.7 + aRand.w * 0.7) * (10.0 / -mv.z) * (1.0 + m * 0.6 * uSwell + ring * 0.8);
   // only what really faces away fades (the far side would show through the face); the bottom of
   // the shoulders dissolves into the page
   float a = lit * mix(0.08, 1.0, smoothstep(-0.4, 0.0, facing)) * smoothstep(-2.83, -2.2, position.y);
@@ -143,7 +144,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       geo.setAttribute('aRand', new THREE.BufferAttribute(data.rnd, 4))
       const u = {
         uTime: { value: 0 }, uSpread: { value: reduced ? 0 : 1 }, uSelect: { value: 0 }, uTint: { value: 0 },
-        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit }, uSky: { value: -10 }, uSkyY: { value: 0 }, uView: { value: new THREE.Vector2(1, 1) },
+        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit }, uSky: { value: -10 }, uSkyY: { value: 0 }, uSwell: { value: small ? 0.35 : 1 }, uView: { value: new THREE.Vector2(1, 1) },
         uMouse: { value: new THREE.Vector2(9, 9) }, uHead: { value: new THREE.Vector2() }, uShock: { value: new THREE.Vector4(0, 0, -99, 0) },
       }
       const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: u, transparent: true, depthWrite: false })

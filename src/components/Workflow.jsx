@@ -19,8 +19,7 @@ import { stage, bustReady } from './hero/stage'
 // window size. One sequence of awaited tweens with a shared abort flag: unmounting stops it and
 // restores the text. With motion only (decorative: aria-hidden; the headline's real text is
 // untouched for assistive tech). Runs once, then again after 40 s while the hero is in view.
-// Below lg the same story, fitted to a phone: a fingertip instead of the mouse pointer, every
-// panel kept inside the screen, a narrower editor with shorter JSX, the 3D panels slimmer and
+// Below lg the same story, fitted to a phone: every panel kept inside the screen, a narrower editor with shorter JSX, the 3D panels slimmer and
 // beside the bust where it stands there (under the headline).
 
 const FIGMA = '#0d99ff', GUIDE = '#f24822'
@@ -64,8 +63,7 @@ export default function Workflow({ rootRef, start }) {
     const ok = () => alive && window.scrollY < window.innerHeight * 0.5
     // the demo pointer, and where the bust should look while it acts
     const ptr = $.ptr
-    // the arrow's tip (desktop), the fingertip's centre (below lg)
-    const syncDemo = () => { const r = ptr.getBoundingClientRect(); stage.demo = small ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: r.left + 3, y: r.top + 2 } }
+    const syncDemo = () => { const r = ptr.getBoundingClientRect(); stage.demo = { x: r.left + 3, y: r.top + 2 } }
     const moveTo = (x, y, d = 0.75, ease = 'power3.inOut') => tw(ptr, { x, y, duration: d, ease, onUpdate: syncDemo })
     const click = async () => {
       gsap.fromTo($.ripple, { x: gsap.getProperty(ptr, 'x') - 12, y: gsap.getProperty(ptr, 'y') - 12, scale: 0.3, autoAlpha: 0.9 }, { scale: 1.4, autoAlpha: 0, duration: 0.45, ease: 'power2.out' })
@@ -458,12 +456,9 @@ export default function Workflow({ rootRef, start }) {
       </div>
       {/* the pointer and its click */}
       <span ref={set('ripple')} className={`${box} w-6 h-6 rounded-full border border-white/70`} />
-      {/* below lg a fingertip (a soft touch circle) — a mouse arrow makes no sense on a phone */}
-      {small
-        ? <span ref={set('ptr')} className={`${box} -ml-[13px] -mt-[13px] w-[26px] h-[26px] rounded-full bg-white/25 ring-1 ring-white/70 shadow-[0_2px_8px_rgba(0,0,0,.5)]`} />
-        : <svg ref={set('ptr')} width="20" height="20" viewBox="0 0 22 22" className={box} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))' }}>
-            <path d="M3 2 L3 18 L7.2 14.2 L10 20.5 L12.6 19.4 L9.9 13.2 L15.6 13.2 Z" fill="#fff" stroke="#000" strokeWidth="1.1" strokeLinejoin="round" />
-          </svg>}
+      <svg ref={set('ptr')} width="20" height="20" viewBox="0 0 22 22" className={box} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))' }}>
+        <path d="M3 2 L3 18 L7.2 14.2 L10 20.5 L12.6 19.4 L9.9 13.2 L15.6 13.2 Z" fill="#fff" stroke="#000" strokeWidth="1.1" strokeLinejoin="round" />
+      </svg>
     </div>
   )
 }
