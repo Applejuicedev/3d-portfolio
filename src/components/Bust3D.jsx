@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { gsap, ScrollTrigger, prefersReduced } from './motion'
+import { gsap, ScrollTrigger, prefersReduced, finePointer } from './motion'
 import { stage, markReady, settleBust } from './hero/stage'
 
 // ── The hero's object: a bust made of light ─────────────────────
@@ -22,7 +22,7 @@ import { stage, markReady, settleBust } from './hero/stage'
 
 const VERT = /* glsl */ `
 uniform float uTime, uSpread, uSelect, uTint, uSize, uAspect, uFade, uHover, uEmit;
-uniform float uSky;
+uniform float uSky, uSkyY;
 uniform vec2 uView;
 uniform vec2 uMouse, uHead;
 uniform vec4 uShock;
@@ -60,7 +60,7 @@ void main() {
   float te = e * e * (3.0 - 2.0 * e);
   vec3 B = mv.xyz;
   vec3 S = vec3((h1 * 2.0 - 1.0) * 1.12 * uView.x + sin(uTime * 0.11 + h3 * 30.0) * 0.015 * uView.y,
-                (h2 * 2.0 - 1.0) * 1.12 * uView.y + cos(uTime * 0.09 + h1 * 30.0) * 0.015 * uView.y,
+                (h2 * 2.0 - 1.0) * 1.12 * uView.y + cos(uTime * 0.09 + h1 * 30.0) * 0.015 * uView.y + uSkyY,
                 uSky + (h3 - 0.5) * uView.y * 1.2);
   vec3 path = mix(S, B, te);
   vec2 d = (B - S).xy;
@@ -118,6 +118,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
     const wrap = wrapRef.current, hero = heroRef.current
     const reduced = prefersReduced()
     const small = !window.matchMedia('(min-width: 1024px)').matches
+    const touch = !finePointer()
     let alive = true, renderer, worker, raf = 0, visible = true, cleanup = []
     const fail = () => { settleBust(); if (alive) onFail?.() }
 
@@ -142,7 +143,7 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       geo.setAttribute('aRand', new THREE.BufferAttribute(data.rnd, 4))
       const u = {
         uTime: { value: 0 }, uSpread: { value: reduced ? 0 : 1 }, uSelect: { value: 0 }, uTint: { value: 0 },
-        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit }, uSky: { value: -10 }, uView: { value: new THREE.Vector2(1, 1) },
+        uSize: { value: 1 }, uAspect: { value: 1 }, uFade: { value: 1 }, uHover: { value: 0 }, uEmit: { value: stage.emit }, uSky: { value: -10 }, uSkyY: { value: 0 }, uView: { value: new THREE.Vector2(1, 1) },
         uMouse: { value: new THREE.Vector2(9, 9) }, uHead: { value: new THREE.Vector2() }, uShock: { value: new THREE.Vector4(0, 0, -99, 0) },
       }
       const mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: u, transparent: true, depthWrite: false })
@@ -154,12 +155,14 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
       const base = { x: 0, y: 0, s: 1 }
       // the canvas is the window (fixed); the bust is placed as if the hero were at the top and
       // follows the hero's actual position each frame (parallax)
-      let rect = wrap.getBoundingClientRect(), upx = 1, heroTop0 = 0
+      let rect = wrap.getBoundingClientRect(), upx = 1, heroTop0 = 0, size = ''
       const layout = () => {
         rect = wrap.getBoundingClientRect()
         const hr = hero.getBoundingClientRect()
         heroTop0 = hr.top + window.scrollY
-        renderer.setSize(rect.width, rect.height, false)
+        // only when the size really changed: a phone fires resize as its toolbars collapse, and
+        // setting the same size again still cleared the canvas for a frame
+        if (size !== `${rect.width}x${rect.height}`) { size = `${rect.width}x${rect.height}`; renderer.setSize(rect.width, rect.height, false) }
         camera.aspect = rect.width / rect.height
         camera.updateProjectionMatrix(); camera.updateMatrixWorld()
         u.uAspect.value = camera.aspect
@@ -220,9 +223,11 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         rect = wrap.getBoundingClientRect()
         u.uTime.value = now / 1000
         // pose: base placement moved with the hero (at 72 % of the page's speed — it lingers), the
-        // workflow's turn, a slow idle sway
+        // workflow's turn, a slow idle sway. Below lg the canvas scrolls with the hero itself
+        // (see the wrapper): nothing to move — a position set from JS trails a phone's scrolling
+        // by a frame, and the bust shook
         const sc = scroll
-        const shift = Math.max(0, window.scrollY - heroTop0) * (reduced ? 1 : 0.72)
+        const shift = small ? 0 : Math.max(0, window.scrollY - heroTop0) * (reduced ? 1 : 0.72)
         bust.position.set(base.x, base.y + shift * upx, 0)
         bust.rotation.set(sc * 0.25, REST_YAW + stage.yaw + Math.sin(now / 3200) * (reduced ? 0 : 0.05) - sc * 0.6, 0)
         bust.updateMatrixWorld()
@@ -236,7 +241,11 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
           const z = tmpV.setFromMatrixPosition(bust.matrixWorld).applyMatrix4(camera.matrixWorldInverse).z
           const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * -z
           u.uSky.value = z
-          u.uView.value.set(halfH * camera.aspect, halfH)
+          // below lg the canvas is taller than the screen and scrolls with the page: the sky fills
+          // the screen, not the canvas
+          const vis = small ? Math.min(1, window.innerHeight / rect.height) : 1
+          u.uSkyY.value = small ? (rect.height / 2 - (window.innerHeight / 2 - rect.top)) * (2 * halfH / rect.height) : 0
+          u.uView.value.set(halfH * camera.aspect, halfH * vis)
         }
         u.uTint.value = stage.tint
         // whose pointer: the demo pointer while it acts (unless the real one moved more recently)
@@ -249,8 +258,15 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
         u.uHover.value = hover
         // the gaze: towards the pointer, limited like a neck, eased by time (same at 60 and 120 Hz)
         const head = toScreen(0, 0.35, 0.4)
-        const tx = Math.max(-1, Math.min(1, (px - head.x) / 700)) * 0.6
-        const ty = Math.max(-1, Math.min(1, (py - head.y) / 600)) * 0.32
+        let tx = Math.max(-1, Math.min(1, (px - head.x) / 700)) * 0.6
+        let ty = Math.max(-1, Math.min(1, (py - head.y) / 600)) * 0.32
+        // no pointer to follow (touch): the gaze wanders on its own, slowly and a little — a few
+        // slow waves that never line up, so it reads as looking around, not as a loop
+        if (touch && !reduced) {
+          const t = now / 1000
+          tx += Math.sin(t * 0.21) * 0.16 + Math.sin(t * 0.53 + 1.3) * 0.06
+          ty += Math.sin(t * 0.17 + 0.7) * 0.06 + Math.sin(t * 0.41 + 2.1) * 0.025
+        }
         const kl = reduced ? 1 : 1 - Math.exp(-dt / 0.22)
         look.x += (tx - look.x) * kl; look.y += (ty - look.y) * kl
         u.uHead.value.set(look.x, look.y)
@@ -325,5 +341,9 @@ export default function Bust3D({ heroRef, stageRef, onFail }) {
   // behind the text (negative z inside the hero's isolated stacking context), above the accent field
   // fixed behind the page (negative z inside the hero's isolated stacking context: under the text,
   // above the accent field and the page ground); the sections after the hero paint over it
-  return <div ref={wrapRef} aria-hidden data-bust className="fixed inset-0 -z-[5] pointer-events-none opacity-0 transition-opacity duration-700" />
+  // below lg: not fixed but laid on the hero, so the page's own scrolling carries it (smooth, nothing
+  // trails), and as tall as the hero plus the stretch over which it scatters — sized in lvh, so a
+  // phone's collapsing toolbars never resize the canvas mid-scroll (that stretched the bust until
+  // the next resize redrew it)
+  return <div ref={wrapRef} aria-hidden data-bust className="fixed inset-0 max-lg:absolute max-lg:bottom-[-40lvh] -z-[5] pointer-events-none opacity-0 transition-opacity duration-700" />
 }
