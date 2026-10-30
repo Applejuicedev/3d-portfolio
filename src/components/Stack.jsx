@@ -28,10 +28,11 @@ function useSlabSize() {
   return s
 }
 
-// Touch screens can't hover, so there the scroll does it: the row passing through a band just below
-// the middle of the screen is selected, exactly as if hovered (its layer lifts out of the model, the
-// other rows dim) — one row at a time, in the order they are read, down and up. Rows are taller
-// than the band, so the selection only moves on when the next row has really arrived. Leaving the
+// Touch screens can't hover, so there the scroll does it: the row passing through a band low on
+// the screen is selected, exactly as if hovered (its layer lifts out of the model, the other rows
+// dim) — low, so a row is picked as soon as it comes up into view, while the model above the list
+// is still on screen to show it. One row at a time, in the order they are read, down and up. Rows
+// are taller than the band, so the selection only moves on when the next row has arrived. Leaving the
 // list lets the model settle. One observer for the rows; nothing with reduced motion (a tap still
 // selects). Devices with a real pointer keep their hover and never get it.
 function useScrollSelect(listRef, select) {
@@ -46,7 +47,7 @@ function useScrollSelect(listRef, select) {
       })
       if (!inside.has(current)) current = inside.size ? [...inside].pop() : null
       select(current)
-    }, { rootMargin: '-45% 0px -40% 0px' })
+    }, { rootMargin: '-78% 0px -8% 0px' })
     listRef.current.querySelectorAll('[data-row]').forEach((r) => io.observe(r))
     return () => io.disconnect()
   }, [listRef, select])
