@@ -17,13 +17,12 @@ export const CHANNELS = [
 ]
 
 // ── Projects ───────────────────────────────────────────────────
-// layout: how the project is composed on the page (each one differently, see Work.jsx).
+// Each project is shown as an app window (Projects.jsx) and opens into a sheet with its story.
 // story: problem / lösung / ergebnis; **key phrases** are set in ink.
 // video: loop recorded from the real application (public/videos/<slug>.webm + .jpg poster).
 export const PROJECTS = [
   {
     slug: 'dienstzeit',
-    layout: 'stage',
     title: 'Dienstzeit',
     kind: 'iOS-App',
     year: '2025 –',
@@ -44,7 +43,6 @@ export const PROJECTS = [
   },
   {
     slug: 'creators-journal',
-    layout: 'wide',
     title: "Creator's Journal",
     kind: 'Web-App',
     year: '2025',
@@ -64,18 +62,17 @@ export const PROJECTS = [
   },
   {
     slug: 'portfolio',
-    layout: 'live',
     title: 'Diese Website',
     kind: 'Web',
     year: '2026',
     status: 'Live',
-    lede: 'Kein Screenshot: Das Projekt läuft gerade in deinem Browser. Die Werte rechts werden live gemessen.',
+    lede: 'Kein Screenshot: Das Projekt läuft gerade in deinem Browser.',
     story: [
       ['problem', 'Viele Portfolios **behaupten Fullstack** in einem Satz. Ich wollte, dass die Seite **selbst die Arbeitsprobe** ist – gestaltet wie ein Designprojekt, gebaut wie eine Anwendung.'],
-      ['lösung', 'Ein **eigener Rasterizer** zeichnet das 3D-Objekt im Hero aus Schriftzeichen – Canvas 2D, **ohne 3D-Bibliothek**. Dazu ein Terminal, das die Seite wirklich steuert, ein Systemdiagramm aus den echten Projektdaten und ein Labor mit lauffähigen Experimenten.'],
-      ['ergebnis', 'Kein Framework-Overhead für Effekte: **React, GSAP und Tailwind**, sonst nichts. Alles ist **per Tastatur bedienbar**, und mit reduzierter Bewegung steht die Seite still.'],
+      ['lösung', 'Eine helle, an macOS angelehnte Oberfläche: ein **Terminal, das die Seite startet**, Fenster, Dock und Spotlight als Navigation, und für jeden Abschnitt **eine eigene Scroll-Choreografie**.'],
+      ['ergebnis', 'Keine Effekt-Bibliothek außer GSAP: **React, GSAP und Tailwind**. Alles ist **per Tastatur bedienbar**, und mit reduzierter Bewegung steht die Seite still.'],
     ],
-    tech: ['React', 'GSAP', 'Canvas 2D', 'Tailwind CSS', 'Vite'],
+    tech: ['React', 'GSAP', 'Three.js', 'Tailwind CSS', 'Vite'],
     links: [{ label: 'Quellcode', href: 'https://github.com/Applejuicedev/3d-portfolio' }],
     repo: 'Applejuicedev/3d-portfolio',
   },
@@ -131,11 +128,10 @@ export const CHAPTERS = [
   { label: 'Heute', hash: 'e05c7f9', head: true, text: 'Im Dienst habe ich gemerkt, dass mir die Mannschaftslaufbahn genug Freiraum für ein Teilzeit-Fernstudium lässt. Zum 1. Januar 2027 nehme ich deshalb den Bachelor of Science in Medieninformatik an der IU wieder auf.' },
 ]
 
-// the sections, in page order (navigation, dock and terminal all read this)
+// the sections, in page order (navigation, Spotlight and the path bar all read this)
 export const SECTIONS = [
   { id: 'arbeiten', label: 'Arbeiten', alias: ['projekte', 'work', 'projects'] },
-  { id: 'system', label: 'System', alias: ['stack', 'skills', 'tech'] },
-  { id: 'labor', label: 'Labor', alias: ['lab', 'playground', 'experimente'] },
-  { id: 'profil', label: 'Profil', alias: ['about', 'über', 'ueber', 'werdegang'] },
+  { id: 'stack', label: 'Stack', alias: ['system', 'skills', 'tech', 'dock'] },
+  { id: 'weg', label: 'Werdegang', alias: ['about', 'über', 'profil', 'lebenslauf'] },
   { id: 'kontakt', label: 'Kontakt', alias: ['contact', 'mail'] },
 ]

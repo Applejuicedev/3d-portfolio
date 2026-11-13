@@ -1,101 +1,124 @@
-import { useEffect, useRef, useState } from 'react'
-import { PERSON, SECTIONS } from '../data/content'
-import { goTo, useBerlinTime } from '../lib/nav'
-import { useMotion, gsap, EASE } from '../lib/motion'
-import { stats } from '../lib/ascii'
-import AsciiCanvas from '../ui/AsciiCanvas'
-import Terminal from '../ui/Terminal'
+import { useEffect, useRef } from 'react'
+import { PERSON, PROJECTS } from '../data/content'
+import { useMotion, gsap, finePointer, prefersReduced } from '../lib/motion'
+import { booted, emit } from '../lib/events'
+import { goTo } from '../lib/nav'
+import Window from '../ui/Window'
+import ProjectMedia from './ProjectMedia'
 
-const pad = (n) => String(n).padStart(2, '0')
+const journal = PROJECTS.find((p) => p.slug === 'creators-journal')
+const HEAD = [['Design', ''], ['trifft', ''], ['Code.', 'text-faint']]
+const TOOLS = 26 // the tiles in the Dock (Stack.jsx)
 
-// the renderer's own numbers, read twice a second — measured, not decorative
-function useStats() {
-  const [s, setS] = useState({ ...stats })
-  useEffect(() => { const id = setInterval(() => setS({ ...stats }), 500); return () => clearInterval(id) }, [])
-  return s
+// The headline's letters answer the pointer quietly: those near it lift a few pixels, the nearest
+// most, and settle back smoothly — no tilting, so the line keeps its shape. A click lifts the letter
+// under the pointer a little higher. Mouse and trackpad only, never with reduced motion.
+function usePlayfulLetters(ref) {
+  useEffect(() => {
+    if (!finePointer() || prefersReduced()) return
+    const letters = [...ref.current.querySelectorAll('[data-ch]')]
+    const lift = letters.map((l) => gsap.quickTo(l, 'y', { duration: 0.7, ease: 'power3.out' }))
+    const move = (e) => letters.forEach((l, i) => {
+      const r = l.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2)
+      const f = Math.max(0, 1 - Math.hypot(dx, dy * 1.4) / 150)
+      lift[i](-8 * f * f * (3 - 2 * f))
+    })
+    const hop = (e) => { const l = e.target.closest?.('[data-ch]'); if (l) gsap.fromTo(l, { y: gsap.getProperty(l, 'y') }, { y: -16, duration: 0.22, ease: 'power2.out', yoyo: true, repeat: 1 }) }
+    const el = ref.current
+    window.addEventListener('pointermove', move, { passive: true })
+    el.addEventListener('pointerdown', hop)
+    return () => { window.removeEventListener('pointermove', move); el.removeEventListener('pointerdown', hop) }
+  }, [ref])
 }
 
-function Readout({ k, v, className = '', ...rest }) {
-  return <p {...rest} className={`t-label flex gap-2 ${className}`}><span className="text-faint">{k}</span><span className="text-ink tabular-nums">{v}</span></p>
-}
-
-// The opening. The top bar is a four-column index (who · what · where to · when); the knot is
-// the hand-written rasterizer, framed like a viewport with its live numbers in the corners; the
-// headline sits on the baseline at the bottom, the terminal beside it is a second way to navigate.
+// The opening, after adamperlis.com's idea of a hero: almost empty. A small hello at the top left,
+// the availability small at the top right, then a lot of air, the headline set left, a short
+// description offset to the right, three small numbers at the bottom right — and below all of it
+// one composed stage: the Journal's window, the Dienstzeit phone standing in front of it. After the
+// boot the pieces come into focus one by one out of a blur, then the stage rises; while scrolling,
+// the stage grows and the phone drifts ahead of the window.
 export default function Hero() {
-  const ref = useRef()
-  const time = useBerlinTime()
-  const s = useStats()
+  const ref = useRef(), headRef = useRef()
+  usePlayfulLetters(headRef)
 
   useMotion(ref, (el) => {
-    const h1 = [...el.querySelectorAll('[data-line]')]
-    gsap.timeline({ delay: 0.15 })
-      .from('[data-top] > *', { opacity: 0, y: -10, duration: 0.9, stagger: 0.07, ease: EASE.out }, 0)
-      .from(h1, { yPercent: 110, duration: 1.4, stagger: 0.12, ease: EASE.out }, 0.2)
-      .from('[data-viewport]', { clipPath: 'inset(50% 50% 50% 50%)', duration: 1.3, ease: EASE.inOut }, 0.1)
-      .from('[data-readout]', { opacity: 0, duration: 0.6, stagger: 0.08 }, 1.1)
-      .from('[data-lede] > *', { opacity: 0, y: 14, duration: 0.9, stagger: 0.1, ease: EASE.out }, 0.8)
-      .from('[data-term]', { opacity: 0, y: 24, duration: 1, ease: EASE.out }, 1.0)
+    const words = el.querySelectorAll('[data-word]')
+    gsap.set([...words, ...el.querySelectorAll('[data-in]')], { opacity: 0 })
+    gsap.set(el.querySelector('[data-stage]'), { opacity: 0, y: 80 })
+    booted.then(() => {
+      gsap.timeline()
+        .fromTo(el.querySelectorAll('[data-in]'), { opacity: 0, y: 12, filter: 'blur(6px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1, stagger: 0.1, ease: 'expo.out', clearProps: 'filter,transform' }, 0.1)
+        .fromTo(words, { opacity: 0, y: 24, filter: 'blur(14px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1.3, stagger: 0.1, ease: 'expo.out', clearProps: 'filter,transform' }, 0.35)
+        .to(el.querySelector('[data-stage]'), { opacity: 1, y: 0, duration: 1.6, ease: 'expo.out' }, 0.9)
+    })
+    const st = { trigger: el.querySelector('[data-stage]'), start: 'top 85%', end: 'top 15%', scrub: 0.6 }
+    gsap.timeline({ scrollTrigger: st })
+      .fromTo(el.querySelector('[data-grow]'), { scale: 0.9 }, { scale: 1, ease: 'none' }, 0)
+      .fromTo(el.querySelector('[data-phone]'), { yPercent: 18 }, { yPercent: -6, ease: 'none' }, 0)
+      .fromTo(el.querySelector('[data-mainwin]'), { yPercent: 4 }, { yPercent: -2, ease: 'none' }, 0)
   })
 
+  const small = 'text-[15px] leading-[1.45]'
   return (
-    <div ref={ref} className="relative frame min-h-[100svh] flex flex-col pt-5 pb-6 lg:pb-8">
-      {/* ── the index bar ── */}
-      <div data-top className="grid12 gap-y-3 items-start relative z-10">
-        <a href="#start" className="col-span-2 lg:col-span-3 text-[15px] font-medium tracking-tight">{PERSON.name}</a>
-        <p className="col-span-2 lg:col-span-3 t-label max-lg:text-right">{PERSON.role}<span className="block text-faint">Medieninformatik</span></p>
-        <nav aria-label="Bereiche" className="hidden lg:block lg:col-span-3">
-          <ul>
-            {SECTIONS.map((sec, i) => (
-              <li key={sec.id}>
-                <a href={`#${sec.id}`} onClick={(e) => { e.preventDefault(); goTo(sec.id) }}
-                  className="group t-label inline-flex gap-3 py-[1px] text-ink hover:text-lime transition-colors">
-                  <span className="text-faint group-hover:text-lime transition-colors">{pad(i + 1)}</span>
-                  <span className="roll"><span>{sec.label}</span><span aria-hidden>{sec.label}</span></span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <p className="hidden lg:block lg:col-span-3 t-label text-right">
-          <span className="inline-flex items-center gap-2 text-ink"><i className="pulse w-1.5 h-1.5 rounded-full bg-lime" />{PERSON.available}</span>
-          <span className="block">{PERSON.looking}</span>
+    <div ref={ref} className="frame pt-28 sm:pt-32 pb-10">
+      <div className="lg:min-h-[calc(100svh-8rem)] grid grid-cols-12 gap-x-6 gap-y-10 content-between">
+        {/* the hello and the availability, small, at the top */}
+        <div data-in className={`col-span-12 sm:col-span-7 lg:col-span-4 flex items-start gap-3 ${small}`}>
+          <span aria-hidden className="flex-none w-9 h-9 rounded-full btn-chrome p-[2.5px]"><img src="/profile/vincent.jpg" alt="" width={560} height={560} decoding="async" className="relative z-[1] block w-full h-full rounded-full object-cover" /></span>
+          <p><span className="text-ink">Hi, ich bin Vincent.</span><br /><span className="text-gray">Ich gestalte und entwickle Anwendungen.</span></p>
+        </div>
+        <p data-in className={`col-span-12 sm:col-span-5 lg:col-start-10 lg:col-span-3 sm:text-right ${small}`}>
+          <span className="inline-flex items-center gap-2 text-ink"><span className="relative flex w-1.5 h-1.5"><span className="absolute inset-0 rounded-full bg-[#28c840] animate-ping opacity-60 motion-reduce:hidden" /><span className="relative w-1.5 h-1.5 rounded-full bg-[#28c840]" /></span>{PERSON.available[0].toUpperCase() + PERSON.available.slice(1)}</span>
+          <br /><span className="text-gray">{PERSON.looking}</span>
         </p>
-      </div>
 
-      {/* ── the viewport with the knot ── */}
-      {/* phones: a square under the index bar; desktop: the whole right side of the hero, from the
-          index bar down to the baseline — the headline and the terminal lie over its lower edge.
-          Its children are all absolute, so it gets its size from here. */}
-      <div data-viewport className="relative max-lg:mt-6 max-lg:aspect-square lg:absolute lg:left-[40%] lg:right-[var(--gutter)] lg:top-[9.5rem] lg:bottom-6">
-        <AsciiCanvas report className="absolute inset-0" fontSize={11} zoom={1.02}
-          label="Ein Torusknoten, live aus Schriftzeichen gerendert. Unter dem Mauszeiger werden die Zeichen zu Code." />
-        {/* corner marks and live numbers, like an editor viewport */}
-        <span aria-hidden className="absolute left-0 top-0 w-3 h-3 border-l border-t border-faint" />
-        <span aria-hidden className="absolute right-0 top-0 w-3 h-3 border-r border-t border-faint" />
-        <Readout data-readout k="OBJ" v="torus_knot(2,3)" className="absolute left-4 top-2" />
-        <div data-readout className="absolute right-4 top-2 text-right space-y-0.5">
-          <Readout k="FPS" v={s.fps || '—'} className="justify-end" />
-          <Readout k="ZEICHEN" v={s.cells ? s.cells.toLocaleString('de-DE') : '—'} className="justify-end max-sm:hidden" />
-          <Readout k="ORTSZEIT" v={time} className="justify-end max-lg:hidden" />
-        </div>
-      </div>
-
-      {/* ── lede (desktop: top left, beside the knot) ── */}
-      <div className="flex-1 grid12 relative z-10 pointer-events-none">
-        <div data-lede className="col-span-4 lg:col-span-4 max-w-[30ch] mt-8 lg:mt-[13vh] pointer-events-auto">
-          <p className="t-lead text-ink">Ich gestalte und entwickle digitale Anwendungen – <span className="text-muted">vom Interface bis zur Datenbank.</span></p>
-          <p className="t-label mt-4">Web-Apps · iOS-Apps · Interfaces</p>
-        </div>
-      </div>
-
-      {/* ── headline on the baseline, terminal docked bottom right ── */}
-      <div className="grid12 gap-y-8 items-end relative z-10 mt-10 lg:mt-0 pointer-events-none">
-        <h1 className="col-span-4 lg:col-span-8 t-mega" aria-label={`${PERSON.name} — ${PERSON.role}`}>
-          <span className="block overflow-hidden pb-[0.06em]"><span data-line className="block">Fullstack</span></span>
-          <span className="block overflow-hidden pb-[0.1em] -mb-[0.1em]"><span data-line className="block t-serif tracking-[-0.035em] pr-[0.05em]">Developer</span></span>
+        {/* the headline: set left, lots of air above it */}
+        <h1 ref={headRef} className="col-span-12 t-hero whitespace-nowrap text-[min(9vw,8.5rem)] max-sm:text-[13vw] leading-[0.95] lg:mt-[10vh] select-none">
+          <span className="sr-only">{PERSON.name}, {PERSON.role}: </span>
+          {HEAD.map(([w, tone], i) => (
+            <span key={w} aria-hidden {...(w === 'Code.' ? { 'data-particles': 'text', 'data-particles-boot': '' } : {})} data-word className={`inline-block pb-[0.14em] -mb-[0.14em] ${tone}`}>
+              {[...w].map((c, k) => <span key={k} data-ch className="inline-block will-change-transform">{c}</span>)}{i < HEAD.length - 1 ? '\u00a0' : ''}
+            </span>
+          ))}
+          <span className="sr-only">Design trifft Code.</span>
         </h1>
-        <div data-term className="col-span-4 lg:col-start-9 lg:col-span-4 pointer-events-auto"><Terminal className="w-full lg:max-w-[24rem] lg:ml-auto" /></div>
+
+        {/* the description, offset to the right; the numbers small at the bottom right */}
+        <div data-in className={`col-span-12 sm:col-span-7 lg:col-start-6 lg:col-span-4 ${small}`}>
+          <p className="text-ink">{PERSON.role} &amp; Medieninformatik.</p>
+          <p className="text-gray">Web-Apps, iOS-Apps und Interfaces – vom Entwurf bis zur Datenbank.</p>
+          <div className="mt-5 flex items-center gap-2">
+            <a href="#arbeiten" onClick={(e) => { e.preventDefault(); goTo('arbeiten') }} className="group btn-chrome inline-flex items-center h-9 px-4 rounded-full text-[14px] font-medium">
+              <span className="roll"><span>Arbeiten ansehen</span><span aria-hidden>Arbeiten ansehen</span></span>
+            </a>
+            <button type="button" onClick={() => emit('spotlight')} className="press inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[14px] text-gray hover:text-ink transition-colors">
+              Suchen <span className="kbd">⌘K</span>
+            </button>
+          </div>
+        </div>
+        <dl data-in className={`col-span-12 sm:col-span-5 lg:col-start-10 lg:col-span-3 self-end grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 ${small}`}>
+          {[['Projekte', String(PROJECTS.length).padStart(2, '0')], ['Werkzeuge', TOOLS], ['Seit', 2020]].map(([k, v]) => [
+            <dt key={k} className="text-gray">{k}</dt>, <dd key={k + 'v'} className="text-ink tabular-nums text-right">{v}</dd>,
+          ])}
+        </dl>
+      </div>
+
+      {/* ── the stage ── */}
+      <div data-stage className="mt-16 sm:mt-24">
+        <div data-grow className="relative mx-auto max-w-[76rem] aspect-[4/5] sm:aspect-[16/10] rounded-sheet overflow-hidden glass flat will-change-transform">
+          {/* a click on the window opens the project (the video's own pause button excepted); keyboard
+              users get the same through the project list below */}
+          <div data-mainwin data-cursor="Öffnen ↗" data-buddy="Das ist Creator's Journal. Echt, nicht gemockt." onClick={(e) => { if (!e.target.closest('button')) emit('open-project', journal.slug) }}
+            className="absolute left-1/2 -translate-x-1/2 top-[9%] sm:top-[10%] w-[92%] sm:w-[72%] text-left cursor-pointer transition-transform duration-700 ease-sys hover:scale-[1.01]">
+            <Window dark flat title={`${journal.title} — ${journal.kind}`} className="shadow-lift">
+              <div className="relative aspect-[16/10]"><ProjectMedia p={journal} /></div>
+            </Window>
+          </div>
+          <button type="button" data-phone onClick={() => emit('open-project', 'dienstzeit')} aria-label="Dienstzeit öffnen" data-cursor="Öffnen ↗" data-buddy="Dienstzeit – rechnet nach SAZV."
+            className="absolute right-[8%] sm:right-[9%] bottom-[-4%] w-[42%] sm:w-[17%] aspect-[390/844] rounded-[16%/7.4%] overflow-hidden ring-[6px] ring-[#111] shadow-lift bg-[#06110B] transition-transform duration-700 ease-sys hover:-translate-y-2">
+            <img src="/videos/dienstzeit.jpg" alt="" className="w-full h-full object-cover object-top" />
+          </button>
+        </div>
       </div>
     </div>
   )

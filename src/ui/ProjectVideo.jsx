@@ -5,14 +5,16 @@ import { prefersReduced } from '../lib/motion'
 // decoded at once during scrolling (one leaving, the next arriving) frames dropped to 30 fps for
 // that overlap; one at a time, scrolling stays at the display's full rate.
 const playing = new Set()
-const playOnly = (v) => { playing.forEach((o) => { if (o !== v) o.pause() }); v.play().catch(() => {}) }
+const playOnly = (v) => { playing.forEach((o) => { if (o !== v && !o.dataset.alongside) o.pause() }); v.play().catch(() => {}) }
+const play = (v, alongside) => (alongside ? v.play().catch(() => {}) : playOnly(v))
 
 // A product demo: a short, silent loop recorded from the real application (scripts in the
 // scratchpad recorder: real clicks, fresh demo data). It loads only when it comes near the screen,
 // plays only while it is visible, and always has a pause control (moving content > 5 s, WCAG 2.2.2).
 // With reduced motion it waits on its poster until asked to play. A browser that can't play WebM
-// keeps the poster — the first frame of the same take.
-export default function ProjectVideo({ src, poster, label, frame = 'screen', surface }) {
+// keeps the poster — the first frame of the same take. `alongside` (an opened project's sheet): it plays
+// without pausing the one on the page behind it, so that one is still running when the sheet closes.
+export default function ProjectVideo({ src, poster, label, frame = 'screen', surface, alongside = false }) {
   const ref = useRef(), wrapRef = useRef()
   const [near, setNear] = useState(false)
   const [paused, setPaused] = useState(() => prefersReduced())
@@ -28,7 +30,7 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
     const ioSeen = new IntersectionObserver(([e]) => {
       const v = ref.current
       if (!v) return
-      if (e.isIntersecting && !userPaused.current) playOnly(v)
+      if (e.isIntersecting && !userPaused.current) play(v, alongside)
       else v.pause()
     }, { threshold: 0.35 })
     ioNear.observe(el); ioSeen.observe(el)
@@ -41,11 +43,11 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
   const toggle = () => {
     const v = ref.current
     if (!v) return
-    if (v.paused) { userPaused.current = false; playOnly(v) } else { userPaused.current = true; v.pause() }
+    if (v.paused) { userPaused.current = false; play(v, alongside) } else { userPaused.current = true; v.pause() }
   }
 
   const media = playable ? (
-    <video ref={ref} muted loop playsInline preload={near ? 'auto' : 'none'} poster={near ? poster : undefined} aria-label={label}
+    <video ref={ref} data-alongside={alongside || undefined} muted loop playsInline preload={near ? 'auto' : 'none'} poster={near ? poster : undefined} aria-label={label}
       src={near ? src : undefined} onPlay={(e) => { playing.add(e.currentTarget); setPaused(false) }} onPause={(e) => { playing.delete(e.currentTarget); setPaused(true) }}
       className="block w-full h-full object-cover" />
   ) : (
@@ -54,29 +56,24 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
 
   const button = playable && (
     <button type="button" onClick={toggle} aria-label={paused ? 'Video abspielen' : 'Video pausieren'}
-      className="press absolute right-3 bottom-3 z-20 inline-flex items-center gap-2 rounded-[4px] bg-bg/75 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-ink ring-1 ring-line backdrop-blur-sm transition-colors hover:ring-lime hover:text-lime">
+      className="press absolute right-3 bottom-3 z-20 inline-flex items-center gap-1.5 rounded-full glass px-3 py-1.5 t-mono text-ink">
       <span aria-hidden className="w-2.5 text-center">{paused ? '▶' : '❚❚'}</span>
-      {paused ? 'abspielen' : 'pause'}
+      {paused ? 'Abspielen' : 'Pause'}
     </button>
   )
 
-  // the phone app on a stage that is already coloured (Work.jsx): just the phone
-  if (frame === 'phone-bare') return (
-    <div ref={wrapRef} className="relative mx-auto w-[min(72vw,19rem)] aspect-[390/844]">
-      <div className="absolute inset-0 overflow-hidden rounded-[2rem] ring-1 ring-white/10 shadow-[0_40px_100px_rgba(0,0,0,.55)]" style={{ background: surface }}>{media}</div>
+  // a phone recording standing on its product's colour, filling whatever holds it
+  if (frame === 'phone') return (
+    <div ref={wrapRef} className="absolute inset-0 grid place-items-center" style={{ background: surface }}>
+      <div className="relative h-[88%] aspect-[390/844] overflow-hidden rounded-[9%/4.2%] ring-1 ring-white/10 shadow-[0_30px_80px_rgba(0,0,0,.45)]">{media}</div>
       {button}
     </div>
   )
 
+  // a screen recording filling whatever holds it
   return (
-    // phone recordings get a taller window (the phone is larger in it); screen recordings keep
-    // their own 16:10 and fill it almost to the edge
-    <div ref={wrapRef} className={`relative overflow-hidden rounded-[4px] ring-1 ring-line ${frame === 'phone' ? 'aspect-[5/4]' : 'aspect-[16/10]'}`} style={{ background: surface }}>
-      {frame === 'phone' ? (
-        <div className="absolute inset-y-[5%] left-1/2 -translate-x-1/2 aspect-[390/844] overflow-hidden rounded-[1.6rem] ring-1 ring-white/10 shadow-[0_30px_80px_rgba(0,0,0,.45)]">{media}</div>
-      ) : (
-        <div className="absolute inset-[3%] overflow-hidden rounded-[4px] ring-1 ring-white/10 shadow-[0_30px_80px_rgba(0,0,0,.45)]">{media}</div>
-      )}
+    <div ref={wrapRef} className="absolute inset-0" style={{ background: surface }}>
+      {media}
       {button}
     </div>
   )

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { scrollToTarget } from './scroll'
 
 // in-page jump; the URL stays clean, so a reload starts at the top (see useDeepLink in App)
-export const goTo = (id) => document.getElementById(id)?.scrollIntoView()
+export const goTo = (id) => { const el = document.getElementById(id); if (el) scrollToTarget(el) }
 
 // which section holds the middle of the screen ('start' for the hero)
 export function useCurrentSection(ids) {

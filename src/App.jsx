@@ -1,48 +1,76 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { ScrollTrigger } from './lib/motion'
+import { startSmoothScroll, scrollToTarget } from './lib/scroll'
+import { booted, notify } from './lib/events'
+import Preloader from './ui/Preloader'
+import Cursor from './ui/Cursor'
+import Buddy from './ui/Buddy'
+import Nav from './ui/Nav'
+import Notifications from './ui/Notifications'
+import Spotlight from './ui/Spotlight'
+import ProjectSheet from './ui/ProjectSheet'
 import Hero from './sections/Hero'
-import Work from './sections/Work'
-import System from './sections/System'
-import Lab from './sections/Lab'
-import Profile from './sections/Profile'
+import Statement from './sections/Statement'
+import Projects from './sections/Projects'
+import Stack from './sections/Stack'
+import Path from './sections/Path'
 import Contact from './sections/Contact'
-import Dock from './ui/Dock'
+// the particle objects (three.js) are their own chunk; the download starts as soon as this module runs
+const particleChunk = import('./ui/ParticleField')
+const ParticleField = lazy(() => particleChunk)
 
-// Where a visit starts. A reload always starts at the top (scroll restoration is off in
-// index.html, and a stale hash is dropped); only a fresh visit with an anchor (a shared link like
-// /#kontakt) jumps to it — once the fonts are in, so the layout is final.
+// Where a visit starts: a reload always at the top; only a fresh visit with an anchor (a shared
+// link like /#kontakt) jumps to it, once the page has booted and the fonts are in.
 function useDeepLink() {
   useEffect(() => {
     let alive = true
     const type = performance.getEntriesByType?.('navigation')[0]?.type
     const id = type === 'navigate' ? decodeURIComponent(location.hash.slice(1)) : ''
     if (!id && location.hash) history.replaceState(null, '', location.pathname + location.search)
-    document.fonts.ready.then(() => {
+    Promise.all([booted, document.fonts.ready]).then(() => {
       if (!alive) return
       ScrollTrigger.refresh()
-      if (id) document.getElementById(id)?.scrollIntoView({ behavior: 'instant' })
-      else if (window.scrollY) window.scrollTo({ top: 0, behavior: 'instant' })
+      if (id) scrollToTarget(document.getElementById(id), { immediate: true })
     })
     return () => { alive = false }
   }, [])
 }
 
-// One page: the opening, then the work, how it is built, the lab, who made it, and how to reach
-// him. Numbered 01–05 everywhere (dock, hero index, section heads, terminal).
+// One hidden detail announces the others: a while after the page has booted, a single
+// notification mentions Spotlight — once per visit, and only if it hasn't been used yet.
+function useHint() {
+  useEffect(() => {
+    let used = false, id
+    const k = (e) => { if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || e.key === '/') used = true }
+    window.addEventListener('keydown', k)
+    booted.then(() => { id = setTimeout(() => { if (!used) notify({ app: 'Tipp', title: 'Spotlight', body: '⌘K (oder /) findet alles auf dieser Seite.', icon: '⌘' }) }, 14000) })
+    return () => { clearTimeout(id); window.removeEventListener('keydown', k) }
+  }, [])
+}
+
 export default function App() {
+  useEffect(() => { startSmoothScroll() }, [])
   useDeepLink()
+  useHint()
   return (
     <>
-      <a href="#arbeiten" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:bg-lime focus:text-bg focus:px-3 focus:py-2 focus:rounded-[4px]">Zum Inhalt springen</a>
-      <main>
+      <a href="#arbeiten" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-20 focus:z-[210] focus:bg-ink focus:text-canvas focus:px-4 focus:py-2 focus:rounded-full">Zum Inhalt springen</a>
+      <Suspense fallback={null}><ParticleField /></Suspense>
+      <Nav />
+      <main className="relative z-[1]">
         <section id="start" aria-label="Start"><Hero /></section>
-        <Work />
-        <System />
-        <Lab />
-        <Profile />
+        <Statement />
+        <Projects />
+        <Stack />
+        <Path />
       </main>
-      <Contact />
-      <Dock />
+      <div className="relative z-[1]"><Contact /></div>
+      <Notifications />
+      <Spotlight />
+      <ProjectSheet />
+      <Buddy />
+      <Preloader />
+      <Cursor />
     </>
   )
 }
