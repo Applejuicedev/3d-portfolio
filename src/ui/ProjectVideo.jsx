@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { prefersReduced } from './motion'
+import { prefersReduced } from '../lib/motion'
 
 // Only one demo plays at a time — the one that came into view last. Measured: whenever two videos
 // decoded at once during scrolling (one leaving, the next arriving) frames dropped to 30 fps for
@@ -52,23 +52,32 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
     <img src={poster} alt={label} loading="lazy" decoding="async" className="block w-full h-full object-cover" />
   )
 
+  const button = playable && (
+    <button type="button" onClick={toggle} aria-label={paused ? 'Video abspielen' : 'Video pausieren'}
+      className="press absolute right-3 bottom-3 z-20 inline-flex items-center gap-2 rounded-[4px] bg-bg/75 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-ink ring-1 ring-line backdrop-blur-sm transition-colors hover:ring-lime hover:text-lime">
+      <span aria-hidden className="w-2.5 text-center">{paused ? '▶' : '❚❚'}</span>
+      {paused ? 'abspielen' : 'pause'}
+    </button>
+  )
+
+  // the phone app on a stage that is already coloured (Work.jsx): just the phone
+  if (frame === 'phone-bare') return (
+    <div ref={wrapRef} className="relative mx-auto w-[min(72vw,19rem)] aspect-[390/844]">
+      <div className="absolute inset-0 overflow-hidden rounded-[2rem] ring-1 ring-white/10 shadow-[0_40px_100px_rgba(0,0,0,.55)]" style={{ background: surface }}>{media}</div>
+      {button}
+    </div>
+  )
+
   return (
     // phone recordings get a taller window (the phone is larger in it); screen recordings keep
     // their own 16:10 and fill it almost to the edge
     <div ref={wrapRef} className={`relative overflow-hidden rounded-[4px] ring-1 ring-line ${frame === 'phone' ? 'aspect-[5/4]' : 'aspect-[16/10]'}`} style={{ background: surface }}>
       {frame === 'phone' ? (
-        // an iPhone-sized recording, standing on the product's own surface
         <div className="absolute inset-y-[5%] left-1/2 -translate-x-1/2 aspect-[390/844] overflow-hidden rounded-[1.6rem] ring-1 ring-white/10 shadow-[0_30px_80px_rgba(0,0,0,.45)]">{media}</div>
       ) : (
         <div className="absolute inset-[3%] overflow-hidden rounded-[4px] ring-1 ring-white/10 shadow-[0_30px_80px_rgba(0,0,0,.45)]">{media}</div>
       )}
-      {playable && (
-        <button type="button" onClick={toggle} aria-label={paused ? 'Video abspielen' : 'Video pausieren'}
-          className="group press absolute right-3 bottom-3 inline-flex items-center gap-2 rounded-full bg-bg/70 px-3 py-1.5 font-mono text-[11px] text-ink ring-1 ring-line backdrop-blur-sm transition-colors hover:ring-ink/40">
-          <span aria-hidden className="w-2.5 text-center">{paused ? '▶' : '❚❚'}</span>
-          {paused ? 'abspielen' : 'pause'}
-        </button>
-      )}
+      {button}
     </div>
   )
 }

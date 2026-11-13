@@ -1,25 +1,16 @@
-import Navbar from './components/Navbar'
-import HeroSection from './components/HeroSection'
-import PortfolioSection from './components/PortfolioSection'
-import AboutSection from './components/AboutSection'
-import Stack from './components/Stack'
-import Footer from './components/Footer'
-import Cursor from './components/Cursor'
-import Atmosphere from './components/Atmosphere'
-import StatusBar from './components/StatusBar'
-import { useGlowPointer } from './components/ui'
 import { useEffect } from 'react'
-import { ScrollTrigger, gsap } from './components/motion'
-import Preloader from './components/Preloader'
+import { ScrollTrigger } from './lib/motion'
+import Hero from './sections/Hero'
+import Work from './sections/Work'
+import System from './sections/System'
+import Lab from './sections/Lab'
+import Profile from './sections/Profile'
+import Contact from './sections/Contact'
+import Dock from './ui/Dock'
 
-// One page, four numbered sections after the opening: the work first, then who made it, what it
-// is made with, and how to reach me.
-// Where a visit starts. A reload (or back/forward onto the page) always starts at the top of the
-// hero — the browser's own scroll restoration is off (index.html), and a hash left in the URL is
-// dropped, so an old #projekte can't pull the page down again. Only a fresh visit with an anchor
-// (a shared link like /#kontakt) jumps to it — and only once the fonts are in (final layout), since
-// the browser's own jump comes before React has rendered the sections. ScrollTrigger recalculates
-// its positions for that final layout either way.
+// Where a visit starts. A reload always starts at the top (scroll restoration is off in
+// index.html, and a stale hash is dropped); only a fresh visit with an anchor (a shared link like
+// /#kontakt) jumps to it — once the fonts are in, so the layout is final.
 function useDeepLink() {
   useEffect(() => {
     let alive = true
@@ -36,26 +27,22 @@ function useDeepLink() {
   }, [])
 }
 
-// the preloader lets the page's motion go (main.jsx paused it)
-const release = () => gsap.globalTimeline.resume()
-
+// One page: the opening, then the work, how it is built, the lab, who made it, and how to reach
+// him. Numbered 01–05 everywhere (dock, hero index, section heads, terminal).
 export default function App() {
-  useGlowPointer()
   useDeepLink()
   return (
     <>
-      <Preloader onRelease={release} />
-      <Atmosphere />
-      <div data-enter style={{ '--enter': '1.5s' }}><Navbar /></div>
+      <a href="#arbeiten" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:bg-lime focus:text-bg focus:px-3 focus:py-2 focus:rounded-[4px]">Zum Inhalt springen</a>
       <main>
-        <section id="start" aria-label="Start"><HeroSection /></section>
-        <PortfolioSection />
-        <AboutSection />
-        <Stack />
+        <section id="start" aria-label="Start"><Hero /></section>
+        <Work />
+        <System />
+        <Lab />
+        <Profile />
       </main>
-      <Footer />
-      <div data-enter style={{ '--enter': '2.3s' }}><StatusBar /></div>
-      <Cursor />
+      <Contact />
+      <Dock />
     </>
   )
 }
