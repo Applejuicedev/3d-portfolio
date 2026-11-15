@@ -79,9 +79,9 @@ function Hero() {
       <h1 className="sr-only">{PERSON.name}, {PERSON.role}</h1>
       <p data-name aria-hidden className="absolute left-[var(--gutter)] top-1/2 -translate-y-1/2 t-title max-md:top-[18%]"><Chars text={PERSON.name} /></p>
       <p data-trade aria-hidden className="absolute right-[var(--gutter)] top-1/2 -translate-y-1/2 t-title text-right max-md:top-auto max-md:bottom-[18%]"><Chars text={PERSON.role} /></p>
-      <p data-sc className="absolute left-[var(--gutter)] top-6 t-cap">{`VF — Portfolio ${new Date().getFullYear()}`}</p>
-      <p data-sc className="absolute right-[var(--gutter)] top-6 t-cap tabular-nums">{`Frankfurt, Germany — ${time}`}</p>
-      <p data-sc className="absolute left-[var(--gutter)] bottom-7 t-cap">{`${PERSON.looking}, ${PERSON.available}`}</p>
+      <p data-sc className="absolute left-[var(--gutter)] top-6 t-cap max-md:hidden">{`VF — Portfolio ${new Date().getFullYear()}`}</p>
+      <p data-sc className="absolute right-[var(--gutter)] top-6 t-cap tabular-nums max-md:hidden">{`Frankfurt, Germany — ${time}`}</p>
+      <p data-sc className="absolute left-[var(--gutter)] bottom-7 t-cap max-md:max-w-[58%]">{`${PERSON.looking}, ${PERSON.available}`}</p>
       <a data-sc href="/resume.html" className="absolute right-[var(--gutter)] bottom-5 py-2 t-cap text-ink hover:text-gray transition-colors">Résumé ↗</a>
     </section>
   )

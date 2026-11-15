@@ -177,7 +177,7 @@ export default function Body() {
         // (the hero's at full strength — there is no text over it)
         u.uOff.value.set(narrow ? 0 : at * W * 0.191, 0) // golden: text in 38.2 %, the form centred in the other 61.8 %
         u.uR.value = narrow ? W * 0.36 * Math.min(1.2, sz * 1.25) : Math.min(W * 0.5, H) * 0.3 * sz
-        const fa = sa.alpha ?? (narrow && !sa.solid ? 0.3 : 1), fb = sb.alpha ?? (narrow && !sb.solid ? 0.3 : 1)
+        const fa = narrow && !sa.solid ? Math.min(sa.alpha ?? 1, 0.3) : sa.alpha ?? 1, fb = narrow && !sb.solid ? Math.min(sb.alpha ?? 1, 0.3) : sb.alpha ?? 1
         u.uAlpha.value = fa + (fb - fa) * m
         u.uRotA.value.set(0, sa.tilt, sa.sway, sa.breath); u.uRotB.value.set(0, sb.tilt, sb.sway, sb.breath)
       }
