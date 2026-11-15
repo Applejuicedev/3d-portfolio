@@ -11,8 +11,8 @@ const QUESTIONS = ['Why does every portfolio look the same?', 'Can a sentence be
 
 function slot(s, ratio = '16 / 9', bare = false) {
   const id = s.youtube ? ytId(s.youtube) : ''
+  if (id) return `<div class="st-media" style="aspect-ratio:${ratio}" data-yt="${id}" data-start="${s.start ?? 0}"></div>`
   if (s.video) return `<video class="st-media" style="aspect-ratio:${ratio};object-fit:cover" src="${s.video}"${s.poster ? ` poster="${s.poster}"` : ''} data-label="${esc(s.label ?? s.title)}" muted loop playsinline controls preload="metadata" data-autoplay></video>${bare ? '' : `<p class="st-cap mono">${esc(s.label)}</p>`}`
-  if (id) return `<div class="st-media" style="aspect-ratio:${ratio}" data-yt="${id}"></div>`
   if (s.image) return `<img class="st-media" style="aspect-ratio:${ratio};object-fit:contain;background:#000" src="${s.image}" alt="">`
   if (bare) return `<div class="st-media st-empty" style="aspect-ratio:${ratio}" title="${esc(s.note)}"></div>`
   return `<div class="st-media st-empty" style="aspect-ratio:${ratio}"><span>${esc(s.label ?? s.title)}</span><small>${esc(s.note)}</small></div>`
@@ -145,7 +145,7 @@ export function story() {
       // YouTube players load only once their window has come up
       // a video file starts once its window has come up, muted (its controls unmute it)
       if (t > 0.6) c.querySelectorAll('video[data-autoplay]:not(.on)').forEach((v) => { v.classList.add('on'); v.play().catch(() => {}) })
-      if (t > 0.6) c.querySelectorAll('[data-yt]:not(.on)').forEach((m) => { m.classList.add('on'); m.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${m.dataset.yt}?autoplay=1&mute=1&loop=1&playlist=${m.dataset.yt}&rel=0&modestbranding=1" title="Video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>` })
+      if (t > 0.6) c.querySelectorAll('[data-yt]:not(.on)').forEach((m) => { m.classList.add('on'); m.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${m.dataset.yt}?autoplay=1&mute=1&loop=1&playlist=${m.dataset.yt}&start=${m.dataset.start}&playsinline=1&rel=0&modestbranding=1" title="Video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>` })
     })
     const up = Math.floor(p + 0.15)
     if (up > risen && up <= N) { risen = up; play('rise') } else if (up < risen) risen = up

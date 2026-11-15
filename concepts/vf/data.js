@@ -75,8 +75,9 @@ export const rich = (s) => s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
 // stay local — they are git-ignored, so they never go out with the site. Until a slot is filled it
 // shows a coloured placeholder that says what goes there.
 export const STORY = {
-  music: { video: '/story/closed-on-sunday.mp4', poster: '/story/closed-on-sunday.jpg', youtube: '', title: 'listening.mov', label: 'Kanye West — Closed On Sunday (official video)', note: 'Paste the YouTube link of the official video here (data.js → STORY.music.youtube).' },
-  discipline: { video: '/story/goggins-effect.mp4', poster: '/story/goggins-effect.jpg', youtube: '', title: 'discipline.mov', label: 'David Goggins', note: 'Paste the YouTube link of an official upload (data.js → STORY.discipline.youtube).' },
+  // the videos play from their YouTube uploads (embedded), never as files of my own
+  music: { youtube: 'https://www.youtube.com/watch?v=MKM90u7pf3U', title: 'listening.mov', label: 'Kanye West — Closed On Sunday (official video)' },
+  discipline: { youtube: 'https://www.youtube.com/watch?v=N1irfcGFy4I', start: 11, title: 'discipline.mov', label: 'The Goggins Effect 2' },
   service: { image: '/story/service.jpg', title: 'service.jpg', note: 'Add your own photo from service (public/story/service.jpg → data.js → STORY.service.image).' },
   // freely licensed photos from Wikimedia Commons, credited as their licences ask (page, credit,
   // license); the others are photos provided for local use only (git-ignored, see .gitignore)
