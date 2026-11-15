@@ -1,79 +1,78 @@
 // Every fact on the site lives here — the sections only arrange it. Nothing in this file is made up:
 // it is carried over from the previous version of the site and the projects' own repositories.
+// The site is in English.
 
 export const PERSON = {
   name: 'Vincent Fidanli',
-  role: 'Fullstack Developer',
+  role: 'Full Stack Developer',
   email: 'vincent@fidanli.de',
-  available: 'verfügbar ab 2029',
-  looking: 'Praktika & Werkstudentenstellen',
+  available: 'from 2029',
+  looking: 'Open to internships & working-student roles',
 }
 
 export const CHANNELS = [
-  { label: 'E-Mail', value: 'vincent@fidanli.de', href: 'mailto:vincent@fidanli.de' },
-  { label: 'Telefon', value: '0151 70801974', href: 'tel:+4915170801974' },
+  { label: 'Email', value: 'vincent@fidanli.de', href: 'mailto:vincent@fidanli.de' },
+  { label: 'Phone', value: '+49 151 70801974', href: 'tel:+4915170801974' },
   { label: 'GitHub', value: '@applejuicedev', href: 'https://github.com/applejuicedev' },
   { label: 'Instagram', value: '@arcterxandapple', href: 'https://instagram.com/arcterxandapple' },
 ]
 
 // ── Projects ───────────────────────────────────────────────────
-// Each project is shown as an app window (Projects.jsx) and opens into a sheet with its story.
-// story: problem / lösung / ergebnis; **key phrases** are set in ink.
-// video: loop recorded from the real application (public/videos/<slug>.webm + .jpg poster).
+// Each project opens into a view with its story (problem / solution / result; **key phrases** are
+// set in the brighter ink). video: a loop recorded from the real application
+// (public/videos/<slug>.webm + .jpg poster).
 export const PROJECTS = [
   {
     slug: 'dienstzeit',
     title: 'Dienstzeit',
-    kind: 'iOS-App',
+    kind: 'iOS app',
     year: '2025 –',
-    status: 'In Arbeit',
-    lede: 'Dienstzeiterfassung für Soldaten – die Konten rechnen nach den echten Regeln.',
+    status: 'In progress',
+    lede: 'Duty-time tracking for German soldiers – the balances follow the actual regulations.',
     story: [
-      ['problem', 'Soldaten führen ihre **Dienstzeit meist auf Papier**, das Geschäftszimmer überträgt sie in die Buchungsliste. Ob Stunden-, FvD- und Urlaubskonto stimmen, ist nach SAZV und § 30c SG **kaum nachzurechnen**.'],
-      ['lösung', 'Eine iOS-App mit **täglicher Erfassung und Erinnerung**. 18 Buchungsarten vom Grundbetrieb bis zur Übung rechnen Pausen, Mehrarbeit und FvD-Tage **nach den echten Regeln**. Am Monatsende entsteht ein PDF im Layout der Buchungsliste.'],
-      ['ergebnis', 'Die **Konten sind jederzeit aktuell**, der Stundenzettel wird nur noch abgeschrieben. Die Rechenlogik ist **per Test gegen eine echte Buchungsliste** geprüft, alle Daten bleiben auf dem Gerät.'],
+      ['problem', 'Soldiers mostly keep their **duty hours on paper**; the orderly room copies them into the booking list. Whether the hour, duty-day and leave balances are right under the regulations (SAZV, § 30c SG) is **hard to check**.'],
+      ['solution', 'An iOS app with **daily entry and reminders**. 18 booking types, from regular duty to exercises, work out breaks, overtime and duty days **by the actual rules**. At the end of the month it produces a PDF in the layout of the official booking list.'],
+      ['result', 'The **balances are always up to date**; the timesheet only has to be copied. The calculation is **tested against a real booking list**, and all data stays on the device.'],
     ],
-    // short facts pinned around the demo — each one is stated in the story above
-    callouts: ['18 Buchungsarten', 'PDF im Layout der Buchungsliste', 'Daten bleiben auf dem Gerät'],
     tech: ['React Native', 'Expo SDK 57', 'TypeScript', 'Expo Router', 'SQLite', 'Vitest'],
-    links: [{ label: 'Landingpage', href: 'https://dienstzeit-app.de' }],
+    links: [{ label: 'Landing page', href: 'https://dienstzeit-app.de' }],
     repo: 'Applejuicedev/dienstzeit-app',
-    video: { frame: 'phone', label: 'Demo der App Dienstzeit: Heute wird als Tätigkeit nach § 30c eingetragen und das FvD-Konto steigt auf 1; im Monatskalender werden die offenen Tage ausgefüllt, der PDF-Monatsbericht erscheint; der Montag wird zu Urlaub, das Urlaubskonto zeigt 29 Tage.' },
+    video: { frame: 'phone', label: 'Demo of the Dienstzeit app: today is logged as an activity under § 30c and the duty-day balance rises to 1; in the month view the open days are filled in and the PDF report appears; Monday becomes leave and the leave balance shows 29 days.' },
     surface: '#06110B',
   },
   {
     slug: 'creators-journal',
     title: "Creator's Journal",
-    kind: 'Web-App',
+    kind: 'Web app',
     year: '2025',
     status: 'Live',
-    lede: 'Planen, reflektieren, trainieren – an einem Ort, lokal auf dem eigenen Rechner.',
+    lede: 'Plan, reflect, train – in one place, locally on my own machine.',
     story: [
-      ['problem', 'Tagesplanung, Reflexion und Training lagen bei mir **verteilt in verschiedenen Apps und Notizen**. Es fehlte ein Ort, an dem ich plane, reflektiere und sehe, **ob mein Training vorankommt**.'],
-      ['lösung', 'Ein **lokales Tagesjournal** (Next.js, SQLite): morgens Zeitplan per Ziehen wie im Kalender, abends Tagescheck und Reflexion, dazu Wochen- und Monatsplanung. Workouts kommen **automatisch über die Hevy-API**.'],
-      ['ergebnis', 'Ein **System, das ich selbst nutze**: Fortschrittsdiagramme pro Übung mit Bestleistungen, Tagescheck-Verlauf über 30 Tage und Zeitplan-Export für den Kalender. **Alle Daten bleiben lokal.**'],
+      ['problem', 'Daily planning, reflection and training were **scattered across apps and notes**. There was no single place to plan, look back and see **whether my training was progressing**.'],
+      ['solution', 'A **local daily journal** (Next.js, SQLite): a schedule built by dragging, like a calendar, in the morning; a daily check and reflection in the evening; weekly and monthly planning. Workouts come in **automatically through the Hevy API**.'],
+      ['result', 'A **system I use myself**: progress charts per exercise with personal bests, a 30-day check history and a schedule export for the calendar. **All data stays local.**'],
     ],
     tech: ['Next.js', 'TypeScript', 'Prisma', 'SQLite', 'Hevy API'],
     // the repository is private, so there is no public link to it
     links: [],
     repo: 'Applejuicedev/creators-journal',
-    video: { frame: 'screen', label: "Demo von Creator's Journal: Im Zeitplan entsteht per Ziehen eine Timebox mit Titel, ein Tagesziel und ein To-do werden eingetragen und abgehakt, abends Tagescheck 8 und ein Tageserfolg, im Wochenrückblick füllt sich das Lebensrad." },
+    video: { frame: 'screen', label: "Demo of Creator's Journal: a timebox with a title is dragged into the schedule, a daily goal and a to-do are added and checked off, the evening check gets an 8 and a daily win, and the wheel of life fills in the weekly review." },
     surface: '#18181b',
   },
   {
     slug: 'portfolio',
-    title: 'Diese Website',
+    title: 'This website',
     kind: 'Web',
     year: '2026',
     status: 'Live',
-    lede: 'Kein Screenshot: Das Projekt läuft gerade in deinem Browser.',
+    lede: 'No screenshot – the project is running in your browser right now.',
     story: [
-      ['problem', 'Viele Portfolios **behaupten Fullstack** in einem Satz. Ich wollte, dass die Seite **selbst die Arbeitsprobe** ist – gestaltet wie ein Designprojekt, gebaut wie eine Anwendung.'],
-      ['lösung', 'Eine helle Oberfläche in **Liquid Glass**, wie Apple sie mit iOS 26 eingeführt hat: ein **Terminal, das die Seite startet**, Mi als Begleiter, Spotlight als Suche und für jeden Abschnitt **eine eigene Scroll-Choreografie**.'],
-      ['ergebnis', 'Keine Effekt-Bibliothek außer GSAP: **React, GSAP und Tailwind**. Alles ist **per Tastatur bedienbar**, und mit reduzierter Bewegung steht die Seite still.'],
+      ['problem', 'Most portfolios **claim full stack** in a single sentence. I wanted the site to **be the work sample** – designed like a design project, built like an application.'],
+      ['solution', 'A **single body of 20,000 points** travels through the page and takes a new form for each part: a solar system, a galaxy, Germany, the world. Otherwise only **type, darkness and space**.'],
+      ['result', 'The forms are **generated at runtime from geometry, map data and type**; a shader lets the points flow. Everything **works with the keyboard**, and with reduced motion the page stands still.'],
     ],
     tech: ['React', 'GSAP', 'Three.js', 'Tailwind CSS', 'Vite'],
-    links: [{ label: 'Quellcode', href: 'https://github.com/Applejuicedev/3d-portfolio' }],
+    links: [{ label: 'Source code', href: 'https://github.com/Applejuicedev/3d-portfolio' }],
     repo: 'Applejuicedev/3d-portfolio',
   },
 ]
@@ -109,23 +108,23 @@ export const LINKS = {
   DHL: 'https://www.google.com/maps/search/?api=1&query=DHL+Briefzentrum+Langg%C3%B6ns',
 }
 
-// from/to in years (fractions for months); open: the end is not fixed yet; state: pausiert / geplant
+// from/to in years (fractions for months); open: the end is not fixed yet; state: paused / planned
 export const STATIONS = [
-  { from: 2020, to: 2022, when: '2020 – 2022', title: 'Medien- & Gestaltungstechnischer Assistent', org: 'Berufliche Schule Butzbach', href: LINKS.BSB, note: 'DQR-Niveau 4 · schulischer Teil des Fachabiturs' },
-  { from: 2022, to: 2023, when: '2022 – 2023', title: 'Fachabitur', org: 'Berufliche Schule Butzbach', href: LINKS.BSB, note: 'Abschluss aus Ausbildung und Praktikum' },
-  { from: 2023, to: 2024, when: '2023 – 2024', title: 'Praktikum als Webentwickler', org: 'Mastercode Applications', note: '6 Monate · React, agile Methoden · praktischer Teil des Fachabiturs' },
-  { from: 2024.17, to: 2025.67, when: '03/2024 – 08/2025', title: 'Nachtschicht im Briefzentrum', org: 'DHL', href: LINKS.DHL, note: 'Nebenjob' },
-  { from: 2024, to: 2025, when: '2024 – 2025', title: 'Medieninformatik Studium', org: 'Technische Hochschule Mittelhessen', href: LINKS.THM, note: 'nach 2 Semestern pausiert', state: 'pausiert' },
-  { from: 2025, to: 2029, open: true, when: '2025 – mind. 2029', title: 'Soldat auf Zeit', org: 'Bundeswehr · Leichter Späher', note: 'Disziplin, Teamfähigkeit und mentale Stärke' },
-  { from: 2027, to: 2031, open: true, when: 'ab 2027', title: 'Medieninformatik Fernstudium (B.Sc.)', org: 'IU Internationale Hochschule', href: LINKS.IU, note: 'Teilzeit 1 Programm — 48 Monate · parallel zum Dienst', state: 'geplant' },
+  { from: 2020, to: 2022, when: '2020 – 2022', title: 'Media & Design Technical Assistant', org: 'Berufliche Schule Butzbach', href: LINKS.BSB, note: 'EQF level 4 · school part of the advanced technical certificate' },
+  { from: 2022, to: 2023, when: '2022 – 2023', title: 'Advanced technical certificate (Fachabitur)', org: 'Berufliche Schule Butzbach', href: LINKS.BSB, note: 'Completed through training and internship' },
+  { from: 2023, to: 2024, when: '2023 – 2024', title: 'Web developer intern', org: 'Mastercode Applications', note: '6 months · React, agile methods · practical part of the certificate' },
+  { from: 2024.17, to: 2025.67, when: '03/2024 – 08/2025', title: 'Night shift at a mail centre', org: 'DHL', href: LINKS.DHL, note: 'Side job' },
+  { from: 2024, to: 2025, when: '2024 – 2025', title: 'Media informatics studies', org: 'Technische Hochschule Mittelhessen', href: LINKS.THM, note: 'paused after two semesters', state: 'paused' },
+  { from: 2025, to: 2029, open: true, when: '2025 – at least 2029', title: 'Soldier on a fixed-term contract', org: 'German Armed Forces · light reconnaissance', note: 'Discipline, teamwork and mental strength' },
+  { from: 2027, to: 2031, open: true, when: 'from 2027', title: 'Media informatics, distance learning (B.Sc.)', org: 'IU International University', href: LINKS.IU, note: 'Part-time · 48 months · alongside service', state: 'planned' },
 ]
 
 export const CHAPTERS = [
-  { label: 'Die Anfänge', hash: 'a1c3f0e', text: 'Meine Leidenschaft für Technik und Gestaltung begann in der schulischen Ausbildung. Dort habe ich die Grundlagen in Design, Medienproduktion und Softwareentwicklung gelegt.' },
-  { label: 'Praktikum', hash: '7be21d4', text: 'Im sechsmonatigen Praktikum als Webentwickler bei Mastercode Applications habe ich moderne Technologien und agiles Arbeiten in der Praxis kennengelernt. Seitdem weiß ich: Ich will Anwendungen bauen, die Menschen wirklich nützen.' },
-  { label: 'Studium & Nachtschicht', hash: 'c94e0a2', text: 'Das Studium an der THM hat mir gefallen. Parallel habe ich nachts im Briefzentrum bei DHL in Langgöns gearbeitet, und oft fehlte mir die Kraft für Prüfungen und Testate. Gelernt habe ich daraus Disziplin – und dass Erfolg erarbeitet werden muss.' },
-  { label: 'Die Entscheidung', hash: '3f8d6b1', text: 'Spätestens im zweiten Semester war klar: Nachtschicht und Studium ließen sich nicht in der Qualität vereinbaren, die ich von mir erwarte. Ich habe das Studium pausiert und meinen Dienst als Soldat angetreten, um mich finanziell und persönlich zu festigen. Weiterstudieren wollte ich eigentlich erst danach, mit dem Berufsförderungsdienst.' },
-  { label: 'Heute', hash: 'e05c7f9', head: true, text: 'Im Dienst habe ich gemerkt, dass mir die Mannschaftslaufbahn genug Freiraum für ein Teilzeit-Fernstudium lässt. Zum 1. Januar 2027 nehme ich deshalb den Bachelor of Science in Medieninformatik an der IU wieder auf.' },
+  { label: 'The beginning', text: 'My passion for technology and design began during my vocational training, where I laid the foundations in design, media production and software development.' },
+  { label: 'Internship', text: 'During six months as a web developer intern at Mastercode Applications I got to know modern technologies and agile work in practice. Since then I know: I want to build applications that genuinely help people.' },
+  { label: 'Studies & night shifts', text: 'I enjoyed studying at THM. At the same time I worked night shifts at the DHL mail centre in Langgöns, and often lacked the energy for exams. What I took from it: discipline – and that success has to be earned.' },
+  { label: 'The decision', text: 'By the second semester it was clear that night shifts and studying could not be combined at the standard I expect of myself. I paused my studies and began my service as a soldier, to settle myself financially and personally.' },
+  { label: 'Today', head: true, text: 'In service I found that my career track leaves enough room for part-time distance learning. On 1 January 2027 I am resuming a Bachelor of Science in media informatics at IU.' },
 ]
 
 // the sections, in page order (navigation, Spotlight and the path bar all read this)

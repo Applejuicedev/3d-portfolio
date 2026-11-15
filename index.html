@@ -1,24 +1,19 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <!-- a reload starts at the top, not at the old scroll position (see useDeepLink in App) -->
     <script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual'</script>
-    <!-- booting from the first paint: the navigation stays hidden until the terminal is done (Preloader) -->
-    <script>document.documentElement.setAttribute('data-booting', '')</script>
     <!-- the colour palette chosen on an earlier visit (lib/theme.js), before anything is painted -->
     <script>try { var t = localStorage.getItem('vf-theme'); if (t && t !== 'hell') document.documentElement.dataset.theme = t } catch (e) {}</script>
-    <!-- Liquid Glass bends what lies behind it at its edges (the #lg-lens filter below) — only Chromium
-         can run an SVG filter as a backdrop-filter; elsewhere the glass is the same without the bend -->
-    <script>if (navigator.userAgentData && navigator.userAgentData.brands.some(function (b) { return /Chromium/.test(b.brand) })) document.documentElement.classList.add('lg-lens')</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#fafafa" />
-    <title>Vincent Fidanli — Fullstack Developer</title>
-    <meta name="description" content="Vincent Fidanli, Fullstack Developer und Medieninformatik-Student. Ich gestalte und entwickle digitale Anwendungen: Web-Apps, iOS-Apps und Interfaces – vom Entwurf bis zur Datenbank." />
+    <meta name="theme-color" content="#161618" />
+    <title>Vincent Fidanli — Full Stack Developer</title>
+    <meta name="description" content="Vincent Fidanli, full stack developer and media informatics student. I design and build apps – web, iOS and interfaces – from the first sketch to the database." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://vincentfidanli.de/" />
-    <meta property="og:title" content="Vincent Fidanli — Fullstack Developer" />
-    <meta property="og:description" content="Web-Apps, iOS-Apps und Interfaces – gestaltet und entwickelt von Vincent Fidanli." />
+    <meta property="og:title" content="Vincent Fidanli — Full Stack Developer" />
+    <meta property="og:description" content="Web apps, iOS apps and interfaces – designed and built by Vincent Fidanli." />
     <meta name="twitter:card" content="summary" />
     <link rel="canonical" href="https://vincentfidanli.de/" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141414'/%3E%3Cpath d='M8 10h3.6l4.4 11 4.4-11H24l-6.3 14h-3.4z' fill='%23f5f5f3'/%3E%3C/svg%3E" />
@@ -28,16 +23,10 @@
          it elsewhere; Geist Mono for code, SF Mono where the system has it (see --mono) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Person","name":"Vincent Fidanli","jobTitle":"Fullstack Developer","url":"https://vincentfidanli.de","email":"mailto:vincent@fidanli.de","sameAs":["https://github.com/applejuicedev"]}
+      {"@context":"https://schema.org","@type":"Person","name":"Vincent Fidanli","jobTitle":"Full Stack Developer","url":"https://vincentfidanli.de","email":"mailto:vincent@fidanli.de","sameAs":["https://github.com/applejuicedev"]}
     </script>
   </head>
   <body>
-    <svg aria-hidden="true" width="0" height="0" style="position:absolute">
-      <filter id="lg-lens" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
-        <feImage x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='x'%3E%3Cstop offset='0' stop-color='%23f00'/%3E%3Cstop offset='.12' stop-color='%23800000'/%3E%3Cstop offset='.88' stop-color='%23800000'/%3E%3Cstop offset='1' stop-color='%23000'/%3E%3C/linearGradient%3E%3ClinearGradient id='y' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%230f0'/%3E%3Cstop offset='.2' stop-color='%23008000'/%3E%3Cstop offset='.8' stop-color='%23008000'/%3E%3Cstop offset='1' stop-color='%23000'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23x)'/%3E%3Crect width='100' height='100' fill='url(%23y)' style='mix-blend-mode:screen'/%3E%3C/svg%3E" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.06" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/*.{js,jsx}', './src/{sections,ui,lib,data}/**/*.{js,jsx}'],
+  content: ['./index.html', './src/*.{js,jsx}', './src/{site,body,cv,sections,ui,lib,data}/**/*.{js,jsx}'],
   // iOS keeps :hover after a tap — only apply hover: variants on devices with a real pointer
   future: { hoverOnlyWhenSupported: true },
   theme: {
