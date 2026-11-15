@@ -1,0 +1,71 @@
+/* ── Design tokens: Cold Desert Futurism ───────────────────────────────────────────────────────────
+   One system for every part of the desk. Components use only the semantic tokens (and the short
+   aliases at the end, which older components still use); the palette is never used directly in a
+   component. Dark — graphite — is the identity; light is the same system cast in concrete. */
+:root {
+  /* palette: graphite, oxidised metal, concrete — no warm tones, no colour */
+  --black: #0a0b0c; --graphite: #121416; --charcoal: #1a1d1f; --steel: #2a2e31;
+  --concrete: #4b5054; --ash: #80868b; --silver: #b9bec2; --cool-white: #eef0f1;
+
+  /* typography: neutral; the experience is what is futuristic, not the letters */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Geist Mono', Menlo, monospace; /* small technical labels only */
+  --fs-micro: 10.5px; --fs-xs: 11px; --fs-s: 13px; --fs-m: 15px; --fs-l: 20px; --fs-xl: 28px; --fs-2xl: 44px;
+  --fw-light: 300; --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --tr-display: -0.035em; --tr-tight: -0.015em; --tr-mono: 0.02em; --tr-label: 0.08em;
+  --lh-tight: 1.1; --lh-text: 1.55;
+
+  /* spacing (4-point), radius, border */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+  --r-xs: 3px; --r-s: 5px; --r-m: 8px; --r-l: 12px; --r-pill: 999px;
+  --bw: 1px;
+
+  /* motion */
+  --ease-out: cubic-bezier(.16, 1, .3, 1); --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --dur-fast: .16s; --dur-base: .28s; --dur-slow: .56s; --dur-enter: .62s;
+
+  /* material: the grain every surface carries, and the blur behind floating panels */
+  --grain-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --blur: 22px;
+}
+
+/* dark: the identity */
+:root, :root[data-theme='dark'] {
+  --bg-primary: var(--black); --bg-secondary: var(--graphite);
+  --surface-1: var(--charcoal); --surface-2: var(--steel);
+  --surface-win: rgb(19 21 23 / .86); --surface-win-solid: #16181a; --surface-inset: rgb(0 0 0 / .22);
+  --text-primary: var(--cool-white); --text-secondary: var(--silver); --text-tertiary: var(--ash);
+  --border: rgb(238 240 241 / .085); --border-strong: rgb(238 240 241 / .18);
+  --highlight: #f6f7f8;
+  --state-hover: rgb(238 240 241 / .055); --state-active: rgb(238 240 241 / .1); --focus: var(--silver);
+  --sh-1: 0 1px 2px rgb(0 0 0 / .3);
+  --sh-2: 0 0 0 .5px rgb(0 0 0 / .5), 0 24px 60px -24px rgb(0 0 0 / .65);
+  --sh-3: 0 0 0 .5px rgb(0 0 0 / .6), 0 2px 6px rgb(0 0 0 / .2), 0 44px 110px -34px rgb(0 0 0 / .85);
+  --sh-inset: inset 0 1px 0 rgb(255 255 255 / .045);
+  --name-giant: #232628; /* written into the surface by difference: lighter on dark, darker in the light */
+  color-scheme: dark;
+}
+/* light: the same system in concrete */
+:root[data-theme='light'] {
+  --bg-primary: #a9adb1; --bg-secondary: #c3c6c9;
+  --surface-1: #d3d6d8; --surface-2: #c2c5c8;
+  --surface-win: rgb(226 228 230 / .88); --surface-win-solid: #e1e3e5; --surface-inset: rgb(18 20 22 / .05);
+  --text-primary: var(--graphite); --text-secondary: #363a3e; --text-tertiary: #62686d;
+  --border: rgb(18 20 22 / .1); --border-strong: rgb(18 20 22 / .22);
+  --highlight: var(--black);
+  --state-hover: rgb(18 20 22 / .05); --state-active: rgb(18 20 22 / .09); --focus: var(--graphite);
+  --sh-1: 0 1px 2px rgb(18 20 22 / .12);
+  --sh-2: 0 0 0 .5px rgb(18 20 22 / .12), 0 24px 60px -26px rgb(18 20 22 / .4);
+  --sh-3: 0 0 0 .5px rgb(18 20 22 / .16), 0 2px 6px rgb(18 20 22 / .08), 0 44px 110px -36px rgb(18 20 22 / .55);
+  --sh-inset: inset 0 1px 0 rgb(255 255 255 / .5);
+  --name-giant: #1b1d1f;
+  color-scheme: light;
+}
+
+/* short aliases (older components use these) */
+:root {
+  --bg: var(--bg-primary); --ink: var(--text-primary); --mute: var(--text-tertiary); --line: var(--border);
+  --win: var(--surface-win); --soft: var(--state-active); --accent: var(--highlight); --shadow: var(--sh-2);
+  --sans: var(--font-sans); --mono: var(--font-mono); --ease: var(--ease-out);
+}

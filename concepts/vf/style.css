@@ -1,0 +1,302 @@
+/* ── The desk: a rough graphite surface with a light gliding over it (surface.js), one sentence and
+   one name on it; everything else opens out of the index. Every value comes from tokens.css. ── */
+* { margin: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+/* the ground is drawn by surface.js; this tone shows only where WebGL is missing */
+body { background: var(--bg-primary); color: var(--text-primary); font: var(--fw-regular) 14px/var(--lh-text) var(--font-sans); overflow: hidden;
+  -webkit-font-smoothing: antialiased; transition: background-color var(--dur-slow) var(--ease-out), color var(--dur-slow) var(--ease-out); }
+body.no-surface { background: radial-gradient(90% 70% at 62% 38%, var(--surface-2), var(--bg-primary) 70%); }
+.surface { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: block; }
+.surface.fixed { position: fixed; }
+.mono { font: var(--fw-regular) var(--fs-xs)/1.5 var(--font-mono); letter-spacing: var(--tr-mono); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 1px solid var(--focus); outline-offset: 3px; border-radius: var(--r-xs); }
+::selection { background: var(--text-primary); color: var(--bg-primary); }
+/* while a window is dragged or resized, nothing gets selected */
+html.dragging, html.dragging * { user-select: none !important; -webkit-user-select: none !important; }
+/* (and pages inside windows don't swallow the pointer on the way) */
+html.dragging iframe { pointer-events: none; }
+
+/* ── controls: one chip for every small button ── */
+.chip { all: unset; cursor: pointer; padding: 3px var(--sp-2); border-radius: var(--r-s); color: var(--text-tertiary);
+  transition: color var(--dur-fast), background-color var(--dur-fast); }
+.chip:hover { color: var(--text-primary); background: var(--state-hover); }
+.chip:active { background: var(--state-active); }
+.chip.on { color: var(--text-primary); }
+.chip:focus-visible { outline: 1px solid var(--focus); }
+/* something new: a point after the word */
+.chip.new { color: var(--text-primary); } .chip.new::after { content: ''; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--highlight); margin-left: 6px; vertical-align: 2px; }
+.btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 7px var(--sp-3); border: var(--bw) solid var(--border-strong); border-radius: var(--r-s);
+  font: var(--fs-xs) var(--font-mono); letter-spacing: var(--tr-mono); transition: background-color var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast); }
+.btn:hover { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
+.btn:active { transform: translateY(1px); }
+
+/* ── the meta layer: the mark alone stays in its corner; the settings and the stack along the top, the
+   local times along the bottom come up with the index (html.reveal) or near the top edge (.peek) ── */
+.mark { position: fixed; top: 12px; left: var(--sp-5); z-index: 100000; font: var(--fw-semibold) var(--fs-s)/1 var(--font-display); letter-spacing: -0.01em; color: var(--text-primary); pointer-events: none; }
+#top, #bottom { position: fixed; left: 0; right: 0; display: flex; justify-content: flex-end; align-items: center; height: 38px; padding: 0 var(--sp-4) 0 72px; z-index: 100000; gap: var(--sp-4); }
+#top { top: 0; } #bottom { bottom: 0; justify-content: flex-start; padding-left: var(--sp-5); }
+.meta { opacity: 0; visibility: hidden; transform: translateY(var(--hide, -6px)); transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-out), visibility 0s linear var(--dur-slow); }
+#bottom.meta { --hide: 6px; }
+html.reveal .meta, html.peek #top { opacity: 1; visibility: visible; transform: none; transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-out), visibility 0s; }
+nav { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+#top .chip { font: var(--fs-xs)/1.4 var(--font-mono); letter-spacing: var(--tr-mono); }
+/* the stack, sliding past */
+#skills { width: 230px; overflow: hidden; color: var(--text-tertiary); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
+#skills-track { display: flex; gap: var(--sp-4); width: max-content; animation: slide 48s linear infinite reverse; }
+#skills:hover #skills-track { animation-play-state: paused; }
+#skills span { display: block; width: 13px; height: 13px; flex: none; }
+#skills svg { width: 100%; height: 100%; fill: currentColor; display: block; }
+/* the time zones: a narrow window the cities slide through */
+#zones { width: 220px; overflow: hidden; color: var(--text-tertiary); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
+#zones-track { display: flex; gap: 22px; white-space: nowrap; width: max-content; animation: slide 26s linear infinite; }
+#zones-track b { font-weight: var(--fw-regular); color: var(--text-primary); }
+@keyframes slide { to { transform: translateX(-50%); } }
+
+/* ── the sentence ── */
+#desk { position: fixed; inset: 0; display: grid; place-items: center; padding: 80px clamp(20px, 7vw, 120px) 110px; }
+#sentence { position: relative; z-index: 2; color: var(--text-secondary); }
+/* narrow screens: one headline, set the way a product page sets one */
+@media (max-width: 759px) {
+  #sentence { font: var(--fw-medium) clamp(28px, 8.2vw, 44px)/1.08 var(--font-display); letter-spacing: var(--tr-display); align-self: start; margin-top: 11vh; }
+}
+/* wide screens: small groups of words, far apart in the open space */
+@media (min-width: 760px) {
+  #desk { display: block; padding: 0; }
+  #sentence { position: absolute; inset: 38px 0; font: var(--fw-regular) var(--fs-s)/1.45 var(--font-sans); letter-spacing: -0.005em; }
+  .frag { position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); max-width: calc(var(--w, 30) * 1vw); will-change: transform; }
+  /* the middle of the sentence stands in the middle of the screen: the ring of projects opens right there */
+  .frag.mid { left: 50%; top: 50%; max-width: none; white-space: nowrap; translate: -50% -50%; }
+}
+a.w { color: var(--text-primary); cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .28em;
+  text-decoration-color: var(--border-strong); transition: color var(--dur-fast), text-decoration-color var(--dur-fast); }
+a.w:hover { text-decoration-color: currentColor; }
+a.w.lit { color: var(--text-tertiary); }
+a.w:focus-visible { outline: 1px solid var(--focus); outline-offset: 4px; }
+.nb { white-space: nowrap; }
+/* my name: the brightest thing on the desk */
+#sentence .name { color: var(--highlight); font-weight: var(--fw-medium); }
+
+/* ── the name (hero.js): enormous, quiet, cut by the bottom edge, written into the surface ── */
+#dune { position: fixed; left: 50%; bottom: 0; display: flex; align-items: flex-end; font: var(--fw-light) var(--size, 26vw)/0.8 var(--font-display); letter-spacing: -0.055em;
+  color: var(--name-giant); mix-blend-mode: difference; white-space: nowrap; pointer-events: none; user-select: none; z-index: 1; transform: translate(calc(-50% + var(--dx, 0px)), var(--dy, 0.17em)); }
+#dune span { display: block; will-change: transform; }
+
+/* ── windows: floating panels of graphite — one system, every window ── */
+#threads { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+#threads line { stroke: var(--text-primary); stroke-width: 1; opacity: .32; }
+#threads circle { fill: var(--text-primary); }
+.win { position: fixed; z-index: 3; display: flex; flex-direction: column; overflow: hidden; color: var(--text-primary);
+  border-radius: var(--r-m); border: var(--bw) solid var(--border);
+  background: var(--grain-img), var(--surface-win); background-size: 160px;
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(.6); backdrop-filter: blur(var(--blur)) saturate(.6);
+  box-shadow: var(--sh-2), var(--sh-inset); max-width: calc(100vw - 16px); max-height: calc(100svh - 92px);
+  transform-origin: var(--ox, 50%) var(--oy, 0); animation: win-in var(--dur-enter) var(--ease-out) both;
+  transition: border-color var(--dur-base), box-shadow var(--dur-base); }
+/* the window in front stands a little closer: a firmer edge, a deeper shadow */
+.win.front { border-color: var(--border-strong); box-shadow: var(--sh-3), var(--sh-inset); }
+/* windows unfold out of the thing they were opened from: out of focus and a little low, into place */
+@keyframes win-in { from { opacity: 0; transform: translateY(12px) scale(.955); filter: blur(10px); } 60% { filter: blur(0); } }
+.win.closing { transition: opacity .22s linear, transform .32s var(--ease-out), filter .32s; opacity: 0; transform: translateY(6px) scale(.975); filter: blur(6px); pointer-events: none; }
+.win.glide { transition: left var(--dur-slow) var(--ease-out), top var(--dur-slow) var(--ease-out), border-color var(--dur-base), box-shadow var(--dur-base); }
+/* the bar: a title in small type and a close control, nothing else, no rule under it */
+.bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); height: 36px; padding: 0 var(--sp-2) 0 var(--sp-4);
+  color: var(--text-tertiary); cursor: grab; touch-action: none; user-select: none; transition: color var(--dur-base); }
+.win.front .bar { color: var(--text-secondary); }
+.bar:active { cursor: grabbing; }
+.bar .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .n { opacity: .5; margin-right: var(--sp-2); }
+.bar .x { all: unset; cursor: pointer; position: relative; width: 22px; height: 22px; border-radius: var(--r-s); opacity: .55; transition: opacity var(--dur-fast), background-color var(--dur-fast); }
+.bar .x::before, .bar .x::after { content: ''; position: absolute; left: 50%; top: 50%; width: 9px; height: 1px; background: currentColor; transform: translate(-50%, -50%) rotate(45deg); }
+.bar .x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.win:hover .bar .x { opacity: .9; }
+.bar .x:hover { opacity: 1; background: var(--state-hover); color: var(--text-primary); }
+.bar .x:focus-visible { opacity: 1; outline: 1px solid var(--focus); }
+.body { overflow: auto; min-height: 0; flex: 1; border-top: var(--bw) solid var(--border); scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+/* the corner grip: two short diagonal hairlines, only when the window is under the pointer */
+.grip { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; touch-action: none; z-index: 2; opacity: 0; transition: opacity var(--dur-fast);
+  background: linear-gradient(135deg, transparent 0 62%, var(--text-tertiary) 62% 67%, transparent 67% 80%, var(--text-tertiary) 80% 85%, transparent 85%); }
+.win:hover .grip { opacity: .7; } .grip:hover { opacity: 1; }
+.pad { padding: var(--sp-5); }
+
+/* type inside windows: a label, a title, a lead, then text */
+.eyebrow { font: var(--fs-xs)/1.4 var(--font-mono); letter-spacing: var(--tr-mono); color: var(--text-tertiary); }
+.title { font: var(--fw-semibold) var(--fs-xl)/var(--lh-tight) var(--font-display); letter-spacing: -0.025em; margin-top: var(--sp-2); }
+.title i { font-style: normal; color: var(--text-tertiary); }
+.lead { font-size: var(--fs-m); line-height: var(--lh-text); margin-top: var(--sp-3); color: var(--text-primary); }
+.text { font-size: var(--fs-s); line-height: 1.65; color: var(--text-secondary); }
+.text b, .lead b { font-weight: var(--fw-medium); color: var(--text-primary); }
+.rule { height: 1px; background: var(--border); margin: var(--sp-4) 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--sp-3); }
+.tags span { font: var(--fs-micro) var(--font-mono); padding: 3px var(--sp-2); border: var(--bw) solid var(--border); border-radius: var(--r-xs); color: var(--text-tertiary); }
+.link { color: var(--text-primary); text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.link:hover { text-decoration-color: currentColor; }
+.video { display: block; width: 100%; background: var(--black); }
+
+/* the inbox */
+.ib { display: flex; flex-direction: column; }
+.ib-row { all: unset; display: grid; gap: 2px; padding: var(--sp-3) var(--sp-4); border-bottom: var(--bw) solid var(--border); cursor: default; }
+.ib-row.act { cursor: pointer; } .ib-row.act:hover { background: var(--state-hover); }
+.ib-from { display: flex; align-items: center; gap: 6px; color: var(--text-tertiary); }
+.ib-from i { width: 5px; height: 5px; border-radius: 50%; } .ib-from em { margin-left: auto; font-style: normal; }
+.ib-row b { font-weight: var(--fw-medium); } .ib-body { font-size: var(--fs-s); color: var(--text-secondary); }
+
+@media (max-width: 640px) {
+  #skills { display: none; }
+  #top { padding-left: 60px; }
+  #top nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  #top nav::-webkit-scrollbar { display: none; }
+  #top .chip { flex: none; }
+  #zones { width: 140px; }
+  .win { left: 8px !important; width: calc(100vw - 16px) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .win { animation: win-fade var(--dur-base) linear both; } .win.closing { transform: none; filter: none; }
+  #zones-track, #skills-track { animation: none; } .win.glide { transition: none; }
+}
+@keyframes win-fade { from { opacity: 0; } }
+
+/* ── x-ray (xray.js): the ring that fills while you rest, and the lens onto the code beneath ── */
+#xray { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; }
+.xr-ring { position: absolute; left: calc(var(--x) - 22px); top: calc(var(--y) - 22px); transform: rotate(-90deg); opacity: 0; transition: opacity var(--dur-fast); }
+.xr-ring circle { fill: none; stroke: var(--text-primary); stroke-width: 1; }
+.xr-lens { --r: 130px; position: absolute; left: calc(var(--x) - var(--r)); top: calc(var(--y) - var(--r)); width: calc(var(--r) * 2); height: calc(var(--r) * 2);
+  border-radius: 50%; overflow: hidden; background: var(--grain-img), var(--graphite); background-size: 160px; color: var(--silver);
+  box-shadow: 0 0 0 1px rgb(238 240 241 / .12), 0 30px 70px -20px rgb(0 0 0 / .7);
+  transform: scale(.6); opacity: 0; filter: blur(8px); transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-base), filter var(--dur-base); }
+#xray.open .xr-lens { transform: scale(1); opacity: 1; filter: none; }
+.xr-lens pre { margin: 0; padding: 0 calc(var(--r) * 0.32); font: var(--fs-micro)/1.6 var(--font-mono); white-space: pre-wrap; word-break: break-word; }
+/* code in grey steps only: comments darkest, strings middle, names brightest */
+.xr-lens i { color: var(--concrete); font-style: normal; } .xr-lens s { color: var(--ash); text-decoration: none; } .xr-lens b { color: var(--cool-white); font-weight: var(--fw-medium); }
+.xr-cap { position: absolute; left: var(--x); top: calc(var(--y) + var(--r, 130px) + 10px); transform: translateX(-50%); font: var(--fs-xs) var(--font-mono); color: var(--text-primary);
+  background: var(--surface-win-solid); border: var(--bw) solid var(--border); padding: 3px var(--sp-2); border-radius: var(--r-s); opacity: 0; transition: opacity var(--dur-base); white-space: nowrap; }
+#xray.open .xr-cap { opacity: 1; }
+
+/* ── notifications (notify.js): small panels of the same material as the windows ── */
+#toasts { position: fixed; top: 46px; right: var(--sp-4); z-index: 100001; display: flex; flex-direction: column; gap: var(--sp-2); width: min(320px, calc(100vw - 32px)); pointer-events: none; }
+.toast { --tc: var(--text-primary); position: relative; pointer-events: auto; color: var(--text-primary); padding: var(--sp-3) 34px var(--sp-3) var(--sp-4);
+  border-radius: var(--r-m); border: var(--bw) solid var(--border); background: var(--grain-img), var(--surface-win); background-size: 160px;
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(.6); backdrop-filter: blur(var(--blur)) saturate(.6);
+  box-shadow: var(--sh-2), var(--sh-inset); animation: toast-in var(--dur-enter) var(--ease-out) both; transition: border-color var(--dur-fast); }
+.toast.act { cursor: pointer; } .toast.act:hover { border-color: var(--border-strong); }
+.toast.out { transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base), filter var(--dur-base); transform: translateX(16px); opacity: 0; filter: blur(4px); }
+@keyframes toast-in { from { transform: translateX(24px); opacity: 0; filter: blur(6px); } }
+.t-from { display: flex; align-items: center; gap: 6px; color: var(--text-tertiary); }
+.t-from i { width: 5px; height: 5px; border-radius: 50%; background: var(--tc); }
+.t-from span { margin-left: auto; }
+.t-title { font-weight: var(--fw-medium); margin-top: var(--sp-1); line-height: 1.35; letter-spacing: var(--tr-tight); }
+.t-body { font-size: var(--fs-s); color: var(--text-secondary); line-height: 1.45; margin-top: 2px; }
+.t-x { all: unset; cursor: pointer; position: absolute; top: var(--sp-2); right: var(--sp-2); width: 20px; height: 20px; border-radius: var(--r-s); font-size: 0; color: var(--text-tertiary); }
+.t-x::before, .t-x::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 1px; background: currentColor; transform: translate(-50%, -50%) rotate(45deg); }
+.t-x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.t-x:hover { background: var(--state-hover); color: var(--text-primary); }
+
+/* ── story (story.js) ── */
+#story { position: fixed; inset: 0; z-index: 99000; background: color-mix(in srgb, var(--bg-primary) 62%, transparent); -webkit-backdrop-filter: blur(10px) saturate(.6); backdrop-filter: blur(10px) saturate(.6);
+  opacity: 0; transition: opacity var(--dur-slow) var(--ease-out); overflow: hidden; touch-action: none; }
+#story.on { opacity: 1; }
+.st-card { position: absolute; left: 0; top: 0; animation: none; max-height: none; max-width: none; transform-origin: 0 0; will-change: transform; border-radius: var(--r-l); overflow: hidden; cursor: default; transition: opacity var(--dur-base); }
+.st-card .body { overflow: hidden; border-top-color: color-mix(in srgb, currentColor 12%, transparent); }
+.st-card .bar { cursor: grab; touch-action: none; color: inherit; opacity: .75; }
+.st-card .bar:active { cursor: grabbing; }
+.st-hint { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); color: var(--text-tertiary); transition: opacity var(--dur-base); }
+.st-close { all: unset; cursor: pointer; position: absolute; top: 46px; left: 50%; transform: translateX(-50%); padding: 5px var(--sp-3); border-radius: var(--r-s); background: var(--text-primary); color: var(--bg-primary); z-index: 100; }
+.st-media { display: block; width: 100%; margin-top: var(--sp-3); background: color-mix(in srgb, currentColor 10%, transparent); }
+.st-media iframe { width: 100%; height: 100%; border: 0; display: block; }
+.st-cap { margin-top: var(--sp-2); opacity: .75; }
+.st-empty { display: grid; place-content: center; gap: 6px; padding: 18px; text-align: center; border: var(--bw) dashed color-mix(in srgb, currentColor 40%, transparent); }
+.st-empty span { font-weight: var(--fw-medium); } .st-empty small { font: var(--fs-xs)/1.5 var(--font-mono); opacity: .7; }
+/* video windows: only the picture (and its controls) under the title bar */
+.st-bare { padding: 0; }
+.st-bare .st-media { margin: 0; border: 0; }
+.st-player { margin: 0; } .st-player canvas { display: block; width: 100%; aspect-ratio: 16 / 10; }
+.st-ctl { display: flex; align-items: center; gap: 10px; padding: var(--sp-2) var(--sp-3); }
+.st-ctl button { all: unset; cursor: pointer; width: 18px; text-align: center; }
+.st-bar { flex: 1; height: 1px; background: color-mix(in srgb, currentColor 30%, transparent); } .st-bar b { display: block; height: 100%; width: 0; background: currentColor; }
+.st-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: var(--sp-3); }
+.st-grid figure { margin: 0; }
+.st-grid img, .st-grid i { aspect-ratio: 1; width: 100%; object-fit: cover; display: block; border-radius: var(--r-xs); background: color-mix(in srgb, currentColor 12%, transparent); filter: grayscale(1) contrast(1.05); transition: filter var(--dur-slow); }
+.st-grid figure:hover img { filter: none; }
+.st-grid figcaption { font-size: var(--fs-micro); margin-top: var(--sp-1); opacity: .75; }
+.st-note a { color: inherit; }
+.st-note { font: var(--fs-xs)/1.5 var(--font-mono); margin-top: var(--sp-2); opacity: .7; }
+
+/* ── the ghost of the old cursor (autopilot.js) ── */
+#ghost { position: fixed; left: 0; top: 0; z-index: 2147483001; pointer-events: none; opacity: 0; transition: opacity var(--dur-slow); }
+#ghost.on { opacity: 1; }
+#ghost .g-ring { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: var(--bw) solid var(--text-primary); transition: transform var(--dur-fast); }
+#ghost .g-dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--text-primary); }
+#ghost.down .g-ring { transform: scale(.7); }
+
+/* ── the virus (virus.js): the system breaking, in its own material — tearing, negative, noise ── */
+html.infected body { animation: glitch .22s steps(1) infinite; }
+@keyframes glitch {
+  0% { filter: none; transform: none; }
+  20% { filter: grayscale(1) contrast(1.8); transform: translate(3px, -1px) skewX(.8deg); clip-path: inset(0 0 52% 0); }
+  40% { filter: invert(1) grayscale(1); transform: translate(-4px, 0); clip-path: none; }
+  60% { filter: contrast(2.4) brightness(.8); transform: translate(2px, 2px) skewX(-.5deg); clip-path: inset(38% 0 0 0); }
+  80% { filter: none; transform: translate(-1px, -2px); clip-path: none; }
+}
+.virus-pop { position: fixed; z-index: 2147483002; width: 270px; border-radius: var(--r-m); overflow: hidden; color: var(--cool-white);
+  background: var(--grain-img), var(--graphite); background-size: 160px; border: 1px solid rgb(238 240 241 / .2); box-shadow: 0 30px 60px -20px rgb(0 0 0 / .8);
+  animation: vp .14s steps(2) both; }
+.virus-pop.neg { color: var(--black); background: var(--grain-img), var(--cool-white); background-size: 160px; border-color: rgb(10 11 12 / .25); }
+.vp-bar { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-bottom: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 18%, transparent); opacity: .85; }
+.vp-bar i { width: 8px; height: 8px; border: 1px solid currentColor; border-radius: 50%; }
+.vp-msg { display: grid; gap: 4px; padding: 12px 12px 14px; }
+.vp-msg b { font-weight: var(--fw-medium); letter-spacing: var(--tr-tight); } .vp-msg span { opacity: .55; }
+@keyframes vp { from { transform: translate(8px, -6px) scale(1.06); opacity: 0; } }
+#reboot { position: fixed; inset: 0; z-index: 2147483003; background: var(--bg-primary); color: var(--text-primary); display: grid; place-content: center; gap: 10px; text-align: center; }
+#reboot i { display: block; width: 180px; height: 1px; background: var(--border); } #reboot b { display: block; height: 100%; width: 0; background: var(--text-primary); animation: boot 2.3s linear forwards; }
+@keyframes boot { to { width: 100%; } }
+
+/* ── the index (nav.js): a small ring, a point in it; its word only on approach; its tools wind out
+   along a spiral. A second point on its rim means something new arrived in the inbox ── */
+#compass { position: fixed; right: 28px; bottom: 28px; z-index: 100001; }
+#compass-btn { all: unset; cursor: pointer; display: flex; align-items: center; gap: var(--sp-3); flex-direction: row-reverse; color: var(--text-primary); }
+#compass-btn span { opacity: 0; transform: translateX(6px); transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-out); color: var(--text-secondary); }
+#compass-btn:hover span, #compass.open #compass-btn span, #compass-btn:focus-visible span { opacity: 1; transform: none; }
+#compass-btn i { position: relative; width: 26px; height: 26px; border: var(--bw) solid var(--border-strong); border-radius: 50%;
+  background: var(--state-hover); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: transform var(--dur-slow) var(--ease-out), border-color var(--dur-base); }
+#compass-btn i::before { content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; border-radius: 50%; background: var(--text-primary); transform: translate(-50%, -50%);
+  transition: width var(--dur-slow) var(--ease-out), height var(--dur-slow) var(--ease-out), border-radius var(--dur-slow); }
+#compass-btn i::after { content: ''; position: absolute; right: -1px; top: -1px; width: 5px; height: 5px; border-radius: 50%; background: var(--highlight); transform: scale(0); transition: transform var(--dur-base) var(--ease-out); }
+#compass.unread #compass-btn i::after { transform: scale(1); }
+#compass-btn:hover i { border-color: var(--text-secondary); transform: scale(1.1); }
+#compass.open #compass-btn i::before { width: 10px; height: 1px; border-radius: 0; }
+#compass-btn:focus-visible { outline: none; } #compass-btn:focus-visible i { outline: 1px solid var(--focus); outline-offset: 3px; }
+#tools { position: absolute; right: 13px; bottom: 13px; width: 0; height: 0; display: block; }
+/* plain text; quiet entries are only a step dimmer, and every entry turns bright under the pointer */
+#tools .chip { white-space: nowrap; font: var(--fs-xs)/1 var(--font-mono); letter-spacing: var(--tr-mono); color: var(--text-primary); background: none; padding: 6px 4px;
+  text-shadow: 0 0 10px var(--bg-primary), 0 0 2px var(--bg-primary); transition: color var(--dur-fast); }
+#tools .chip.quiet { color: var(--text-secondary); }
+#tools .chip:hover, #tools .chip:focus-visible { color: var(--highlight); background: none; text-decoration: underline; text-underline-offset: .45em; text-decoration-color: var(--border-strong); }
+#tools .chip.on { color: var(--highlight); text-decoration: underline; text-underline-offset: .45em; text-decoration-color: var(--text-tertiary); }
+/* a strand: its head on the spiral (a point after the word), its tools to the left of it */
+.strand { position: absolute; right: 0; bottom: 0; display: flex; align-items: center; transform: translate(0, 50%) scale(.6); opacity: 0; visibility: hidden; filter: blur(4px);
+  transition: transform var(--dur-slow) var(--ease-out) var(--out), opacity var(--dur-base) linear var(--out), filter var(--dur-base) var(--out), visibility 0s linear calc(var(--out) + var(--dur-slow)); }
+#compass.open .strand { transform: translate(var(--tx), calc(var(--ty) + 50%)); opacity: 1; visibility: visible; filter: none;
+  transition: transform .7s var(--ease-out) var(--in), opacity var(--dur-base) linear var(--in), filter var(--dur-slow) var(--in), visibility 0s; }
+.st-btn { position: relative; }
+.st-btn::before { content: ''; position: absolute; right: -10px; top: 50%; width: 3px; height: 3px; border-radius: 50%; background: currentColor; transform: translateY(-50%); }
+.strand.on .st-btn { color: var(--highlight); }
+/* while one strand is open the others step back */
+#compass.deep .strand:not(.on) { opacity: .45; }
+#compass.deep .strand:not(.on):hover, #compass.deep .strand:not(.on):focus-within { opacity: 1; }
+.subs { position: absolute; right: 100%; top: 50%; display: flex; flex-direction: row-reverse; align-items: center; gap: 14px; padding-right: 26px; transform: translateY(-50%); pointer-events: none; }
+/* the hairline the tools hang on: drawn out from the strand's head */
+.subs::after { content: ''; position: absolute; right: 6px; top: 50%; width: 14px; height: 1px; background: var(--border-strong); transform: scaleX(0); transform-origin: right; transition: transform var(--dur-base) var(--ease-out); }
+.subs .chip { opacity: 0; transform: translateX(10px); filter: blur(3px); visibility: hidden;
+  transition: opacity var(--dur-fast) linear, transform var(--dur-base) var(--ease-out), filter var(--dur-fast), visibility 0s linear var(--dur-base); }
+.strand.on .subs { pointer-events: auto; }
+.strand.on .subs::after { transform: scaleX(1); }
+.strand.on .subs .chip { opacity: 1; transform: none; filter: none; visibility: visible;
+  transition: opacity var(--dur-base) linear calc(80ms + var(--j) * 45ms), transform var(--dur-slow) var(--ease-out) calc(80ms + var(--j) * 45ms), filter var(--dur-base) calc(80ms + var(--j) * 45ms), visibility 0s; }
+/* phones: no room to the left — the tools stand in a column above their strand, the others give way */
+@media (max-width: 640px) {
+  .subs { right: 0; top: auto; bottom: 100%; flex-direction: column-reverse; align-items: flex-end; padding: 0 0 var(--sp-2); transform: none; }
+  .subs::after { display: none; }
+  .subs .chip { padding: 6px; transform: translateY(8px); }
+  #compass.deep .strand:not(.on) { opacity: 0; visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) { .strand, #compass.open .strand, .subs .chip, .strand.on .subs .chip { transition: opacity var(--dur-fast) linear, visibility 0s; filter: none; } }

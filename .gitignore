@@ -34,3 +34,11 @@ yarn-error.log*
 .eslintcache
 .vercel
 .env*
+
+# third-party videos for the desk's story: kept locally, never committed (rights stay with their owners)
+public/story/*.mp4
+public/story/*.webm
+public/story/closed-on-sunday.*
+public/story/goggins-effect.*
+public/story/heroes/arda-saatci.jpg
+public/story/heroes/bryan-ruiz.jpg

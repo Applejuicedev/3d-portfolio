@@ -1,33 +1,74 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <!-- a reload starts at the top, not at the old scroll position (see useDeepLink in App) -->
-    <script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual'</script>
-    <!-- the colour palette chosen on an earlier visit (lib/theme.js), before anything is painted -->
-    <script>try { var t = localStorage.getItem('vf-theme'); if (t && t !== 'hell') document.documentElement.dataset.theme = t } catch (e) {}</script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#161618" />
-    <title>Vincent Fidanli — Full Stack Developer</title>
-    <meta name="description" content="Vincent Fidanli, full stack developer and media informatics student. I design and build apps – web, iOS and interfaces – from the first sketch to the database." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://vincentfidanli.de/" />
-    <meta property="og:title" content="Vincent Fidanli — Full Stack Developer" />
-    <meta property="og:description" content="Web apps, iOS apps and interfaces – designed and built by Vincent Fidanli." />
-    <meta name="twitter:card" content="summary" />
-    <link rel="canonical" href="https://vincentfidanli.de/" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141414'/%3E%3Cpath d='M8 10h3.6l4.4 11 4.4-11H24l-6.3 14h-3.4z' fill='%23f5f5f3'/%3E%3C/svg%3E" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Apple's own system font (SF Pro) wherever it exists — Inter (optical sizes) only stands in for
-         it elsewhere; Geist Mono for code, SF Mono where the system has it (see --mono) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Person","name":"Vincent Fidanli","jobTitle":"Full Stack Developer","url":"https://vincentfidanli.de","email":"mailto:vincent@fidanli.de","sameAs":["https://github.com/applejuicedev"]}
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vincent Fidanli</title>
+<meta name="description" content="Vincent Fidanli — full stack developer in Frankfurt. Apps, sites and design studies, on a desk you can use." />
+<meta property="og:title" content="Vincent Fidanli" />
+<meta property="og:description" content="Full stack developer in Frankfurt. Apps, sites and design studies, on a desk you can use." />
+<meta property="og:url" content="https://vincentfidanli.de/" />
+<meta name="theme-color" content="#0a0b0c" />
+<link rel="canonical" href="https://vincentfidanli.de/" />
+<meta name="twitter:card" content="summary" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141414'/%3E%3Cpath d='M8 10h3.6l4.4 11 4.4-11H24l-6.3 14h-3.4z' fill='%23f5f5f3'/%3E%3C/svg%3E" />
+<!-- graphite unless the visitor chose concrete before: set before the first paint, so nothing flashes -->
+<script>document.documentElement.dataset.theme = 'dark'; try { const t = localStorage.getItem('vf-desk-theme'); if (t) document.documentElement.dataset.theme = t } catch (e) {}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..600&family=Geist+Mono:wght@400;500&display=swap" />
+<link rel="stylesheet" href="/concepts/vf/tokens.css" />
+<link rel="stylesheet" href="/concepts/vf/style.css" />
+</head>
+<body>
+  <!-- the mark is the only thing always in a corner; the rest of the meta layer (the stack, the
+       settings, the local times) lies hidden and comes up with the index -->
+  <span class="mark" aria-hidden="true">VF</span>
+  <header id="top" class="mono meta">
+    <div id="skills" aria-label="Skills"><div id="skills-track"></div></div>
+    <nav aria-label="Settings">
+      <button class="chip" id="inbox" data-src="inbox">inbox</button>
+      <button class="chip" id="me" data-src="me">me.txt</button>
+      <button class="chip" id="sound" aria-pressed="true" data-src="sound">sound on</button>
+      <button class="chip" id="theme" data-src="theme">dark</button>
+    </nav>
+  </header>
+
+  <main id="desk">
+    <!-- the sentence, broken into the groups of words that belong together and set far apart, small,
+         in capitals, in the open space of the desk (x, y: where each group stands, as a share of the
+         screen) — read in any order first, and as one sentence on a second look -->
+    <p id="sentence">
+      <span class="frag" style="--x:18;--y:22"><a class="w name" href="#me" data-open="me">Vincent Fidanli</a> is a</span>
+      <span class="frag" style="--x:60;--y:15"><a class="w" href="#role" data-open="role">full stack developer</a></span>
+      <span class="frag" style="--x:83;--y:57">in <a class="w" href="#where" data-open="where">Frankfurt</a>.</span>
+      <span class="frag mid">He builds <a class="w" href="#projects" data-open="projects">apps, sites and design studies — eight so far</a>.</span>
+      <span class="frag" style="--x:8;--y:87;--w:22">He is <a class="w" href="#open" data-open="open">open to working-student roles</a></span>
+      <span class="frag" style="--x:71;--y:84">— <a class="w" href="#hello" data-open="hello">say hello</a>.</span>
+    </p>
+  </main>
+
+  <footer id="bottom" class="mono meta">
+    <div id="zones" aria-label="Local times"><div id="zones-track"></div></div>
+  </footer>
+
+  <!-- the index: a small instrument in the corner; it opens its tools out along a spiral (nav.js) -->
+  <div id="compass">
+    <button id="compass-btn" class="mono" aria-expanded="false" aria-controls="tools" aria-label="Index"><i aria-hidden="true"></i><span>index</span></button>
+    <nav id="tools" aria-label="Tools">
+      <!-- four strands; each opens its own few tools along a hairline -->
+      <div class="strand"><button class="chip st-btn" aria-expanded="false">work</button><div class="subs">
+        <button class="chip" data-open="projects">projects</button><button class="chip" data-open="numbers">numbers</button><button class="chip" data-open="scale">scale</button></div></div>
+      <div class="strand"><button class="chip st-btn" aria-expanded="false">about</button><div class="subs">
+        <button class="chip" data-open="story">story</button><button class="chip" data-open="ask">ask</button><button class="chip" data-open="me">me.txt</button></div></div>
+      <div class="strand"><button class="chip st-btn" aria-expanded="false">play</button><div class="subs">
+        <button class="chip" data-open="studio3d">3d studio</button><button class="chip" data-open="sounds">sounds</button></div></div>
+      <div class="strand"><button class="chip st-btn quiet" aria-expanded="false">desk</button><div class="subs">
+        <button class="chip quiet" id="tidy" data-src="tidy">tidy</button><button class="chip quiet" id="clear" data-src="clear">close all</button></div></div>
+    </nav>
+  </div>
+
+  <svg id="threads" aria-hidden="true"></svg>
+  <script type="module" src="/concepts/vf/main.js"></script>
+</body>
 </html>
