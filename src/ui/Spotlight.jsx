@@ -64,7 +64,7 @@ export default function Spotlight() {
           <svg aria-hidden width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-gray"><circle cx="8.5" cy="8.5" r="6" /><path d="m13 13 5 5" strokeLinecap="round" /></svg>
           <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey}
             role="combobox" aria-expanded="true" aria-controls="spot-list" aria-activedescendant={list[i] ? `spot-${i}` : undefined}
-            placeholder="Spotlight-Suche" className="flex-1 bg-transparent outline-none text-[20px] tracking-tight placeholder:text-faint" />
+            placeholder="Spotlight-Suche" className="flex-1 bg-transparent outline-none text-[17px] placeholder:text-faint" />
           <span className="kbd">esc</span>
         </div>
         <ul id="spot-list" data-lenis-prevent role="listbox" aria-label="Ergebnisse" className="max-h-[52vh] overflow-y-auto p-2">
@@ -75,9 +75,9 @@ export default function Spotlight() {
               <li key={c[1]} role="presentation">
                 {head && <p className="t-cap px-3 pt-2 pb-1">{head}</p>}
                 <div id={`spot-${n}`} role="option" aria-selected={n === i} onMouseMove={() => setI(n)} onClick={() => run(c)}
-                  className={`flex items-center justify-between gap-4 px-3 py-2 rounded-ctl cursor-default ${n === i ? 'bg-blue text-white' : ''}`}>
+                  className={`flex items-center justify-between gap-4 px-3 py-2 rounded-ctl cursor-default ${n === i ? 'bg-blue text-on-accent' : ''}`}>
                   <span className="text-[15px]">{c[1]}</span>
-                  <span className={`t-mono ${n === i ? 'text-white/75' : 'text-gray'}`}>{c[2]}</span>
+                  <span className={`t-mono ${n === i ? 'text-on-accent/75' : 'text-gray'}`}>{c[2]}</span>
                 </div>
               </li>
             )

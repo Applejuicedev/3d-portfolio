@@ -1,72 +1,68 @@
-import { useEffect, useState } from 'react'
+
+import { useEffect, useRef, useState } from 'react'
 import ProjectVideo from '../ui/ProjectVideo'
+import { prefersReduced } from '../lib/motion'
+import { on } from '../lib/events'
 
-// What a project shows inside its window: the recording of the real app, or — for this site — its
-// own boot code (the preloader's real steps), since the site itself is already on screen.
-const Tok = ({ c, children }) => <span style={{ color: c }}>{children}</span>
-const K = (p) => <Tok c="#ff7ab2" {...p} />, S = (p) => <Tok c="#fc6a5d" {...p} />, F = (p) => <Tok c="#67b7a4" {...p} />, C = (p) => <Tok c="#7f8c98" {...p} />
+// What a project shows inside its window: the recording of the real app, or — for this site — the
+// site itself in miniature, live: the turning sphere of points on the white page
+// with the name either side, the glass capsule of the navigation over it.
+function MiniSphere() {
+  const ref = useRef()
+  useEffect(() => {
+    const cv = ref.current, x = cv.getContext('2d'), N = 900, pts = []
+    for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), t = i * 2.399963; pts.push([Math.cos(t) * r, y, Math.sin(t) * r]) }
+    let raf = 0, visible = true
+    const t0 = performance.now(), still = prefersReduced()
+    let ink = `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--c-ink')})`
+    const offT = on('theme', () => { ink = `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--c-ink')})`; if (still) draw(0) })
+    const draw = (now) => {
+      raf = 0
+      const W = cv.clientWidth, H = cv.clientHeight, pr = Math.min(devicePixelRatio || 1, 2)
+      if (cv.width !== W * pr) { cv.width = W * pr; cv.height = H * pr }
+      x.setTransform(pr, 0, 0, pr, 0, 0); x.clearRect(0, 0, W, H)
+      const a = still ? 1 : (now - t0) / 1000 * 0.25, R = Math.min(W, H) * 0.3, c = Math.cos(a), s = Math.sin(a), tc = Math.cos(0.35), ts = Math.sin(0.35)
+      for (const [px, py, pz] of pts) {
+        const X = px * c - pz * s, Z = px * s + pz * c, Y = py * tc - Z * ts, Z2 = py * ts + Z * tc
+        x.globalAlpha = 0.18 + 0.6 * (Z2 + 1) / 2
+        x.fillStyle = ink; x.fillRect(W / 2 + X * R, H / 2 - Y * R, 1.3, 1.3)
+      }
+      if (visible && !still) raf = requestAnimationFrame(draw)
+    }
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf) raf = requestAnimationFrame(draw) })
+    io.observe(cv); raf = requestAnimationFrame(draw)
+    return () => { cancelAnimationFrame(raf); io.disconnect(); offT() }
+  }, [])
+  return <canvas ref={ref} aria-hidden className="absolute inset-0 w-full h-full" />
+}
 
-export function SelfCode() {
+export function SelfPreview() {
+  const [k, setK] = useState(0)
+  useEffect(() => { if (prefersReduced()) return; const id = setInterval(() => setK((n) => (n + 1) % 3), 2600); return () => clearInterval(id) }, [])
   return (
-    <div className="absolute inset-0 bg-[#1f1f24] text-white/85 overflow-hidden">
-      <div className="flex h-full">
-        <ul aria-hidden className="hidden sm:block w-40 flex-none border-r border-white/[0.06] bg-[#25252b] py-3 t-mono text-[11px] text-white/55">
-          {['App.jsx', 'Hero.jsx', 'Projects.jsx', 'Preloader.jsx', 'Spotlight.jsx', 'Dock.jsx'].map((f) => (
-            <li key={f} className={`px-3 py-1 ${f === 'Preloader.jsx' ? 'bg-[#3d5a98] text-white' : ''}`}>{f}</li>
-          ))}
-        </ul>
-        <pre className="flex-1 t-mono text-[11px] sm:text-[12px] leading-[1.75] p-4 overflow-hidden">
-          <C>{'// Jede Zeile erscheint erst, wenn ihr Schritt wirklich fertig ist.'}</C>{'\n'}
-          <K>const</K> STEPS = [{'\n'}
-          {'  '}[<S>'fonts'</S>, () =&gt; document.fonts.<F>ready</F>],{'\n'}
-          {'  '}[<S>'projekte'</S>, () =&gt; Promise.<F>all</F>(posters.<F>map</F>(decode))],{'\n'}
-          {'  '}[<S>'display'</S>, () =&gt; <S>`${'{'}innerWidth{'}'}×${'{'}innerHeight{'}'}`</S>],{'\n'}
-          {'  '}[<S>'motion'</S>, () =&gt; reduced ? <S>'reduziert'</S> : gsap.version],{'\n'}
-          ]{'\n\n'}
-          <K>for</K> (<K>const</K> [name, work] <K>of</K> STEPS) {'{\n'}
-          {'  '}<F>log</F>(name, <K>await</K> <F>work</F>()){'\n'}
-          {'}\n'}
-          <F>close</F>(terminal) <C>{'// das Fenster schließt sich, die Seite erscheint'}</C>
-        </pre>
+    <div aria-label="Vorschau dieser Website" className="absolute inset-0 overflow-hidden bg-canvas text-ink">
+      <MiniSphere />
+      {/* the navigation's capsule, its drop of glass moving from item to item */}
+      <div className="absolute left-1/2 top-[7%] -translate-x-1/2 glass rounded-full p-[3px] !bg-white/30 flex text-[clamp(8px,1vw,11px)] font-medium">
+        <span aria-hidden className="absolute top-[3px] bottom-[3px] left-[3px] w-[calc((100%-6px)/3)] rounded-full bg-paper/75 shadow-[inset_0_0_6px_-1px_#fff,0_1px_4px_-1px_rgb(0_0_0/.15)] transition-transform duration-700 ease-[cubic-bezier(.34,1.4,.5,1)]" style={{ transform: `translateX(${k * 100}%)` }} />
+        {['Arbeiten', 'Skills', 'Über mich'].map((t, i) => <span key={t} className={`relative w-[5.2em] py-[0.45em] text-center transition-colors duration-500 ${i === k ? 'text-ink' : 'text-ink/50'}`}>{t}</span>)}
       </div>
+      <span className="absolute right-[4%] top-[7%] glass-tint rounded-full px-[0.9em] py-[0.45em] text-[clamp(8px,1vw,11px)] font-medium">Kontakt</span>
+      <p className="absolute left-[6%] top-1/2 -translate-y-1/2 text-[clamp(10px,1.4vw,17px)] tracking-[-0.012em]">Vincent Fidanli</p>
+      <p className="absolute right-[6%] top-1/2 -translate-y-1/2 text-[clamp(10px,1.4vw,17px)] tracking-[-0.012em]">Full Stack Developer</p>
+      {/* Mi in his corner */}
+      <span aria-hidden className="absolute right-[6%] bottom-[9%] w-[5%] aspect-square rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,#c9cbd1_35%,#3b3c42_62%,#e4e4e8_80%,#9a9ba2)] shadow-[0_6px_14px_-4px_rgb(0_0_0/.3)]" />
+      <span className="absolute left-[4%] bottom-[6%] glass rounded-full px-[0.9em] py-[0.4em] text-[clamp(8px,0.95vw,11px)] text-ink/70 flex items-center gap-[0.5em]"><i className="block w-[0.55em] h-[0.55em] rounded-full bg-[#28c840]" />läuft gerade in diesem Tab</span>
     </div>
   )
 }
 
 export default function ProjectMedia({ p, alongside }) {
-  if (!p.video) return <SelfCode />
+  if (!p.video) return <SelfPreview />
   return <ProjectVideo src={`/videos/${p.slug}.webm`} poster={`/videos/${p.slug}.jpg`} label={p.video.label} frame={p.video.frame} surface={p.surface} alongside={alongside} />
 }
 
 // ── extras inside the sheets ──────────────────────────────────
-
-// The break rule from the Dienstzeit app (src/lib/zeit/berechnung.ts), unchanged
-export function arbeitszeitMitPause(minuten) {
-  if (minuten <= 360) return minuten
-  if (minuten <= 570) return Math.max(360, minuten - 30)
-  return Math.max(540, minuten - 45)
-}
-const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
-
-export function PauseRule() {
-  const [start, setStart] = useState(7 * 60)
-  const [end, setEnd] = useState(16 * 60 + 45)
-  const dauer = Math.max(0, end - start), ist = arbeitszeitMitPause(dauer), pause = dauer - ist
-  return (
-    <div className="rounded-card bg-white/45 ring-1 ring-black/5 p-4">
-      <p className="t-cap">Probier's aus · Pausenregel aus der App (Grundbetrieb)</p>
-      <div className="grid sm:grid-cols-2 gap-x-5 gap-y-2 mt-3">
-        <label className="block"><span className="flex justify-between text-[13px] text-gray">Dienstbeginn <b className="font-medium text-ink tabular-nums">{hm(start)}</b></span>
-          <input type="range" className="range" min={300} max={660} step={15} value={start} onChange={(e) => setStart(+e.target.value)} /></label>
-        <label className="block"><span className="flex justify-between text-[13px] text-gray">Dienstende <b className="font-medium text-ink tabular-nums">{hm(end)}</b></span>
-          <input type="range" className="range" min={600} max={1320} step={15} value={end} onChange={(e) => setEnd(+e.target.value)} /></label>
-      </div>
-      <p className="mt-3 text-[15px]" aria-live="polite">
-        {hm(dauer)} h anwesend <span className="text-gray">−</span> {pause} min Pause <span className="text-gray">=</span> <b className="font-semibold">{hm(ist)} h</b> Arbeitszeit
-      </p>
-    </div>
-  )
-}
 
 // Measured while the sheet is open: frame rate, JavaScript transferred, DOM size, load time
 export function LiveNumbers() {

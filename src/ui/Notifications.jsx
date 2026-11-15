@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { on } from '../lib/events'
 import { prefersReduced } from '../lib/motion'
+import { sfx } from '../lib/sound'
 
 let id = 0
 
@@ -11,7 +12,7 @@ export default function Notifications() {
   const [items, setItems] = useState([])
   const [hold, setHold] = useState(false)
 
-  useEffect(() => on('notify', (n) => setItems((l) => [...l.slice(-2), { ...n, id: ++id, t: Date.now(), out: false }])), [])
+  useEffect(() => on('notify', (n) => { sfx('chime'); setItems((l) => [...l.slice(-2), { ...n, id: ++id, t: Date.now(), out: false }]) }), [])
   useEffect(() => {
     if (hold || !items.length) return
     const tm = setInterval(() => {
@@ -31,7 +32,7 @@ export default function Notifications() {
         <button key={n.id} type="button" onClick={() => dismiss(n.id)}
           style={{ animation: still ? 'none' : `${n.out ? 'note-out' : 'note-in'} 520ms var(--ease) both` }}
           className="pointer-events-auto glass-strong text-left rounded-card px-3.5 py-3 flex gap-3 items-start">
-          <span aria-hidden className="grid place-items-center w-9 h-9 flex-none rounded-ctl bg-white/80 ring-1 ring-black/5 shadow-pill text-[16px] text-ink">{n.icon ?? '›_'}</span>
+          <span aria-hidden className="grid place-items-center w-9 h-9 flex-none rounded-ctl bg-paper/80 ring-1 ring-black/5 shadow-pill text-[16px] text-ink">{n.icon ?? '›_'}</span>
           <span className="min-w-0 flex-1">
             <span className="flex justify-between gap-2 t-cap"><span className="uppercase tracking-[0.06em]">{n.app}</span><span>jetzt</span></span>
             <span className="block text-[14px] font-semibold leading-snug mt-0.5">{n.title}</span>

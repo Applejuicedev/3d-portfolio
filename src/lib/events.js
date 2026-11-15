@@ -6,7 +6,10 @@ export const on = (name, fn) => {
   subs.get(name).add(fn)
   return () => subs.get(name).delete(fn)
 }
-export const emit = (name, data) => subs.get(name)?.forEach((fn) => fn(data))
+const last = new Map()
+export const emit = (name, data) => { last.set(name, data); subs.get(name)?.forEach((fn) => fn(data)) }
+// the last value sent under a name — for whoever starts listening late
+export const lastOf = (name) => last.get(name)
 
 // a system notification (Notifications.jsx): { app, title, body, icon? }
 export const notify = (n) => emit('notify', n)

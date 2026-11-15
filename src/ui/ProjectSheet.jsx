@@ -3,8 +3,9 @@ import { PROJECTS } from '../data/content'
 import { on, emit } from '../lib/events'
 import { gsap, prefersReduced } from '../lib/motion'
 import { holdScroll } from '../lib/scroll'
+import { sfx } from '../lib/sound'
 import { Lights } from './Window'
-import ProjectMedia, { PauseRule, LiveNumbers } from '../sections/ProjectMedia'
+import ProjectMedia, { LiveNumbers } from '../sections/ProjectMedia'
 
 const Marked = ({ text }) => text.split('**').map((part, i) => (i % 2 ? <strong key={i} className="font-medium text-ink">{part}</strong> : part))
 const LABEL = { problem: 'Problem', lösung: 'Lösung', ergebnis: 'Ergebnis' }
@@ -25,7 +26,7 @@ export default function ProjectSheet() {
 
   useEffect(() => {
     if (!state) return
-    document.documentElement.style.overflow = 'hidden'; holdScroll(true)
+    document.documentElement.style.overflow = 'hidden'; holdScroll(true, 'sheet'); sfx('open')
     const s = sheetRef.current, r = s.getBoundingClientRect(), f = state.from
     closeRef.current?.querySelector('button')?.focus({ preventScroll: true })
     if (!prefersReduced()) {
@@ -46,12 +47,13 @@ export default function ProjectSheet() {
       }
     }
     window.addEventListener('keydown', key)
-    return () => { window.removeEventListener('keydown', key); document.documentElement.style.overflow = ''; holdScroll(false) }
+    return () => { window.removeEventListener('keydown', key); document.documentElement.style.overflow = ''; holdScroll(false, 'sheet') }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state])
 
   const close = () => {
     const done = () => { setState(null); emit('sheet:closed'); lastFocus.current?.focus?.({ preventScroll: true }) }
+    sfx('close')
     if (prefersReduced()) return done()
     gsap.to(backRef.current, { opacity: 0, duration: 0.22 })
     gsap.to(sheetRef.current, { y: 24, scale: 0.97, opacity: 0, duration: 0.22, ease: 'power2.in', onComplete: done })
@@ -66,7 +68,7 @@ export default function ProjectSheet() {
         <div className="min-h-full flex items-start justify-center p-3 sm:p-6 lg:p-10">
           <div ref={sheetRef} role="dialog" aria-modal="true" aria-labelledby="sheet-title"
             className="pointer-events-auto w-full max-w-[76rem] rounded-sheet glass-strong flat overflow-hidden will-change-transform">
-            <div ref={closeRef} className="sticky top-0 z-10 flex items-center gap-3 h-12 px-5 border-b border-black/[0.06] bg-white/95">
+            <div ref={closeRef} className="sticky top-0 z-10 flex items-center gap-3 h-12 px-5 border-b border-black/[0.06] bg-paper/55 backdrop-blur-2xl backdrop-saturate-[1.9]">
               <Lights onClose={close} />
               <p className="absolute inset-x-24 text-center text-[13px] font-medium text-gray truncate">{p.title} — {p.repo}</p>
             </div>
@@ -78,14 +80,13 @@ export default function ProjectSheet() {
                   <h2 id="sheet-title" className="t-display mt-2">{p.title}</h2>
                   <p className="t-lead text-gray mt-3">{p.lede}</p>
                 </div>
-                {p.slug === 'dienstzeit' && <div data-in><PauseRule /></div>}
                 {p.slug === 'portfolio' && <div data-in><LiveNumbers /></div>}
                 <ul data-in className="flex flex-wrap gap-1.5">
-                  {p.tech.map((t) => <li key={t} className="t-mono rounded-full bg-white/55 ring-1 ring-black/5 px-2.5 py-1">{t}</li>)}
+                  {p.tech.map((t) => <li key={t} className="glass t-mono rounded-full px-2.5 py-1">{t}</li>)}
                 </ul>
                 <div data-in className="flex flex-wrap gap-2">
                   {p.links.map((l) => (
-                    <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="group btn-chrome inline-flex items-center gap-2 h-10 px-4 rounded-full text-[14px] font-medium">
+                    <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="group btn gap-2 h-10 px-4 text-[14px]">
                       <span className="roll"><span>{l.label}</span><span aria-hidden>{l.label}</span></span><span aria-hidden>↗</span>
                     </a>
                   ))}

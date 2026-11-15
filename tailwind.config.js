@@ -6,21 +6,22 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter Tight"', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
-        // SF Mono where the system has it (Apple devices), JetBrains Mono elsewhere
-        mono: ['ui-monospace', '"SF Mono"', 'SFMono-Regular', 'Menlo', '"JetBrains Mono"', 'monospace'],
+        // SF Pro on Apple devices (as on adamperlis.com), Inter elsewhere
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Inter"', 'system-ui', 'sans-serif'],
+        mono: ['"Geist Mono"', 'ui-monospace', '"SF Mono"', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
-      // the tokens from index.css (same values)
+      // the tokens from index.css — CSS variables, so the palettes (html[data-theme]) change them all
       colors: {
-        canvas: 'rgb(250 250 250 / <alpha-value>)',
-        paper: 'rgb(255 255 255 / <alpha-value>)',
-        mist: 'rgb(240 240 240 / <alpha-value>)',
-        ink: 'rgb(15 15 15 / <alpha-value>)',
-        gray: 'rgb(99 99 102 / <alpha-value>)',
-        faint: 'rgb(142 142 147 / <alpha-value>)',
-        line: 'rgb(0 0 0 / 0.08)',
+        canvas: 'rgb(var(--c-canvas) / <alpha-value>)',
+        paper: 'rgb(var(--c-paper) / <alpha-value>)',
+        mist: 'rgb(var(--c-mist) / <alpha-value>)',
+        ink: 'rgb(var(--c-ink) / <alpha-value>)',
+        gray: 'rgb(var(--c-gray) / <alpha-value>)',
+        faint: 'rgb(var(--c-faint) / <alpha-value>)',
+        line: 'rgb(var(--c-line) / 0.08)',
         night: 'rgb(28 28 30 / <alpha-value>)',
-        blue: 'rgb(0 113 227 / <alpha-value>)',
+        blue: 'rgb(var(--c-accent) / <alpha-value>)', // the accent: blue, orange, light blue or yellow by palette
+        'on-accent': 'rgb(var(--c-on-accent) / <alpha-value>)',
       },
       // one radius scale: control · card · window · sheet
       borderRadius: { ctl: '10px', card: '16px', win: '22px', sheet: '32px' },

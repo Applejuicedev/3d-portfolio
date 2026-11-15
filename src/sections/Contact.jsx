@@ -4,7 +4,7 @@ import { PERSON, CHANNELS } from '../data/content'
 import { useMotion, gsap, prefersReduced } from '../lib/motion'
 import { notify, copyText } from '../lib/events'
 import { goTo, useBerlinTime } from '../lib/nav'
-import Window from '../ui/Window'
+import { Lights } from '../ui/Window'
 
 const TOPICS = ['Praktikum', 'Werkstudentenstelle', 'Projektidee', 'Einfach Hallo']
 const ver = (name) => (pkg.dependencies[name] ?? '').replace(/^\D*/, '').split('.').slice(0, 2).join('.')
@@ -42,37 +42,50 @@ function Compose() {
       <path d="M22 28 44 6 18 25z" fill="#e7e9ee" />
       <path d="M22 28 24 38 28 32z" fill="#d6d9df" />
     </svg>
-    <div ref={winRef}>
-    <Window title="Neue E-Mail" className="w-full max-w-[44rem]">
+    {/* Apple Mail's compose window: the toolbar with Send, the header fields on white with grey labels
+        and hairlines, the recipient as Mail's blue token, the message below */}
+    <div ref={winRef} className="mac-window w-full max-w-[44rem] text-[13px] text-ink">
       <form onSubmit={send}>
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-line text-[15px]">
-          <span className="text-gray w-16">An:</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/60 ring-1 ring-black/5 px-3 py-0.5">{PERSON.email}</span>
-          <button type="button" onClick={copy} className="press ml-auto t-mono text-gray hover:text-ink rounded-full px-2.5 py-1 hover:bg-mist">kopieren</button>
+        <div className="relative flex items-center gap-3 h-[52px] px-4 border-b border-black/[0.07]">
+          <Lights />
+          <button type="submit" aria-label="Senden" title="Senden" className="glass ml-3 grid place-items-center w-10 h-8 rounded-full text-gray hover:text-blue transition-colors">
+            <svg aria-hidden width="17" height="16" viewBox="0 0 17 16"><path d="M1.5 7.3 15.6 1 11 14.8 8 9.2z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /><path d="M8 9.2 15.6 1" stroke="currentColor" strokeWidth="1.4" /></svg>
+          </button>
+          <p className="absolute left-1/2 -translate-x-1/2 text-[13px] font-semibold text-ink/85">{topic}</p>
+          <span className="ml-auto flex items-center gap-4 text-faint">
+            <svg aria-hidden width="15" height="15" viewBox="0 0 15 15"><path d="M9.5 3.5 4 9a1.6 1.6 0 0 0 2.3 2.3l6-6a2.8 2.8 0 0 0-4-4l-6 6a4 4 0 0 0 5.7 5.7l5-5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+            <span className="text-[14px] font-medium">Aa</span>
+          </span>
         </div>
-        <fieldset className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-line">
+        <div className="flex items-center gap-2 h-10 px-4 border-b border-black/[0.08] bg-paper">
+          <span className="w-16 text-right text-faint">An:</span>
+          <span className="inline-flex items-center rounded-[5px] bg-blue/[0.14] text-blue px-1.5 py-[1px]">{PERSON.name}</span>
+          <button type="button" onClick={copy} className="ml-auto text-[12px] text-faint hover:text-blue transition-colors">Adresse kopieren</button>
+        </div>
+        <div className="flex items-center gap-2 h-10 px-4 border-b border-black/[0.08] bg-paper">
+          <span className="w-16 text-right text-faint">Kopie:</span>
+        </div>
+        <fieldset className="flex flex-wrap items-center gap-1.5 min-h-10 px-4 py-1.5 border-b border-black/[0.08] bg-paper">
           <legend className="sr-only">Betreff</legend>
-          <span aria-hidden className="text-gray w-16 text-[15px]">Betreff:</span>
+          <span aria-hidden className="w-16 text-right text-faint mr-0.5">Betreff:</span>
           {TOPICS.map((t) => (
-            <label key={t} className={`press cursor-pointer rounded-full px-3 py-1 text-[14px] ring-1 transition-colors ${topic === t ? 'bg-ink text-canvas ring-ink' : 'ring-line hover:bg-mist'}`}>
+            <label key={t} className={`cursor-pointer rounded-full px-2.5 py-[3px] transition-colors ${topic === t ? 'bg-blue text-on-accent' : 'text-ink/80 hover:bg-black/[0.05]'}`}>
               <input type="radio" name="topic" value={t} checked={topic === t} onChange={() => setTopic(t)} className="sr-only" />{t}
             </label>
           ))}
         </fieldset>
-        <label className="block px-5 py-4">
+        <label className="block px-5 pt-4 pb-2 bg-paper">
           <span className="sr-only">Nachricht</span>
-          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder="Hallo Vincent, …"
-            className="w-full resize-none bg-transparent outline-none text-[16px] leading-relaxed placeholder:text-faint" />
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} placeholder="Hallo Vincent, …"
+            className="w-full resize-none bg-transparent outline-none text-[14px] leading-[1.55] placeholder:text-faint/70" />
         </label>
-        <div className="flex items-center justify-between gap-4 px-5 pb-5">
-          <p className="t-cap">öffnet dein Mailprogramm</p>
-          <button type="submit" className="group btn-chrome inline-flex items-center gap-2 h-10 px-5 rounded-full text-[14px] font-medium">
+        <div className="flex items-center justify-between gap-4 px-5 pb-5 bg-paper">
+          <p className="text-[12px] text-faint">Gesendet mit deinem Mailprogramm · {PERSON.email}</p>
+          <button type="submit" className="group btn-primary gap-2 h-9 px-4 text-[14px]">
             <span className="roll"><span>Senden</span><span aria-hidden>Senden</span></span>
-            <svg aria-hidden width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="transition-transform duration-500 ease-sys group-hover:translate-x-0.5 group-hover:-translate-y-0.5"><path d="M15 1 1 7l5 2 2 6z" /></svg>
           </button>
         </div>
       </form>
-    </Window>
     </div>
     </div>
   )
@@ -83,16 +96,17 @@ export default function Contact() {
   const time = useBerlinTime()
   useMotion(ref, (el) => {
     // the two words close in from either side, the mail window rises beside them
-    const st = { trigger: el, start: 'top 85%', end: 'top 15%', scrub: 0.6 }
+    // (measured from the heading, so it plays wherever the page above ends)
+    const st = { trigger: el.querySelector('h2'), start: 'top 78%', end: 'top 22%', scrub: 0.6, invalidateOnRefresh: true }
     gsap.timeline({ scrollTrigger: st })
-      .fromTo(el.querySelector('[data-w1]'), { xPercent: -24, opacity: 0.2 }, { xPercent: 0, opacity: 1, ease: 'none' }, 0)
-      .fromTo(el.querySelector('[data-w2]'), { xPercent: 60, opacity: 0 }, { xPercent: 0, opacity: 1, ease: 'none' }, 0.1)
-      .fromTo(el.querySelector('[data-mail]'), { y: 160, scale: 0.9, opacity: 0 }, { y: 0, scale: 1, opacity: 1, ease: 'none' }, 0.15)
+      .fromTo(el.querySelector('[data-w1]'), { x: () => -innerWidth * 0.55, opacity: 0 }, { x: 0, opacity: 1, ease: 'power2.out' }, 0)
+      .fromTo(el.querySelector('[data-w2]'), { x: () => innerWidth * 0.55, opacity: 0 }, { x: 0, opacity: 1, ease: 'power2.out' }, 0)
+      .fromTo(el.querySelector('[data-mail]'), { y: 160, scale: 0.9, opacity: 0 }, { y: 0, scale: 1, opacity: 1, ease: 'none' }, 0.25)
   })
 
   return (
     <footer ref={ref} id="kontakt" aria-labelledby="kontakt-title" className="frame pt-[var(--space-section)] pb-8 overflow-x-clip">
-      <h2 id="kontakt-title" className="t-hero text-[clamp(3.4rem,13vw,12rem)] leading-[0.9]">
+      <h2 id="kontakt-title" className="t-hero text-[clamp(3rem,9.5vw,8.5rem)] leading-[0.9]">
         <span data-w1 className="inline-block">Schreib</span> <span data-w2 className="inline-block text-gray">mir.</span>
       </h2>
       <div className="grid grid-cols-12 gap-x-6 gap-y-10 mt-10 items-start">
@@ -106,7 +120,7 @@ export default function Contact() {
           return (
             <li key={c.label}>
               <a href={c.href} target={ext ? '_blank' : undefined} rel={ext ? 'noopener noreferrer' : undefined}
-                className="group press inline-flex items-center gap-2 h-10 px-4 rounded-full glass text-[14px]">
+                className="group btn gap-2 h-10 px-4 text-[14px]">
                 <span className="t-mono text-gray">{c.label}</span>
                 <span className="roll"><span>{c.value}</span><span aria-hidden>{c.value}</span></span>
               </a>

@@ -1,0 +1,263 @@
+{
+	"Hi, ich bin Mi! Vincent hat mich mit Claude Code gebaut.": {
+		"src": "/mi/voice/fb8a681b40e4.mp3",
+		"ms": 3576,
+		"words": [
+			0,
+			488,
+			673,
+			859,
+			1312,
+			1834,
+			2020,
+			2206,
+			2345,
+			2647,
+			2914
+		]
+	},
+	"Scroll los, ich komm mit.": {
+		"src": "/mi/voice/d587a2a18660.mp3",
+		"ms": 1486,
+		"words": [
+			0,
+			464,
+			755,
+			882,
+			1091
+		]
+	},
+	"Die Bildchen im Satz sind echte Ausschnitte. Fahr mal drüber.": {
+		"src": "/mi/voice/33acefde1600.mp3",
+		"ms": 3622,
+		"words": [
+			0,
+			244,
+			743,
+			894,
+			1184,
+			1486,
+			1858,
+			2601,
+			2810,
+			2949
+		]
+	},
+	"Seine Projekte – echte Aufnahmen aus den Apps. Scroll weiter, die Galerie läuft seitwärts.": {
+		"src": "/mi/voice/142ce1ee0045.mp3",
+		"ms": 6084,
+		"words": [
+			0,
+			383,
+			1080,
+			1184,
+			1556,
+			2113,
+			2276,
+			2485,
+			3228,
+			3611,
+			4203,
+			4365,
+			4865,
+			5201
+		]
+	},
+	"Sein Werkzeugkasten. Fahr über ein Projekt, dann leuchtet auf, was drinsteckt.": {
+		"src": "/mi/voice/f23286fd165a.mp3",
+		"ms": 5294,
+		"words": [
+			0,
+			418,
+			1521,
+			1858,
+			2090,
+			2206,
+			2926,
+			3146,
+			3564,
+			4087,
+			4354
+		]
+	},
+	"Hier steht, wer er ist. Die Stationen klappen beim Scrollen auf.": {
+		"src": "/mi/voice/654244b474fd.mp3",
+		"ms": 4365,
+		"words": [
+			0,
+			290,
+			743,
+			998,
+			1161,
+			1823,
+			1985,
+			2670,
+			3007,
+			3216,
+			3750
+		]
+	},
+	"Schreib ihm! Er sucht Praktika und Werkstudentenstellen ab 2029.": {
+		"src": "/mi/voice/8a66bba9c02a.mp3",
+		"ms": 5480,
+		"words": [
+			0,
+			580,
+			1219,
+			1382,
+			1625,
+			2264,
+			2461,
+			3506,
+			3680
+		]
+	},
+	"⌘K findet alles auf dieser Seite.": {
+		"src": "/mi/voice/f738af802fde.mp3",
+		"ms": 2322,
+		"words": [
+			0,
+			383,
+			766,
+			1138,
+			1289,
+			1614
+		]
+	},
+	"Vincent sucht Praktika und Werkstudentenstellen – ab 2029.": {
+		"src": "/mi/voice/e5830d7fb49a.mp3",
+		"ms": 4551,
+		"words": [
+			0,
+			522,
+			801,
+			1428,
+			1579,
+			2659,
+			2705,
+			2961
+		]
+	},
+	"Ich habe die Seite gestartet. Return war deine Idee.": {
+		"src": "/mi/voice/245ebe01de3f.mp3",
+		"ms": 3576,
+		"words": [
+			0,
+			221,
+			430,
+			580,
+			894,
+			1695,
+			2287,
+			2485,
+			2844
+		]
+	},
+	"Die Fenster oben laufen mit echten Aufnahmen.": {
+		"src": "/mi/voice/3d78f484e3d2.mp3",
+		"ms": 3111,
+		"words": [
+			0,
+			221,
+			766,
+			1254,
+			1602,
+			1800,
+			2229
+		]
+	},
+	"Ich bin Mi – nur CSS, kein Three.js, keine Bilder.": {
+		"src": "/mi/voice/f7b69bf3a938.mp3",
+		"ms": 3529,
+		"words": [
+			0,
+			209,
+			430,
+			697,
+			766,
+			1068,
+			1637,
+			1904,
+			2577,
+			2879
+		]
+	},
+	"Hi, ich bin Mi.": {
+		"src": "/mi/voice/295b6e0bc375.mp3",
+		"ms": 1393,
+		"words": [
+			0,
+			511,
+			731,
+			940
+		]
+	},
+	"Vincent hat mich mit Claude Code gebaut. Scroll los!": {
+		"src": "/mi/voice/ce655b2451f0.mp3",
+		"ms": 3437,
+		"words": [
+			0,
+			511,
+			685,
+			859,
+			1022,
+			1358,
+			1672,
+			2334,
+			2752
+		]
+	},
+	"Such ruhig – ich warte.": {
+		"src": "/mi/voice/c9d0d66f9397.mp3",
+		"ms": 1858,
+		"words": [
+			0,
+			383,
+			848,
+			1022,
+			1207
+		]
+	},
+	"Kopiert! Jetzt nur noch einfügen.": {
+		"src": "/mi/voice/18f6559498e9.mp3",
+		"ms": 2508,
+		"words": [
+			0,
+			917,
+			1254,
+			1416,
+			1625
+		]
+	},
+	"Ich drück die Daumen.": {
+		"src": "/mi/voice/9b85529c3200.mp3",
+		"ms": 1393,
+		"words": [
+			0,
+			255,
+			569,
+			708
+		]
+	},
+	"Oh – hi! Ich war kurz weg.": {
+		"src": "/mi/voice/68eab444586e.mp3",
+		"ms": 1765,
+		"words": [
+			0,
+			255,
+			360,
+			685,
+			859,
+			998,
+			1277
+		]
+	},
+	"zzz …": {
+		"src": "/mi/voice/99baaf1055da.mp3",
+		"ms": 697,
+		"words": [
+			0,
+			430
+		]
+	}
+}

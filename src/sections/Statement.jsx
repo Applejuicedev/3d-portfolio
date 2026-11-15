@@ -56,7 +56,7 @@ function AppsCard() {
   return (
     <>
       <p className="t-cap">Anwendungen</p>
-      <p className="text-[17px] font-medium tracking-tight mt-1">Drei Projekte, alle echt</p>
+      <p className="text-[15px] font-medium mt-1">Drei Projekte, alle echt</p>
       <ul className="mt-3 -mx-1.5">
         {['dienstzeit', 'creators-journal', 'portfolio'].map((s) => {
           const p = byslug(s)
@@ -83,7 +83,7 @@ function InterfaceCard() {
   return (
     <>
       <p className="t-cap">Interface</p>
-      <p className="text-[17px] font-medium tracking-tight mt-1">Vom Entwurf zum Pixel</p>
+      <p className="text-[15px] font-medium mt-1">Vom Entwurf zum Pixel</p>
       <div className="mt-3 flex items-center gap-2">
         <Tile t="Figma" size={38} /><span className="text-faint">→</span><Tile t="React" size={38} /><Tile t="SwiftUI" size={38} /><Tile t="Tailwind CSS" size={38} />
       </div>
@@ -95,7 +95,7 @@ function DataCard() {
   return (
     <>
       <p className="t-cap">Datenbank</p>
-      <p className="text-[17px] font-medium tracking-tight mt-1">Daten, die bleiben</p>
+      <p className="text-[15px] font-medium mt-1">Daten, die bleiben</p>
       <div className="mt-3 flex items-center gap-2"><Tile t="SQLite" size={38} /><Tile t="Prisma" size={38} /><Tile t="TypeScript" size={38} /></div>
       <ul className="text-[14px] text-gray leading-snug mt-3 space-y-1">
         <li><span className="text-ink">Creator's Journal</span> speichert alles lokal in SQLite.</li>
@@ -174,7 +174,6 @@ export default function Statement() {
       {/* set like a magazine page: a small label in the margin, the sentence left with a first-line
           indent (a div, not a p: the popups hold lists and paragraphs of their own) */}
       <div className="grid grid-cols-12 gap-x-6 gap-y-6">
-        <p className="col-span-12 lg:col-span-2 t-cap pt-3">Was ich mache</p>
       <div data-sentence className="col-span-12 lg:col-span-10 t-display max-w-[16em] [text-indent:1.6em] [&_*]:[text-indent:0]">
         Ich gestalte und entwickle digitale Anwendungen <Chip id="apps" /> – vom Interface <Chip id="ui" /> bis
         zur Datenbank <Chip id="data" />.
@@ -187,7 +186,7 @@ export default function Statement() {
         .motif-pointer{left:20%;top:70%;animation:pointer 3.2s var(--ease) infinite}
         @keyframes pointer{0%,10%{left:18%;top:72%}45%,70%{left:72%;top:74%}100%{left:18%;top:72%}}
         .motif-press{animation:press 3.2s var(--ease) infinite}
-        @keyframes press{0%,48%{transform:scale(1);background:#0f0f0f}53%{transform:scale(.88);background:#0071e3}62%,100%{transform:scale(1);background:#0f0f0f}}
+        @keyframes press{0%,48%{transform:scale(1);background:var(--ink)}53%{transform:scale(.88);background:var(--blue)}62%,100%{transform:scale(1);background:var(--ink)}}
         .motif-row{opacity:0;animation:row 4s var(--ease) infinite;animation-delay:calc(var(--r) * .35s)}
         @keyframes row{0%{opacity:0;transform:translateX(-12%)}15%,80%{opacity:1;transform:none}100%{opacity:0}}
         @media (prefers-reduced-motion:reduce){.motif-fan,.motif-pointer,.motif-press,.motif-row{animation:none;opacity:1}}

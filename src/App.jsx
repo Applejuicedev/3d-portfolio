@@ -40,11 +40,11 @@ function useDeepLink() {
 // notification mentions Spotlight — once per visit, and only if it hasn't been used yet.
 function useHint() {
   useEffect(() => {
-    let used = false, id
+    let used = false, id, alive = true
     const k = (e) => { if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || e.key === '/') used = true }
     window.addEventListener('keydown', k)
-    booted.then(() => { id = setTimeout(() => { if (!used) notify({ app: 'Tipp', title: 'Spotlight', body: '⌘K (oder /) findet alles auf dieser Seite.', icon: '⌘' }) }, 14000) })
-    return () => { clearTimeout(id); window.removeEventListener('keydown', k) }
+    booted.then(() => { if (alive) id = setTimeout(() => { if (!used) notify({ app: 'Tipp', title: 'Spotlight', body: '⌘K (oder /) findet alles auf dieser Seite.', icon: '⌘' }) }, 14000) })
+    return () => { alive = false; clearTimeout(id); window.removeEventListener('keydown', k) }
   }, [])
 }
 
@@ -59,10 +59,14 @@ export default function App() {
       <Nav />
       <main className="relative z-[1]">
         <section id="start" aria-label="Start"><Hero /></section>
-        <Statement />
-        <Projects />
-        <Stack />
-        <Path />
+        {/* "Ich gestalte und entwickle …" and all that follows slide up over the hero, as the next layer */}
+        <div className="relative z-[2] -mt-[100svh] bg-canvas rounded-t-[28px] lg:rounded-t-[40px] shadow-[0_-1px_0_rgb(255_255_255),0_-24px_48px_-36px_rgb(0_0_0/.18)]">
+          {/* (everything after the hero rides on this layer, so the sphere never shows between them) */}
+          <Statement />
+          <Projects />
+          <Stack />
+          <Path />
+        </div>
       </main>
       <div className="relative z-[1]"><Contact /></div>
       <Notifications />

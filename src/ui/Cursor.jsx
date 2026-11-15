@@ -29,6 +29,8 @@ export default function Cursor() {
 
     const pick = (t) => {
       if (!t?.closest) return
+      // on a dark ground (the hero, [data-dark]) the dot turns into a small glowing light
+      dot.dataset.dark = t.closest('[data-dark]') ? '1' : ''
       const l = t.closest('[data-cursor]')
       const s = t.closest(SNAP)
       if (t.closest('input:not([type=range]):not([type=radio]), textarea, [contenteditable="true"]')) { snap = null; label = 'text'; return }
@@ -106,8 +108,8 @@ export default function Cursor() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[400]">
       <span ref={plateRef} className="absolute left-0 top-0 bg-ink" style={{ opacity: 0 }} />
-      <span ref={dotRef} className="absolute left-0 top-0 w-[10px] h-[10px] rounded-full bg-ink shadow-[0_0_0_1.5px_#fff,0_1px_4px_rgb(0_0_0/.25)]" />
-      <span ref={pillRef} className="absolute left-0 top-0 rounded-pill bg-ink text-canvas text-[13px] font-medium px-3.5 py-1.5 shadow-lift whitespace-nowrap transition-[opacity] duration-200" style={{ opacity: 0 }}>
+      <span ref={dotRef} className="absolute left-0 top-0 w-[10px] h-[10px] rounded-full bg-ink shadow-[0_0_0_1.5px_#fff,0_1px_4px_rgb(0_0_0/.25)] transition-[background-color,box-shadow] duration-300 data-[dark='1']:bg-white data-[dark='1']:shadow-[0_0_10px_3px_rgb(255_255_255/.55),0_0_2px_rgb(255_255_255)]" />
+      <span ref={pillRef} className="glass-dark absolute left-0 top-0 rounded-full text-white text-[13px] font-medium px-3.5 py-1.5 whitespace-nowrap transition-[opacity] duration-200" style={{ opacity: 0 }}>
         <span ref={textRef} />
       </span>
     </div>

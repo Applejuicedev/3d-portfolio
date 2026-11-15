@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { gsap, prefersReduced } from '../lib/motion'
+import { useEffect, useRef, useState } from 'react'
+import { gsap, prefersReduced, finePointer } from '../lib/motion'
 import { PROJECTS, PERSON } from '../data/content'
 import { markBooted, on, emit } from '../lib/events'
 import { holdScroll, scrollToTarget } from '../lib/scroll'
-import LiquidChrome from './LiquidChrome'
+import { sfx, unlock, setSound, useSound } from '../lib/sound'
 
-// The boot steps are real: each line prints when its work has actually finished, so the sequence
-// is as long as the page needs and no longer (typing only adds a few hundred milliseconds).
+// The boot steps are real: each one reports when its work has actually finished, so the build is
+// as long as the page needs and no longer.
 const STEPS = [
-  ['fonts', () => document.fonts.ready.then(() => 'Inter Tight · JetBrains Mono')],
+  ['fonts', () => document.fonts.ready.then(() => /Mac|iPhone|iPad/.test(navigator.userAgent) ? 'SF Pro · Geist Mono' : 'Inter · Geist Mono')],
   ['projekte', () => Promise.all(PROJECTS.filter((p) => p.video).map((p) => {
     const img = new Image(); img.src = `/videos/${p.slug}.jpg`
     return img.decode().catch(() => {})
@@ -19,8 +19,7 @@ const STEPS = [
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-// the work starts as soon as the page loads, not when the visitor answers: return only shows it.
-// `readyAt` is when the last step had really finished (ms since navigation start).
+// the work starts as soon as the page loads, not when the visitor answers: Run only shows it.
 let work, readyAt
 const startWork = () => {
   if (!work) {
@@ -30,105 +29,96 @@ const startWork = () => {
   return work
 }
 
-// The opening: a terminal cast in liquid chrome, floating in space; its screen is frosted glass —
-// light, the moving chrome showing through it blurred — waiting. Nothing happens until the visitor
-// answers — return, a click on Run, or a tap on the window. Then the command runs, the real
-// loading steps log themselves, and the terminal wakes up and becomes the companion (Buddy). "Intro überspringen" or Esc skip it at any time.
+// The opening: a small terminal of Liquid Glass on the white page, turning towards the pointer. The
+// title bar, a prompt, a command waiting. Nothing
+// happens until the visitor answers: return, Run, or a click anywhere. Then it builds: the real
+// loading steps log themselves as they finish, a progress line fills, "Build Succeeded" — and the
+// terminal's screen grows until it is the page. Esc or "Intro überspringen" skip it at any time.
 export default function Preloader() {
-  const [run, setRun] = useState(0) // increments on every boot (Spotlight can restart it)
-  const [phase, setPhase] = useState('idle') // idle → running → leaving → done
-  const [lines, setLines] = useState([])
+  const [phase, setPhase] = useState('idle') // idle → running → leaving → handoff → done
+  const [lines, setLines] = useState([]) // the console
   const [nudge, setNudge] = useState(0)
-  const [liquid, setLiquid] = useState(true)
-  const noLiquid = useCallback(() => setLiquid(false), [])
   const rootRef = useRef(), winRef = useRef(), runBtn = useRef()
+  const sound = useSound()
 
   useEffect(() => { startWork() }, [])
-  // lock the page while booting; Spotlight's "Terminal neu starten" brings it back
-  useEffect(() => on('reboot', () => { scrollToTarget(0, { immediate: true }); setLines([]); setPhase('idle'); setRun((r) => r + 1) }), [])
+  useEffect(() => on('reboot', () => { scrollToTarget(0, { immediate: true }); setLines([]); setPhase('idle') }), [])
   useEffect(() => {
     const html = document.documentElement
-    if (phase === 'done' || phase === 'handoff') { html.removeAttribute('data-booting'); holdScroll(false) }
-    // handoff: the navigation (with Kontakt) fades in once the terminal has become the companion
-    if (phase === 'handoff') { const t = setTimeout(() => setPhase('done'), 760); return () => clearTimeout(t) }
+    if (phase === 'done' || phase === 'handoff') { html.removeAttribute('data-booting'); holdScroll(false, 'boot') }
+    if (phase === 'handoff') { const t = setTimeout(() => setPhase('done'), 700); return () => clearTimeout(t) }
     if (phase === 'done') return
-    html.setAttribute('data-booting', ''); holdScroll(true)
-    if (phase === 'idle') requestAnimationFrame(() => runBtn.current?.focus({ preventScroll: true }))
+    html.setAttribute('data-booting', ''); holdScroll(true, 'boot')
+    if (phase === 'idle') requestAnimationFrame(() => runBtn.current?.focus({ preventScroll: true, focusVisible: false }))
   }, [phase])
 
-  // the light on the chrome follows the pointer; the window leans a degree or two towards it
-  useEffect(() => {
-    if (phase === 'done' || phase === 'handoff' || prefersReduced()) return
-    const w = winRef.current
-    const move = (e) => {
-      const r = w.getBoundingClientRect()
-      const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height
-      w.style.setProperty('--lx', `${x * 100}%`); w.style.setProperty('--ly', `${y * 100}%`)
-      gsap.to(w, { rotateY: (x - 0.5) * 6, rotateX: -(y - 0.5) * 6, duration: 0.8, ease: 'power3.out', overwrite: 'auto' })
-    }
-    window.addEventListener('pointermove', move)
-    return () => window.removeEventListener('pointermove', move)
-  }, [phase, run])
-
-  // The end: the terminal becomes the companion. Its text clears and two eyes open on the empty
-  // screen (it wakes up); then it shrinks and travels in an arc to where the companion lives (Buddy),
-  // squaring off into its shape, while the ground fades and the page comes up. There it hands over.
+  // The end: the whole terminal becomes the page — it turns to face the visitor, then the glass
+  // itself grows from its place until it fills the screen, its contents fading, the glass clouding
+  // over into the page's white.
   const finish = (skip = false) => {
     setPhase('leaving')
-    const still = prefersReduced() || skip
-    const w = winRef.current, done = () => {
-      setPhase('handoff'); markBooted(); emit('buddy:arrive')
-    }
-    const target = document.querySelector('[data-buddy-body]')?.getBoundingClientRect()
-    if (still || !target || !target.width) {
-      gsap.timeline({ onComplete: done }).to(rootRef.current, { opacity: 0, duration: 0.35 })
-      return
-    }
-    // pin the window where it stands, so its real size can change without moving anything
-    const r = w.getBoundingClientRect(), screen = w.querySelector('[data-screen]')
-    gsap.set(w, { position: 'fixed', left: r.left, top: r.top, width: r.width, height: r.height, margin: 0, padding: 0 })
-    gsap.set(screen, { position: 'absolute', left: 10, top: 10, right: 10, bottom: 10 })
-    // the companion's exact measures (Buddy): face 22.37 % corners, an 11 % chrome rim, a screen
-    // with 16 % corners, eyes 8 × 12 px 9 px apart (28 × 44 / 32 here → × 0.2857), the caret mouth
-    const S = target.width, rim = S * 0.11, inner = S - rim * 2
-    const fly = { duration: 1.1, ease: 'power3.inOut' }
+    const done = () => { setPhase('handoff'); markBooted(); emit('buddy:arrive') }
+    const still = prefersReduced() || skip, win = winRef.current, tilt = tiltRef.current
+    if (still || !win) { gsap.to(rootRef.current, { opacity: 0, duration: 0.35, onComplete: done }); return }
+    sfx('whoosh')
+    const root = rootRef.current
+    gsap.killTweensOf(tilt)
     gsap.timeline({ onComplete: done })
-      .to(w.querySelectorAll('[data-log], [data-bar]'), { opacity: 0, filter: 'blur(6px)', duration: 0.35, ease: 'power2.in' }, 0)
-      .to(w, { rotateX: 0, rotateY: 0, duration: 0.4 }, 0)
-      // the screen turns into the companion's own: its exact black and edge, no blur
-      .set(screen, { backdropFilter: 'none', webkitBackdropFilter: 'none' }, 0.2)
-      .to(screen, { backgroundColor: '#0e0e10', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 0 1px rgba(0,0,0,.6)', duration: 0.45, ease: 'power2.out' }, 0.2)
-      .fromTo(w.querySelector('[data-wake]'), { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(2.5)' }, 0.3)
-      .to(w.querySelector('[data-wake]'), { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 0.95)
-      .set(w.querySelector('[data-bar]'), { display: 'none' }, 1.15)
-      .to(w, { left: target.left, ...fly }, 1.2)
-      .to(w, { top: target.top, duration: 1.1, ease: 'back.inOut(1.3)' }, 1.2)
-      .to(w, { width: S, height: S, borderRadius: S * 0.2237, ...fly }, 1.2)
-      .to(w, { rotation: target.left > r.left ? 8 : -8, duration: 0.55, ease: 'power2.out' }, 1.2)
-      .to(w, { rotation: 0, duration: 0.55, ease: 'power2.inOut' }, 1.75)
-      .to(screen, { left: rim, top: rim, right: rim, bottom: rim, borderRadius: inner * 0.16, ...fly }, 1.2)
-      .to(w.querySelector('[data-wake] > div'), { scale: 8 / 28, y: -4, ...fly }, 1.2)
-      .to(w.querySelector('[data-wake-mouth]'), { opacity: 1, duration: 0.3 }, 2.05)
-      // on the way the liquid chrome cools into the companion's polished chrome, so the swap shows nothing
-      .to(w.querySelector('canvas'), { opacity: 0, duration: 0.7, ease: 'power2.inOut' }, 1.5)
-      .to(w.querySelector('[data-cast]'), { opacity: 1, duration: 0.7, ease: 'power2.inOut' }, 1.5)
+      .to(tilt, { rotationX: 0, rotationY: 0, x: 0, y: 0, duration: 0.35, ease: 'power2.out' }, 0)
+      .to(root.querySelectorAll('[data-slab]'), { opacity: 0, duration: 0.3 }, 0)
+      .add(() => {
+        // from here the window is lifted out of the layout and grown in place
+        const r = win.getBoundingClientRect()
+        gsap.set(tilt, { clearProps: 'transform' }); Object.assign(tilt.style, { transformStyle: 'flat', willChange: 'auto' }) // (else they'd hold the fixed window inside them)
+        Object.assign(win.style, { position: 'fixed', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, margin: 0, zIndex: 5 })
+      }, 0.36)
+      .to(win.querySelectorAll(':scope > :not([data-fill])'), { opacity: 0, filter: 'blur(6px)', duration: 0.45, ease: 'power2.in' }, 0.38)
+      .to(win, { left: 0, top: 0, width: () => innerWidth, height: () => innerHeight, borderRadius: 0, duration: 1.05, ease: 'power3.inOut' }, 0.4)
+      .to(win.querySelector('[data-fill]'), { opacity: 1, duration: 0.9, ease: 'power2.inOut' }, 0.55)
+      .to(root, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--canvas'), duration: 0.9, ease: 'power2.inOut' }, 0.5)
   }
+
+  // the terminal is a slab of glass in 3D: it turns towards the pointer (or, on touch, sways
+  // slowly by itself), the light on it following
+  const tiltRef = useRef()
+  useEffect(() => {
+    const t = tiltRef.current
+    if (!t || prefersReduced()) return
+    gsap.set(t, { transformPerspective: 1100 })
+    const rx = gsap.quickTo(t, 'rotationX', { duration: 0.9, ease: 'power3.out' }), ry = gsap.quickTo(t, 'rotationY', { duration: 0.9, ease: 'power3.out' })
+    const tx = gsap.quickTo(t, 'x', { duration: 1.1, ease: 'power3.out' }), ty = gsap.quickTo(t, 'y', { duration: 1.1, ease: 'power3.out' })
+    const aim = (u, v) => { // u, v: -1 … 1 from the middle of the screen
+      if (phase !== 'idle' && phase !== 'running') return
+      rx(-v * 14); ry(u * 18); tx(u * 14); ty(v * 10)
+      t.style.setProperty('--sx', `${50 + u * 45}%`); t.style.setProperty('--sy', `${30 + v * 40}%`)
+    }
+    if (!finePointer()) {
+      const sway = gsap.to({ k: 0 }, { k: Math.PI * 2, duration: 9, repeat: -1, ease: 'none', onUpdate() { const k = this.targets()[0].k; aim(Math.sin(k) * 0.5, Math.cos(k * 0.7) * 0.4) } })
+      return () => sway.kill()
+    }
+    const move = (e) => aim(e.clientX / innerWidth * 2 - 1, e.clientY / innerHeight * 2 - 1)
+    window.addEventListener('pointermove', move, { passive: true })
+    return () => window.removeEventListener('pointermove', move)
+  }, [phase])
 
   const start = async () => {
     if (phase !== 'idle') return
+    unlock() // a gesture: from here on the page may make sound
     setPhase('running')
     const add = (l) => setLines((ls) => [...ls, l])
     const typing = !prefersReduced()
     add({ k: 'cmd', text: 'npx start @vincentfidanli' })
-    await sleep(typing ? 260 : 0)
+    await sleep(typing ? 280 : 0)
     for (const step of startWork()) {
       const [name, v] = await step
       add({ k: 'ok', name, text: v })
-      if (typing) await sleep(110)
+      sfx('ok')
+      if (typing) await sleep(320)
     }
     await Promise.all(work)
-    add({ k: 'done', text: `Seite bereit nach ${readyAt ?? Math.round(performance.now())} ms · hallo.` })
-    await sleep(typing ? 700 : 0)
+    add({ k: 'done', text: `Build Succeeded · ${readyAt ?? Math.round(performance.now())} ms · hallo.` })
+    sfx('ready')
+    await sleep(typing ? 900 : 0)
     finish()
   }
 
@@ -136,7 +126,7 @@ export default function Preloader() {
     if (phase !== 'idle' && phase !== 'running') return
     const key = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); finish(true) }
-      else if (e.key === 'Enter' && phase === 'idle' && e.target === document.body) { e.preventDefault(); start() }
+      else if ((e.key === 'Enter' || (e.key === 'r' && e.metaKey)) && phase === 'idle' && (e.target === document.body || e.target === runBtn.current)) { e.preventDefault(); start() }
       else if (phase === 'idle' && e.key.length === 1 && !e.metaKey && !e.ctrlKey) setNudge((n) => n + 1)
     }
     window.addEventListener('keydown', key)
@@ -144,56 +134,61 @@ export default function Preloader() {
   })
 
   if (phase === 'done') return null
-  const handoff = phase === 'handoff'
-  const still = prefersReduced()
+  const handoff = phase === 'handoff', running = phase === 'running'
+  const built = lines.some((l) => l.k === 'done')
+  const progress = (lines.filter((l) => l.k === 'ok').length + (built ? 1 : 0)) / (STEPS.length + 1)
   return (
-    <div ref={rootRef} role="dialog" aria-modal={!handoff} aria-label="Startbildschirm"
-      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center gap-6 px-4 [perspective:1400px] ${handoff ? 'pointer-events-none' : still ? 'bg-canvas' : ''}`}>
-      <div ref={winRef} className={`${liquid ? '' : 'chrome'} relative isolate w-[min(36rem,100%)] rounded-[28px] p-[10px] [transform-style:preserve-3d] terminal-float`} style={{ willChange: 'transform', opacity: handoff ? 0 : undefined }}
-        onClick={(e) => { if (phase === 'idle' && e.target.tagName !== 'BUTTON') start() }}>
-        {/* the body: liquid chrome (WebGL), the CSS chrome only where there is no WebGL */}
-        {liquid ? <LiquidChrome className="absolute -z-10" onFail={noLiquid} /> : <span aria-hidden className="chrome-rim absolute inset-0 rounded-[inherit] pointer-events-none" />}
-        {/* the companion's chrome (Buddy), faded in during the flight */}
-        {liquid && <span data-cast aria-hidden className="chrome absolute inset-0 -z-10 rounded-[inherit] opacity-0 pointer-events-none"><span className="chrome-rim absolute inset-0 rounded-[inherit]" /></span>}
-        {/* the screen: frosted glass over the chrome — light, the metal behind it moving as a blur */}
-        <div data-screen className="relative rounded-[18px] bg-white/[0.58] backdrop-blur-2xl backdrop-saturate-150 text-ink overflow-hidden shadow-[inset_0_1px_0_rgb(255_255_255/.9),inset_0_0_0_1px_rgb(255_255_255/.35),inset_0_0_50px_rgb(255_255_255/.35)]">
-          {/* the companion's eyes, opening on the cleared screen at the end */}
-          <div data-wake aria-hidden className="absolute inset-0 grid place-items-center opacity-0 pointer-events-none">
-            <div className="flex gap-8"><i className="block w-7 h-11 rounded-[14px] bg-white shadow-[0_0_24px_rgb(255_255_255/.5)]" /><i className="block w-7 h-11 rounded-[14px] bg-white shadow-[0_0_24px_rgb(255_255_255/.5)]" /></div>
-            <i data-wake-mouth className="absolute bottom-[22%] left-1/2 -translate-x-1/2 w-[7px] h-[2.5px] rounded-full bg-[#28c840] opacity-0" />
-          </div>
-          <div data-log className="flex items-center h-10 px-4 border-b border-black/[0.06]">
-            <span className="lights live flex gap-2" aria-hidden><i /><i /><i /></span>
-            <p className="flex-1 min-w-0 truncate text-center t-mono text-ink/55 sm:-ml-14 max-sm:pl-3">{PERSON.name.split(' ')[0].toLowerCase()}@fidanli — zsh — 80×24</p>
-          </div>
-          <div data-log className="t-mono text-[13px] leading-[1.75] px-5 pt-4 pb-5 min-h-[15.5rem]" aria-live="polite">
-            <p className="text-ink/55">Last login: {new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date())} on ttys001</p>
-            <p className="text-ink/55"># Willkommen. Das hier ist eine Website – sie startet, wenn du willst.</p>
-            <p className="mt-2"><span className="text-[#0a7d2c]">➜</span> <span className="text-blue">~</span>{' '}
-              {lines.length ? <span>{lines[0].text}</span> : <span>npx start @vincentfidanli<span className="caret ml-0.5" /></span>}
-            </p>
-            {lines.slice(1).map((l, n) => (
-              l.k === 'ok'
-                ? <p key={n} className="grid grid-cols-[1.25rem_6.5rem_1fr] text-ink/85"><span className="text-[#0a7d2c]">✓</span><span className="text-ink/55">{l.name}</span><span className="truncate">{l.text}</span></p>
-                : <p key={n} className="mt-2 text-ink">{l.text}<span className="caret ml-1" /></p>
-            ))}
-            {phase === 'running' && lines.length < STEPS.length + 2 && <p className="text-ink/55">…</p>}
-          </div>
-        </div>
-        <div data-bar className="relative mt-[10px] flex items-center justify-between gap-3 rounded-[18px] bg-white/35 backdrop-blur-xl backdrop-saturate-150 px-4 py-2.5 shadow-[inset_0_1px_0_rgb(255_255_255/.85),0_0_0_1px_rgb(255_255_255/.25)]">
-          <p className="text-[14px] text-ink/70">
-            <span className="max-sm:hidden">Drück </span>
-            <span key={nudge} className="kbd mx-1 inline-block" style={{ animation: nudge ? 'nudge 420ms var(--ease)' : undefined }}>return ↵</span>
-            <span className="max-sm:hidden"> zum Starten</span>
-          </p>
-          <button ref={runBtn} type="button" onClick={start} disabled={phase !== 'idle'}
-            className="btn-chrome rounded-full px-4 py-1.5 text-[14px] font-medium disabled:opacity-60">
-            {phase === 'idle' ? 'Run ↵' : 'läuft …'}
+    <div ref={rootRef} role="dialog" aria-modal={!handoff} aria-label="Startbildschirm" onClick={(e) => { if (phase === 'idle' && !e.target.closest('button, label, a')) start() }}
+      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center px-4 bg-canvas text-ink/85 ${phase === 'idle' ? 'cursor-pointer' : ''} ${handoff ? 'pointer-events-none opacity-0' : ''}`}>
+      <div ref={tiltRef} className="relative w-[min(34rem,100%)] [transform-style:preserve-3d] will-change-transform [--sx:30%] [--sy:10%]">
+      {/* its thickness: a few layers of glass edge behind it, seen as it turns */}
+      {[1, 2, 3, 4, 5, 6].map((d) => <i key={d} data-slab aria-hidden className="absolute inset-0 rounded-[22px] border border-white/60 bg-white/[0.07] pointer-events-none" style={{ transform: `translateZ(${-d * 3}px)`, boxShadow: d === 6 ? '0 30px 70px -20px rgb(0 0 0 / .28)' : undefined }} />)}
+      <div ref={winRef} className="glass-strong relative w-full rounded-[22px] overflow-hidden [--lg-blur:26px] !bg-white/[0.32]">
+        {/* the light on the glass, where the pointer is */}
+        <i aria-hidden className="absolute inset-0 pointer-events-none bg-[radial-gradient(60%_80%_at_var(--sx)_var(--sy),rgb(255_255_255/.5),rgb(255_255_255/0)_60%)] mix-blend-soft-light" />
+        {/* the title bar */}
+        <div className="relative flex items-center h-11 px-4 border-b border-white/50">
+          <span className="flex gap-2" aria-hidden>{[0, 1, 2].map((i) => <i key={i} className="block w-3 h-3 rounded-full bg-black/[0.12] shadow-[inset_0_0_0_.5px_rgb(0_0_0/.08)]" />)}</span>
+          <p className="absolute left-1/2 -translate-x-1/2 text-[12px] text-ink/60 whitespace-nowrap">{PERSON.name.split(' ')[0].toLowerCase()} — zsh — 80×24</p>
+          <button ref={runBtn} type="button" onClick={start} disabled={phase !== 'idle'} aria-label="Run" title="Run (return)"
+            className="glass ml-auto grid place-items-center w-8 h-7 rounded-full text-ink/70 hover:text-ink disabled:opacity-30 transition-colors">
+            <svg width="10" height="11" viewBox="0 0 12 13" aria-hidden><path d="M1.5 1.2v10.6c0 .6.6.9 1.1.6l8.6-5.3c.5-.3.5-1 0-1.3L2.6.6c-.5-.3-1.1 0-1.1.6z" fill="currentColor" /></svg>
           </button>
         </div>
+        {/* the screen */}
+        <div className="relative font-mono text-[12.5px] leading-[1.75] px-4 pt-3 pb-4 h-[15.5rem] text-ink/85" aria-live="polite">
+          <p className="text-faint">Last login: {new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date())} on ttys001</p>
+          <p className="text-faint"># Die volle Experience gibt es nur mit Ton.</p>
+          <p className="mt-1.5"><span className="text-faint/70">~ %</span> {lines.length ? lines[0].text : <>npx start @vincentfidanli<span className="caret ml-0.5 text-ink/70" style={{ width: '0.55em' }} /></>}</p>
+          {lines.slice(1).map((l, n) => (
+            l.k === 'ok'
+              ? <p key={n} className="grid grid-cols-[1.1rem_5.5rem_1fr]"><span className="text-faint">✓</span><span className="text-faint">{l.name}</span><span className="truncate">{l.text}</span></p>
+              : <p key={n} className={l.k === 'done' ? 'mt-1.5 text-ink font-medium' : 'text-faint'}>{l.text}</p>
+          ))}
+          {running && !built && <p className="text-faint/70">…</p>}
+          {/* the progress line */}
+          <i aria-hidden className="absolute left-0 bottom-0 h-[2px] bg-[#8e8e93] transition-[width,opacity] duration-500 ease-sys" style={{ width: `${phase === 'idle' ? 0 : progress * 100}%`, opacity: built ? 0 : 1 }} />
+          {phase === 'idle' && (
+            <p className="absolute left-4 right-4 bottom-4 text-[12px] text-faint">
+              Drück <span className="kbd mx-0.5 inline-block !bg-paper/70 !text-ink" key={nudge} style={{ animation: nudge ? 'nudge 420ms var(--ease)' : undefined }}>return ↵</span> oder {finePointer() ? 'klick' : 'tipp'} irgendwo.
+            </p>
+          )}
+        </div>
+        {/* the white the glass clouds over into, as it becomes the page */}
+        <i data-fill aria-hidden className="absolute inset-0 z-10 bg-canvas opacity-0 pointer-events-none" />
       </div>
-      <button type="button" onClick={() => finish(true)} hidden={phase !== 'idle' && phase !== 'running'} className="fixed right-5 bottom-5 text-[13px] text-gray hover:text-ink transition-colors">Intro überspringen <span className="kbd ml-1">esc</span></button>
-      <style>{'@keyframes nudge{30%{transform:translateY(-3px) scale(1.08)}}.terminal-float{animation:tfloat 7s ease-in-out infinite}@keyframes tfloat{50%{translate:0 -8px}}@media (prefers-reduced-motion:reduce){.terminal-float{animation:none}}'}</style>
+      </div>
+
+      {/* sound: an iOS switch */}
+      <label className={`glass fixed left-1/2 -translate-x-1/2 max-sm:left-5 max-sm:translate-x-0 bottom-8 flex items-center gap-3 rounded-full pl-4 pr-1.5 py-1.5 text-[13px] text-ink/80 cursor-pointer select-none transition-opacity duration-500 ${phase === 'idle' || running ? '' : 'opacity-0 pointer-events-none'}`}>
+        Ton
+        <button type="button" role="switch" aria-checked={sound} onClick={() => { setSound(!sound); if (!sound) { unlock(); sfx('snap') } }}
+          className={`relative w-[51px] h-[31px] rounded-full transition-colors duration-200 ${sound ? 'bg-[#34c759]' : 'bg-[rgb(120_120_128/0.16)]'}`}>
+          <span className={`absolute top-[2px] left-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-[0_3px_8px_rgb(0_0_0/.15),0_3px_1px_rgb(0_0_0/.06)] transition-transform duration-200 ease-sys ${sound ? 'translate-x-[20px]' : ''}`} />
+        </button>
+      </label>
+      <button type="button" onClick={() => finish(true)} hidden={phase !== 'idle' && !running} className="fixed right-5 bottom-8 text-[13px] text-faint hover:text-ink transition-colors">Intro überspringen <span className="kbd ml-1 !bg-paper/70 !text-ink">esc</span></button>
+      <style>{`@keyframes nudge{30%{transform:translateY(-3px) scale(1.08)}}`}</style>
     </div>
   )
 }

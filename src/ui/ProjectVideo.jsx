@@ -16,10 +16,11 @@ const play = (v, alongside) => (alongside ? v.play().catch(() => {}) : playOnly(
 // without pausing the one on the page behind it, so that one is still running when the sheet closes.
 export default function ProjectVideo({ src, poster, label, frame = 'screen', surface, alongside = false }) {
   const ref = useRef(), wrapRef = useRef()
-  const [near, setNear] = useState(false)
+  const [near, setNear] = useState(alongside) // a sheet's video is on screen at once: load it now
   const [paused, setPaused] = useState(() => prefersReduced())
   const [playable] = useState(() => document.createElement('video').canPlayType('video/webm') !== '')
   const userPaused = useRef(prefersReduced())
+  const seen = useRef(false) // visible enough to play; play() before the source has loaded is lost, so canplay asks again
 
   // loads 2.5 screens ahead — by the time it scrolls into view the first seconds are buffered and
   // it starts at once (one screen ahead was not enough when scrolling fast); plays only while
@@ -30,6 +31,7 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
     const ioSeen = new IntersectionObserver(([e]) => {
       const v = ref.current
       if (!v) return
+      seen.current = e.isIntersecting
       if (e.isIntersecting && !userPaused.current) play(v, alongside)
       else v.pause()
     }, { threshold: 0.35 })
@@ -40,6 +42,17 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
   // near: source set and preload=auto, so it is downloaded before it is visible
   useEffect(() => { if (near) ref.current?.load() }, [near])
 
+  // the sheet picks up where the window on the page was, so opening it doesn't jump back to the start
+  const resume = (e) => {
+    const v = e.currentTarget
+    if (alongside && !v.dataset.synced) {
+      v.dataset.synced = '1'
+      const twin = [...document.querySelectorAll('video')].find((o) => o !== v && o.currentSrc === v.currentSrc && o.currentTime > 0)
+      if (twin) v.currentTime = twin.currentTime
+    }
+    if (seen.current && !userPaused.current && v.paused) play(v, alongside)
+  }
+
   const toggle = () => {
     const v = ref.current
     if (!v) return
@@ -48,7 +61,7 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
 
   const media = playable ? (
     <video ref={ref} data-alongside={alongside || undefined} muted loop playsInline preload={near ? 'auto' : 'none'} poster={near ? poster : undefined} aria-label={label}
-      src={near ? src : undefined} onPlay={(e) => { playing.add(e.currentTarget); setPaused(false) }} onPause={(e) => { playing.delete(e.currentTarget); setPaused(true) }}
+      src={near ? src : undefined} onCanPlay={resume} onPlay={(e) => { playing.add(e.currentTarget); setPaused(false) }} onPause={(e) => { playing.delete(e.currentTarget); setPaused(true) }}
       className="block w-full h-full object-cover" />
   ) : (
     <img src={poster} alt={label} loading="lazy" decoding="async" className="block w-full h-full object-cover" />
@@ -56,7 +69,7 @@ export default function ProjectVideo({ src, poster, label, frame = 'screen', sur
 
   const button = playable && (
     <button type="button" onClick={toggle} aria-label={paused ? 'Video abspielen' : 'Video pausieren'}
-      className="press absolute right-3 bottom-3 z-20 inline-flex items-center gap-1.5 rounded-full glass px-3 py-1.5 t-mono text-ink">
+      className="btn-media absolute right-3 bottom-3 z-20 gap-1.5 h-8 px-3 text-[12px]">
       <span aria-hidden className="w-2.5 text-center">{paused ? '▶' : '❚❚'}</span>
       {paused ? 'Abspielen' : 'Pause'}
     </button>

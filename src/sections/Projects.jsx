@@ -24,7 +24,7 @@ function ProjectWindow({ p, i }) {
     <article data-item aria-labelledby={`p-${p.slug}`} className="flex-none w-full lg:w-[61.8vw] lg:max-w-[64rem]">
       <div data-win className="relative will-change-transform">
         <Window flat title={`${p.title} — ${p.kind}`} className="group/win cursor-pointer">
-          <div className="relative aspect-[16/10] overflow-hidden" onClick={open} data-cursor="Öffnen ↗" data-buddy={`${p.title}: echte Aufnahme. Klick rein.`}>
+          <div className="relative aspect-[16/10] overflow-hidden" onClick={open} data-cursor="Öffnen ↗">
             <ProjectMedia p={p} />
           </div>
         </Window>
@@ -32,11 +32,11 @@ function ProjectWindow({ p, i }) {
       <div data-cap className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-5 gap-y-2 mt-6 px-1">
         <span className="t-cap tabular-nums">{pad(i)}</span>
         <h3 id={`p-${p.slug}`} className="t-title">{p.title}</h3>
-        <button type="button" onClick={open} className="group press row-span-2 self-center inline-flex items-center gap-2 h-10 px-4 rounded-full glass text-[14px]">
+        <button type="button" onClick={open} className="group btn row-span-2 self-center gap-2 h-10 px-4 text-[14px]">
           <span className="roll"><span>Öffnen</span><span aria-hidden>Details</span></span><span aria-hidden>↗</span>
         </button>
         <p className="col-start-2 t-mono text-gray">{p.kind} · {p.year} · <span className={p.status === 'Live' ? 'text-[#1f9d55]' : ''}>{p.status}</span></p>
-        <p className="col-start-2 col-span-2 text-[16px] text-gray max-w-[44ch]">{p.lede}</p>
+        <p className="col-start-2 col-span-2 text-[15px] text-gray max-w-[44ch]">{p.lede}</p>
       </div>
     </article>
   )

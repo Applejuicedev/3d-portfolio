@@ -69,7 +69,7 @@ export const PROJECTS = [
     lede: 'Kein Screenshot: Das Projekt läuft gerade in deinem Browser.',
     story: [
       ['problem', 'Viele Portfolios **behaupten Fullstack** in einem Satz. Ich wollte, dass die Seite **selbst die Arbeitsprobe** ist – gestaltet wie ein Designprojekt, gebaut wie eine Anwendung.'],
-      ['lösung', 'Eine helle, an macOS angelehnte Oberfläche: ein **Terminal, das die Seite startet**, Fenster, Dock und Spotlight als Navigation, und für jeden Abschnitt **eine eigene Scroll-Choreografie**.'],
+      ['lösung', 'Eine helle Oberfläche in **Liquid Glass**, wie Apple sie mit iOS 26 eingeführt hat: ein **Terminal, das die Seite startet**, Mi als Begleiter, Spotlight als Suche und für jeden Abschnitt **eine eigene Scroll-Choreografie**.'],
       ['ergebnis', 'Keine Effekt-Bibliothek außer GSAP: **React, GSAP und Tailwind**. Alles ist **per Tastatur bedienbar**, und mit reduzierter Bewegung steht die Seite still.'],
     ],
     tech: ['React', 'GSAP', 'Three.js', 'Tailwind CSS', 'Vite'],
@@ -131,7 +131,7 @@ export const CHAPTERS = [
 // the sections, in page order (navigation, Spotlight and the path bar all read this)
 export const SECTIONS = [
   { id: 'arbeiten', label: 'Arbeiten', alias: ['projekte', 'work', 'projects'] },
-  { id: 'stack', label: 'Stack', alias: ['system', 'skills', 'tech', 'dock'] },
-  { id: 'weg', label: 'Werdegang', alias: ['about', 'über', 'profil', 'lebenslauf'] },
+  { id: 'stack', label: 'Skills', alias: ['system', 'skills', 'tech', 'dock'] },
+  { id: 'weg', label: 'Über mich', alias: ['about', 'über', 'profil', 'lebenslauf'] },
   { id: 'kontakt', label: 'Kontakt', alias: ['contact', 'mail'] },
 ]

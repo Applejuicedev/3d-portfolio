@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { gsap, prefersReduced, finePointer } from '../lib/motion'
-import { booted, on } from '../lib/events'
+import { booted, on, lastOf } from '../lib/events'
+import { palette, refreshPalette } from '../lib/theme'
 
 // ── Particle objects across the page ────────────────────────────
 // After the particle bust of the previous design: words and objects made of points that build
@@ -9,8 +10,8 @@ import { booted, on } from '../lib/events'
 // data-particles="text" becomes one: its own words, sampled in its own font and extruded into a 3D
 // body (front, back, walls), with a loose swarm orbiting it. One fixed canvas and one renderer for
 // all of them — each object one draw call:
-//   · data-particles-boot: assembles once the page has booted and is blown apart as the hero
-//     scrolls away (the hero's "Code.");
+//   · data-particles-boot: assembles once the page has booted (with data-particles-wait: when the
+//     hero's scene says 'hero:code') and is blown apart as the hero scrolls away (the hero's "Code.");
 //   · data-particles-live: when the element's text changes, the points fly from the old word into
 //     the new one (the Stack's heading, the year in the time line);
 //   · data-particles-stay: once built it no longer falls apart above the screen (the page's end);
@@ -24,6 +25,7 @@ const VERT = /* glsl */ `
 uniform float uTime, uMorph, uSpread, uScatter, uSize, uAspect, uHover, uFade, uWide;
 uniform vec2 uMouse, uTilt;
 uniform vec4 uShock;
+uniform vec3 uInk, uAccent, uCanvas;
 attribute vec3 aNormal, aFrom, aFromN;
 attribute vec4 aRand;
 attribute float aOrbit;
@@ -67,8 +69,8 @@ void main() {
   // a key light from the upper left front: faces towards it read darker on the white page
   float key = max(dot(nv, normalize(vec3(-0.5, 0.5, 0.75))), 0.);
   gl_PointSize = uSize * (0.65 + aRand.w * 0.7) * (10. / -mv.z) * (1. + m * 0.45 + ring * 0.7);
-  vec3 ink = mix(vec3(0.62, 0.62, 0.66), vec3(0.1, 0.1, 0.12), pow(key, 0.8));
-  vec3 col = mix(ink, vec3(0.0, 0.443, 0.89), clamp(m * 0.9 + ring * 0.8, 0., 1.));
+  vec3 ink = mix(mix(uInk, uCanvas, 0.6), uInk, pow(key, 0.8));
+  vec3 col = mix(ink, uAccent, clamp(m * 0.9 + ring * 0.8, 0., 1.));
   float a = (aOrbit > 0.5 ? 0.42 : mix(0.45, 1., key)) * (1. - s * 0.92) * uFade; // scattered points all but vanish: no dust left on the page
   a = min(1., a + m * 0.3);
   vColor = vec4(col, a);
@@ -165,11 +167,16 @@ export default function ParticleField() {
       el.style.color = 'transparent'
       cleanup.push(() => { el.style.color = ''; geo.dispose(); mat.dispose() })
       const o = { el, boot, stay: el.hasAttribute('data-particles-stay'), w, pts, u, tilt: { x: 0, y: 0 }, hover: 0 }
-      if (boot) booted.then(() => {
-        if (!alive) return
-        gsap.to(u.uFade, { value: 1, duration: 0.6, ease: 'power2.out' })
-        gsap.fromTo(u.uSpread, { value: 1 }, { value: 0, duration: 2.6, ease: 'power3.out', delay: 0.15 })
-      })
+      const assemble = () => {
+        gsap.to(u.uFade, { value: 1, duration: 0.6, ease: 'power2.out', overwrite: true })
+        gsap.to(u.uSpread, { value: 0, duration: 2.6, ease: 'power3.out', delay: 0.15, overwrite: true })
+      }
+      // data-particles-wait: not at the boot but when the hero says so (the drop melting into the words, HeroScene) — and apart again when it is wound back
+      if (boot && el.hasAttribute('data-particles-wait')) cleanup.push(on('hero:code', (v) => {
+        if (v) assemble()
+        else { gsap.to(u.uFade, { value: 0, duration: 0.4, overwrite: true }); gsap.to(u.uSpread, { value: 1, duration: 0.6, ease: 'power2.in', overwrite: true }) }
+      }), lastOf('hero:code') ? (assemble(), () => {}) : () => {})
+      else if (boot) booted.then(() => { if (alive) assemble() })
       if (live) {
         // the text changed: where the points are now becomes the start, the new word the goal
         const A = geo.attributes
@@ -208,8 +215,10 @@ export default function ParticleField() {
         uniforms: {
           uTime: { value: 0 }, uMorph: { value: 1 }, uSpread: { value: 0 }, uScatter: { value: 0 }, uSize: { value: 1 }, uAspect: { value: 1 }, uHover: { value: 0 }, uFade: { value: 1 },
           uWide: { value: 1 }, uMouse: { value: new THREE.Vector2(9, 9) }, uTilt: { value: new THREE.Vector2() }, uShock: { value: new THREE.Vector4(0, 0, -99, 0) },
+          uInk: { value: new THREE.Vector3() }, uAccent: { value: new THREE.Vector3() }, uCanvas: { value: new THREE.Vector3() },
         },
       })
+      refreshPalette()
       document.querySelectorAll('[data-particles]').forEach((el) => { if (el.getClientRects().length) objects.push(make(el, scene)) })
 
       const mouse = { x: -1e4, y: -1e4 }, shock = new THREE.Vector4(0, 0, -99, 0)
@@ -233,6 +242,7 @@ export default function ParticleField() {
         let any = false
         for (const o of objects) {
           const r = o.el.getBoundingClientRect(), u = o.u
+          u.uInk.value.fromArray(palette.ink); u.uAccent.value.fromArray(palette.accent); u.uCanvas.value.fromArray(palette.canvas)
           // how far it is from the middle of the screen decides whether it holds together
           let target
           if (o.boot) target = Math.min(1, Math.max(0, scrollY / (H * 0.75)))
