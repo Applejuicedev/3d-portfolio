@@ -9,6 +9,8 @@
   #compass-btn span { opacity: 1; transform: none; }
   a.w, .bar, #compass, .strand { -webkit-touch-callout: none; }
   #desk, #compass { -webkit-user-select: none; user-select: none; }
+  /* iOS zooms in on any field set smaller than 16 px the moment it is tapped: at 16 px it stays put */
+  input, textarea, select { font-size: 16px !important; }
   .win .grip { opacity: .7; width: 28px; height: 28px; }
   .bar .x { opacity: .9; }
 }

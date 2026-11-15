@@ -100,6 +100,11 @@ export function browse(id, from, { url, title, note = '' }) {
     fr.addEventListener('load', () => {
       try {
         const l = fr.contentWindow.location; path.textContent = (l.pathname + l.hash).replace(/index\.html/, '')
+        // on touch screens the page's fields get 16 px type, so tapping one doesn't zoom the phone in
+        if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
+          const st = fr.contentDocument.createElement('style'); st.textContent = 'input, textarea, select { font-size: 16px !important; }'
+          fr.contentDocument.head.appendChild(st)
+        }
         // clicks inside the preview count toward the virus as well
         fr.contentDocument.addEventListener('pointerdown', (e) => { if (e.isTrusted) tick() }, true)
         fr.contentDocument.addEventListener('click', (e) => {
