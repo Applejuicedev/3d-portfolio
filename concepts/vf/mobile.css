@@ -1,0 +1,132 @@
+/* ── Mobile: the desk, rethought for a hand ────────────────────────────────────────────────────────
+   Only phones (and phones turned sideways) and touch screens are touched here; the desktop rules in
+   style.css stay as they are. Same tokens, same material — but windows are sheets from the bottom,
+   the index is a panel within the thumb's reach, every control is at least 44 px, nothing depends
+   on hovering, and the iPhone's safe areas are respected. */
+
+/* touch screens of any size: no hover-only controls, no callouts on long-press (that shows the code) */
+@media (hover: none) and (pointer: coarse) {
+  #compass-btn span { opacity: 1; transform: none; }
+  a.w, .bar, #compass, .strand { -webkit-touch-callout: none; }
+  #desk, #compass { -webkit-user-select: none; user-select: none; }
+  .win .grip { opacity: .7; width: 28px; height: 28px; }
+  .bar .x { opacity: .9; }
+}
+/* touch screens with the wide layout (tablets, phones sideways): the same desk, finger-sized targets */
+@media (hover: none) and (pointer: coarse) and (min-width: 641px) {
+  #compass-btn i { width: 44px; height: 44px; }
+  #sentence a.w { padding: .9em .1em; }
+  #tools .chip { padding: 12px 10px; }
+  .bar { height: 44px; }
+  .bar .x { width: 40px; height: 40px; }
+}
+
+/* the touch-screen tokens: larger targets, slightly larger small type */
+@media (max-width: 640px), (pointer: coarse) and (max-height: 500px) {
+  :root { --tap: 44px; --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px); --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px); }
+
+  /* corners clear of the notch and the home indicator */
+  .mark { top: calc(14px + var(--safe-t)); left: calc(20px + var(--safe-l)); }
+  #compass { right: calc(16px + var(--safe-r)); bottom: calc(16px + var(--safe-b)); }
+  #top, #bottom { display: none; } /* their contents live in the index panel here (nav.js) */
+
+  /* ── windows → sheets ── */
+  #threads { display: none; }
+  #scrim { position: fixed; inset: 0; z-index: 4; background: rgb(0 0 0 / .5); opacity: 0; pointer-events: none; transition: opacity var(--dur-base) linear; }
+  html.has-sheet #scrim { opacity: 1; pointer-events: auto; }
+  /* a sheet has its own ways back (swipe, ×, the dimmed desk): the index steps aside meanwhile */
+  html.has-sheet #compass { opacity: 0; visibility: hidden; }
+  #compass { transition: opacity var(--dur-base), visibility 0s linear var(--dur-base); }
+  html:not(.has-sheet) #compass { transition: opacity var(--dur-base); }
+  .win.sheet { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: 100% !important; min-width: 0 !important; max-width: none;
+    height: calc(100svh - 52px - var(--safe-t)) !important; min-height: 0 !important; max-height: none;
+    border-radius: 16px 16px 0 0; border-width: 1px 0 0; padding-bottom: var(--safe-b);
+    transform: translateY(var(--pull, 0px)); transform-origin: 50% 0;
+    animation: sheet-in .5s var(--ease-out) both; transition: transform .38s var(--ease-out), filter var(--dur-base), border-color var(--dur-base); }
+  @keyframes sheet-in { from { transform: translateY(100%); } }
+  .win.sheet.pulling { transition: none; }
+  /* a sheet beneath the front one steps back, as on iOS */
+  .win.sheet:not(.front) { transform: translateY(-8px) scale(.94); filter: brightness(.7); }
+  .win.sheet.closing { transform: translateY(105%); opacity: 1; filter: none; transition: transform .32s var(--ease-out); }
+  .win.sheet .bar { height: 54px; padding: 8px 6px 0 18px; cursor: default; position: relative; }
+  .win.sheet .bar .handle { position: absolute; left: 50%; top: 6px; width: 36px; height: 4px; margin-left: -18px; border-radius: var(--r-pill); background: var(--border-strong); }
+  .win.sheet .bar .x { width: var(--tap); height: var(--tap); opacity: .9; }
+  .win.sheet .bar .x::before, .win.sheet .bar .x::after { width: 13px; }
+  .win.sheet .grip { display: none; }
+  .win.sheet .body { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  /* content inside sheets: a touch more room, readable sizes */
+  .win.sheet .pad { padding: var(--sp-4) 18px var(--sp-6); }
+  .win.sheet .btn { min-height: var(--tap); padding: 0 var(--sp-4); }
+  .win.sheet .title { font-size: 24px; }
+
+  /* ── notifications: under the notch, full width, out of the way of sheets and the index ── */
+  #toasts { top: calc(8px + var(--safe-t)); left: 12px; right: 12px; width: auto; }
+  /* (hidden while a sheet or the index is up — and out of reach of taps: the cards inside take
+     pointer events of their own) */
+  html.has-sheet #toasts, html.reveal #toasts { opacity: 0; visibility: hidden; }
+  #toasts { transition: opacity var(--dur-base), visibility 0s linear var(--dur-base); }
+  .t-x { top: 2px; right: 2px; width: 40px; height: 40px; }
+
+  /* ── the index: a panel above the ring, within the thumb's reach ── */
+  #compass-btn { min-height: var(--tap); gap: var(--sp-3); }
+  #compass-btn i { width: 44px; height: 44px; }
+  #compass-btn i::before { width: 4px; height: 4px; }
+  #compass.open #compass-btn i::before { width: 14px; }
+  #compass-btn span { opacity: 1; transform: none; font-size: var(--fs-xs); }
+  #tools { position: fixed; left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); bottom: calc(80px + var(--safe-b)); width: auto; height: auto;
+    max-height: calc(100svh - 120px - var(--safe-t) - var(--safe-b)); overflow: auto; overscroll-behavior: contain;
+    display: flex; flex-direction: column; align-items: stretch; padding: 6px; border-radius: 16px; border: var(--bw) solid var(--border);
+    background: var(--grain-img), var(--surface-win); background-size: 160px; -webkit-backdrop-filter: blur(var(--blur)) saturate(.6); backdrop-filter: blur(var(--blur)) saturate(.6);
+    box-shadow: var(--sh-3); counter-reset: strand;
+    opacity: 0; visibility: hidden; transform: translateY(16px) scale(.98); transform-origin: 100% 100%;
+    transition: opacity var(--dur-base) linear, transform var(--dur-slow) var(--ease-out), visibility 0s linear var(--dur-slow); }
+  #compass.open #tools { opacity: 1; visibility: visible; transform: none; transition: opacity var(--dur-base) linear, transform var(--dur-slow) var(--ease-out), visibility 0s; }
+  .strand, #compass.open .strand { position: static; display: block; transform: none; opacity: 1; visibility: inherit; filter: none; transition: none; counter-increment: strand; }
+  .strand + .strand { border-top: var(--bw) solid var(--border); }
+  #compass.deep .strand:not(.on) { opacity: .55; }
+  #tools .chip { text-shadow: none; }
+  #tools .st-btn { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 52px; padding: 0 14px; box-sizing: border-box;
+    font: var(--fw-medium) 17px/1 var(--font-sans); letter-spacing: var(--tr-tight); color: var(--text-primary); text-decoration: none; border-radius: var(--r-m); }
+  #tools .st-btn::after { content: counter(strand, decimal-leading-zero); order: -1; font: var(--fs-xs)/1 var(--font-mono); color: var(--text-tertiary); width: 22px; }
+  /* the point after the word becomes a chevron that turns when the strand opens */
+  #tools .st-btn::before { position: static; order: 2; margin-left: auto; width: 7px; height: 7px; border-radius: 0; background: none; transform: rotate(45deg);
+    border-right: 1.5px solid var(--text-tertiary); border-bottom: 1.5px solid var(--text-tertiary); transition: transform var(--dur-base) var(--ease-out); }
+  .strand.on .st-btn::before { transform: rotate(-135deg); }
+  #tools .st-btn:hover, #tools .st-btn:active { background: var(--state-hover); text-decoration: none; }
+  .subs, .strand.on .subs { position: static; display: none; flex-direction: column; align-items: stretch; gap: 0; padding: 0 0 6px; transform: none; pointer-events: auto; }
+  .strand.on .subs { display: flex; }
+  .subs::after { display: none; }
+  #tools .subs .chip, .strand.on .subs .chip { display: flex; align-items: center; min-height: var(--tap); padding: 0 14px 0 48px; opacity: 1; transform: none; filter: none; visibility: visible; transition: none;
+    font: var(--fw-regular) 15px/1 var(--font-sans); letter-spacing: 0; color: var(--text-secondary); border-radius: var(--r-m); text-decoration: none; }
+  #tools .subs .chip:active, #tools .subs .chip:hover { background: var(--state-hover); color: var(--text-primary); }
+  #tools .subs .chip.on { color: var(--highlight); }
+  #tools .subs .chip.on::after { content: 'open'; margin-left: auto; font: var(--fs-xs) var(--font-mono); color: var(--text-tertiary); }
+  /* the settings and the clocks, moved into the panel (nav.js) */
+  .tools-meta { border-top: var(--bw) solid var(--border); padding: 6px 2px 2px; }
+  .tools-meta nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; justify-content: stretch; }
+  #tools .tools-meta nav .chip { display: flex; align-items: center; justify-content: center; min-height: var(--tap); padding: 0 4px; border-radius: var(--r-m);
+    font: var(--fs-xs)/1 var(--font-mono); color: var(--text-secondary); background: var(--state-hover); text-align: center; }
+  #tools .tools-meta nav .chip.on, #tools .tools-meta nav .chip.new { color: var(--text-primary); background: var(--state-active); }
+  /* (the endless clock band is far wider than its window: it must not widen the panel) */
+  #tools, .tools-meta nav { flex-wrap: nowrap; justify-content: flex-start; align-items: stretch; } /* (the global nav rule wraps and centres) */
+  #tools > * { min-width: 0; width: auto; align-self: stretch; }
+  .tools-meta #zones { width: 100%; min-width: 0; margin: 8px 0 2px; }
+
+  /* ── the story: a deck of windows, one on top of the other ── */
+  .st-hint { bottom: calc(16px + var(--safe-b)); left: 16px; right: 16px; transform: none; text-align: center; }
+  .st-close { top: calc(10px + var(--safe-t)); min-height: 40px; padding: 0 var(--sp-4); display: flex; align-items: center; }
+  .st-card .bar { cursor: default; }
+  .win.st-card { left: 0 !important; }
+  /* while the story is up it has the screen to itself */
+  body:has(#story) #toasts, body:has(#story) #compass { opacity: 0; visibility: hidden; }
+}
+
+/* phones upright: the sentence is the hero — a headline-sized paragraph, set in the upper part of the
+   screen, with a line underneath that says what to do with it */
+@media (max-width: 640px) {
+  #desk { padding: calc(72px + var(--safe-t)) 22px 0; place-items: start stretch; }
+  #sentence { font: var(--fw-medium) clamp(23px, 6.6vw, 30px)/1.2 var(--font-display); letter-spacing: -0.022em; margin-top: 7svh; max-width: 30ch; }
+  #sentence a.w { padding: .18em 0; text-underline-offset: .2em; }
+  #sentence::after { content: 'Tap anything underlined. Hold it to see its code.'; display: block; margin-top: 22px;
+    font: var(--fw-regular) var(--fs-xs)/1.5 var(--font-mono); letter-spacing: var(--tr-mono); color: var(--text-tertiary); }
+}

@@ -20,7 +20,9 @@ import './links.js'
 const studio3d = (from) => import('./studio3d.js').then((m) => { sourceOf('open:studio3d', m.studio3d); return m.studio3d(from) })
 
 // the ground: the rough graphite surface with the light gliding over it
-mountSurface(document.body)
+// (on touch screens: 30 frames a second, a lighter light pass, and nothing while a sheet covers it)
+const touch = matchMedia('(hover: none) and (pointer: coarse)').matches
+mountSurface(document.body, touch ? { fps: 30, maxPR: 1.5, rest: () => document.documentElement.classList.contains('has-sheet') } : {})
 
 // The desk: one sentence about me; whatever is underlined, and every tool at the bottom, opens a
 // window tied to it by a hairline. Corners: the mark and the settings (me.txt, sound, theme) above,

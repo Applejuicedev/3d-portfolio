@@ -93,7 +93,9 @@ void main() {
   gl_FragColor = vec4(col, 1.);
 }`
 
-export function mountSurface(host, { fixed = host === document.body } = {}) {
+// Options for small, battery-powered screens: fps caps the frame rate, maxPR the pixel density of the
+// light pass, and rest() — asked every frame — pauses the surface while something covers it.
+export function mountSurface(host, { fixed = host === document.body, fps = 0, maxPR = 2, rest = () => false } = {}) {
   const cv = document.createElement('canvas')
   cv.className = 'surface'; cv.setAttribute('aria-hidden', 'true')
   if (fixed) cv.classList.add('fixed')
@@ -120,7 +122,7 @@ export function mountSurface(host, { fixed = host === document.body } = {}) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0)
 
   // full resolution for the light and the grain (device pixels, up to 2×); the form at half the CSS size
-  let PR = Math.min(devicePixelRatio || 1, 2), FORM_SCALE = 0.5
+  let PR = Math.min(devicePixelRatio || 1, maxPR), FORM_SCALE = 0.5
   let W = 1, H = 1, fw = 1, fh = 1, box = host.getBoundingClientRect()
   function size() {
     box = fixed ? { left: 0, top: 0, width: innerWidth, height: innerHeight } : host.getBoundingClientRect()
@@ -177,9 +179,11 @@ export function mountSurface(host, { fixed = host === document.body } = {}) {
   }
   if (fixed) addEventListener('resize', size); else new ResizeObserver(size).observe(host)
   size()
+  let drawn = 0
   if (still) draw(performance.now())
   else (function loop(now) {
-    if (!document.hidden && !frozen) { draw(now); check(now) } else last = 0
+    const due = !fps || now - drawn >= 1000 / fps - 2
+    if (!document.hidden && !frozen && !rest()) { if (due) { drawn = now; draw(now) } check(now) } else last = 0
     if (!frozen) requestAnimationFrame(loop)
   })(performance.now())
   return cv

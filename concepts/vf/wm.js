@@ -11,6 +11,32 @@ const listeners = new Set()
 export const onChange = (fn) => listeners.add(fn)
 const changed = () => listeners.forEach((fn) => fn(wins))
 
+// Phones (and phones turned sideways): every window is a sheet that comes up from the bottom edge —
+// full width, its own height, a handle to swipe it away, a large close control, the desk dimmed
+// behind it (a tap there closes the sheet in front). No dragging, no resizing, no hairlines there.
+export const SHEETS = matchMedia('(max-width: 640px), (pointer: coarse) and (max-height: 500px)')
+const scrim = document.createElement('div')
+scrim.id = 'scrim'; scrim.setAttribute('aria-hidden', 'true')
+document.body.appendChild(scrim)
+scrim.addEventListener('click', () => { const t = topmost(); if (t) close(t.id) })
+const sheetState = () => document.documentElement.classList.toggle('has-sheet', SHEETS.matches && wins.size > 0)
+listeners.add(sheetState); SHEETS.addEventListener('change', sheetState)
+
+// swipe a sheet down by its bar to close it
+function swipe({ id, w }) {
+  const bar = w.querySelector('.bar')
+  bar.addEventListener('pointerdown', (e) => {
+    if (!SHEETS.matches || e.target.closest('button')) return
+    const y0 = e.clientY; let dy = 0
+    bar.setPointerCapture(e.pointerId); w.classList.add('pulling')
+    bar.onpointermove = (m) => { dy = Math.max(0, m.clientY - y0); w.style.setProperty('--pull', dy + 'px') }
+    bar.onpointerup = bar.onpointercancel = () => {
+      bar.onpointermove = bar.onpointerup = bar.onpointercancel = null; w.classList.remove('pulling')
+      if (dy > 90) close(id); else w.style.setProperty('--pull', '0px')
+    }
+  })
+}
+
 const clampX = (x, W) => Math.max(8, Math.min(innerWidth - W - 8, x))
 // windows stay between the two grid lines under the top bar and over the bottom one
 export const TOP = 42, BOTTOM = 42
@@ -26,7 +52,8 @@ export function open(id, from, { title, width = 360, height, skin = '', place: s
   w.dataset.minW = minW; w.dataset.minH = minH
   w.style.minWidth = Math.min(minW, innerWidth - 16) + 'px'; w.style.minHeight = Math.min(minH, innerHeight - 110) + 'px'
   w.style.width = Math.min(Math.max(width, minW), innerWidth - 16) + 'px'; if (height) w.style.height = Math.min(height, innerHeight - 110) + 'px'
-  w.innerHTML = `<div class="bar mono"><span class="t"><span class="n">${String(++made).padStart(2, '0')}</span>${title}</span><button class="x" aria-label="Close ${title}"></button></div><div class="body"></div><i class="grip" aria-hidden="true"></i>`
+  if (SHEETS.matches) w.classList.add('sheet')
+  w.innerHTML = `<div class="bar mono"><i class="handle" aria-hidden="true"></i><span class="t"><span class="n">${String(++made).padStart(2, '0')}</span>${title}</span><button class="x" aria-label="Close ${title}"></button></div><div class="body"></div><i class="grip" aria-hidden="true"></i>`
   document.body.appendChild(w)
   const body = w.querySelector('.body')
   const it = { id, w, body, from, onClose }
@@ -38,7 +65,7 @@ export function open(id, from, { title, width = 360, height, skin = '', place: s
   wins.set(id, it); front(it); changed(); play('open')
   w.querySelector('.x').onclick = () => close(id)
   w.addEventListener('pointerdown', () => front(it))
-  drag(it); resize(it)
+  drag(it); resize(it); swipe(it)
   w.querySelector('.x').focus({ preventScroll: true })
   return it
 }
@@ -72,7 +99,7 @@ export const topmost = () => [...wins.values()].sort((a, b) => b.w.style.zIndex 
 export function drag({ w }) {
   const bar = w.querySelector('.bar')
   bar.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('button') || e.button > 0) return
+    if (e.target.closest('button') || e.button > 0 || SHEETS.matches) return
     e.preventDefault(); bar.setPointerCapture(e.pointerId); w.classList.remove('glide'); play('grab')
     document.documentElement.classList.add('dragging') // no text gets selected on the way
     const sx = e.clientX - w.offsetLeft, sy = e.clientY - w.offsetTop

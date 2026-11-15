@@ -1,5 +1,6 @@
 import { play } from './sound.js'
 import { ME, RESUME, STORY, ytId } from './data.js'
+import { SHEETS } from './wm.js'
 
 // The story: what the résumé doesn't say. The desk dims, and scrolling (wheel, swipe, ↓ / ↑, space)
 // pulls one window after another up from below into a cascade, each the same step further on, so
@@ -31,7 +32,7 @@ export function story() {
   if (document.getElementById('story')) return
   const el = document.createElement('div')
   el.id = 'story'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Story')
-  el.innerHTML = `<p class="st-hint mono">scroll ↓ · drag a window by its bar · click to bring it forward · double-click to look closer · esc</p><button class="st-close mono">close story</button>` + CARDS.map((c, i) =>
+  el.innerHTML = `<p class="st-hint mono">${SHEETS.matches ? 'swipe up for the next window · down to go back · tap one to bring it forward' : 'scroll ↓ · drag a window by its bar · click to bring it forward · double-click to look closer · esc'}</p><button class="st-close mono">close story</button>` + CARDS.map((c, i) =>
     `<section class="win st-card" data-i="${i}" tabindex="0" style="${c.bg ? `--surface-win:${c.bg};--text-primary:${c.ink};--text-secondary:color-mix(in srgb, ${c.ink} 80%, transparent);--text-tertiary:color-mix(in srgb, ${c.ink} 58%, transparent);--border:color-mix(in srgb, ${c.ink} 14%, transparent);--border-strong:color-mix(in srgb, ${c.ink} 26%, transparent);--ink:${c.ink};--mute:var(--text-tertiary);--line:var(--border);color:${c.ink}` : ''}">
       <div class="bar mono"><span class="t"><span class="n">${String(i + 1).padStart(2, '0')}</span>${esc(c.title)}</span></div><div class="body ${c.bare ? 'st-bare' : 'pad'}">${c.html}</div></section>`).join('')
   document.body.appendChild(el)
@@ -58,6 +59,17 @@ export function story() {
   const SMALL = [0, CARDS.length - 1]
   let slots = []
   function layout() {
+    // phones: a deck — every window full width, each one a title bar lower than the last, and
+    // lifted (or scaled) just enough to stand wholly on the screen when it is the one on top
+    if (SHEETS.matches) {
+      const W = innerWidth, H = innerHeight, top = 64, step = 30, bottom = 56
+      cards.forEach((c) => (c.style.width = W - 20 + 'px'))
+      slots = cards.map((c, i) => {
+        const h = c.offsetHeight, room = H - top - bottom, s = Math.min(1, room / h)
+        return [(W - c.offsetWidth * s) / 2, Math.max(top, Math.min(top + i * step, H - bottom - h * s)), h, s]
+      })
+      return
+    }
     const W = innerWidth, H = innerHeight, top = 96, bottom = 52 // (below the close button)
     const big = cards.filter((_, i) => !SMALL.includes(i)), n = big.length
     const dx = W < 700 ? 14 : 38, dy = 36
@@ -85,7 +97,7 @@ export function story() {
     c.addEventListener('pointerdown', (e) => { if (!e.target.closest('a, button, iframe, input, .st-ctl')) { order[i] = ++z + cards.length; play('click') } })
     const bar = c.querySelector('.bar')
     bar.addEventListener('pointerdown', (e) => {
-      if (e.button > 0 || focused >= 0 || p - i < 0.95) return
+      if (e.button > 0 || focused >= 0 || p - i < 0.95 || SHEETS.matches) return
       e.preventDefault(); bar.setPointerCapture(e.pointerId); document.documentElement.classList.add('dragging'); play('grab')
       const q = cur[i], ox = e.clientX - q.x, oy = e.clientY - q.y
       bar.onpointermove = (m) => {
@@ -124,7 +136,7 @@ export function story() {
     cards.forEach((c, i) => {
       const t = Math.max(0, Math.min(1, p - i)), e = 1 - Math.pow(1 - t, 3)
       const [sx, sy, sh] = manual[i] ? [...manual[i], slots[i][2]] : slots[i]
-      let tx = sx, ty2 = sy + (1 - e) * H * 1.1, ts = 1
+      let tx = sx, ty2 = sy + (1 - e) * H * 1.1, ts = (!manual[i] && slots[i][3]) || 1
       if (focused === i) { const cw = c.offsetWidth; ts = Math.min(1.9, (W * 0.62) / cw, (H * 0.78) / sh); tx = (W - cw * ts) / 2; ty2 = (H - sh * ts) / 2 }
       const q = cur[i]; q.x += (tx - q.x) * 0.16; q.y += (ty2 - q.y) * 0.16; q.s += (ts - q.s) * 0.16
       c.style.transform = `translate(${q.x}px, ${q.y}px) scale(${q.s})`

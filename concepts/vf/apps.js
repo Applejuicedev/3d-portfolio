@@ -77,7 +77,9 @@ export function browse(id, from, { url, title, note = '' }) {
       <div class="wb-view"><div class="wb-frame"><iframe src="${esc(u.href)}" title="${esc(title)}" allow="autoplay; fullscreen; clipboard-write" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock"></iframe></div></div>
       ${note ? `<p class="wb-note mono">${esc(note)}</p>` : ''}</div>`
     const view = b.querySelector('.wb-view'), frame = b.querySelector('.wb-frame'), fr = b.querySelector('iframe'), path = b.querySelector('.wb-url i')
-    let mode = 'desktop'
+    // on a phone the page opens as a phone would show it
+    let mode = innerWidth < 700 ? 'phone' : 'desktop'
+    b.querySelectorAll('.wb-seg button').forEach((y) => y.classList.toggle('on', y.dataset.v === mode))
     const fit = () => {
       const [vw, vh] = VIEWS[mode], W = view.clientWidth, H = view.clientHeight
       if (!W || !H) return

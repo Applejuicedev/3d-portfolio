@@ -58,6 +58,20 @@ addEventListener('keydown', (e) => {
   if (i >= 0) { setStrand(-1); heads[i].focus() } else { setOpen(false); btn.focus() }
 }, true)
 focusable()
+
+// phones: the index is a panel within reach of the thumb, and the settings (inbox, me.txt, sound,
+// theme) and the clocks move into it — up in the corners they would be out of reach and too small.
+// Turned back to a wide screen, they return to their places.
+const PANEL = matchMedia('(max-width: 640px), (pointer: coarse) and (max-height: 500px)')
+const settings = topBar.querySelector('nav'), zones = document.getElementById('zones'), bottomBar = document.getElementById('bottom')
+const meta = document.createElement('div'); meta.className = 'tools-meta'
+const place = () => {
+  if (PANEL.matches) { meta.append(settings, zones); document.getElementById('tools').append(meta) }
+  else { topBar.append(settings); bottomBar.append(zones); meta.remove() }
+}
+PANEL.addEventListener('change', place); place()
+// inbox and me.txt open a window: the panel folds away; sound and theme are switches: it stays
+;['inbox', 'me'].forEach((id) => document.getElementById(id).addEventListener('click', () => { if (PANEL.matches) setTimeout(() => setOpen(false), 60) }))
 addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') root.classList.toggle('peek', e.clientY < 48 || topBar.contains(e.target)) }, { passive: true })
 topBar.addEventListener('focusin', () => root.classList.add('peek'))
 topBar.addEventListener('focusout', () => root.classList.remove('peek'))

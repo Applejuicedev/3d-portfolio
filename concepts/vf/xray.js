@@ -4,11 +4,13 @@ import { drag, resize } from './wm.js'
 // it; once full, a round lens opens and shows — in place — the actual code that runs when you click
 // that very thing: the function that builds a window, the one that drags it by its bar, the one that
 // resizes it at the grip; on the empty desk, the code of this lens. While you rest, the code scrolls
-// slowly past; move on and the lens closes. Nothing appears while you just move the pointer.
+// slowly past; move on and the lens closes. Nothing appears while you just move the pointer. On a
+// touch screen a long press does the same (see below).
 const sources = new Map() // key → function (its real source is what the lens shows)
 export const sourceOf = (key, fn) => sources.set(key, fn)
 
-if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+const fine = matchMedia('(hover: hover) and (pointer: fine)').matches
+{
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches
   const R = 130, DELAY = 600, DWELL = 1200 // rest 0.6 s before the ring starts, 1.2 s more to fill it
   const root = document.createElement('div')
@@ -43,6 +45,7 @@ if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
     .replace(/\b(const|let|return|if|else|function|new|for|of|await|async|export|import)\b/g, '<b>$1</b>')
 
   let x = -999, y = -999, restX = 0, restY = 0, restAt = 0, openKey = null, scroll = 0, over = true
+  if (fine) {
   addEventListener('pointermove', (e) => {
     x = e.clientX; y = e.clientY; over = true
     if (Math.hypot(x - restX, y - restY) > 6) { restX = x; restY = y; restAt = performance.now(); if (openKey) close() }
@@ -53,6 +56,30 @@ if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
   // move, so it must not think it is resting at the edge — the lens waits until it comes back
   document.addEventListener('pointerover', (e) => { if (e.target.tagName === 'IFRAME') { over = false; close() } })
 
+  }
+
+  // touch screens: there is no resting pointer, so the lens answers a long press instead. Hold a
+  // finger on anything: the ring fills just above the finger, then the lens opens above it (where the
+  // finger doesn't cover it) and stays; the next tap anywhere closes it — and does nothing else.
+  let holdAt = 0, hx = 0, hy = 0, swallow = false
+  const lensAt = (px, py) => {
+    const W = innerWidth, H = innerHeight, r = Math.min(R, W / 2 - 12)
+    lens.style.setProperty('--r', r + 'px')
+    x = Math.max(r + 12, Math.min(W - r - 12, px)); y = Math.max(r + 60, Math.min(H - r - 70, py - r - 60))
+  }
+  if (!fine) {
+    addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return
+      if (openKey) { close(); swallow = true; return }
+      if (document.getElementById('story') || e.target.closest('iframe, input, textarea, .ring, canvas')) return
+      hx = e.clientX; hy = e.clientY; holdAt = performance.now(); x = hx; y = hy - 56
+    }, true)
+    addEventListener('pointermove', (e) => { if (holdAt && Math.hypot(e.clientX - hx, e.clientY - hy) > 10) holdAt = 0 }, true)
+    ;['pointerup', 'pointercancel'].forEach((t) => addEventListener(t, () => { holdAt = 0 }, true))
+    addEventListener('click', (e) => { if (swallow) { e.preventDefault(); e.stopPropagation(); swallow = false } }, true)
+    addEventListener('contextmenu', (e) => { if (holdAt || openKey) e.preventDefault() }, true)
+  }
+
   function show(key, fn) {
     openKey = key; scroll = 0
     pre.innerHTML = paint(String(fn))
@@ -62,15 +89,18 @@ if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
   function close() { openKey = null; root.classList.remove('open') }
 
   function frame(now) {
+    // a touch screen with nothing held and nothing open: look again in a moment, touch nothing
+    if (!fine && !holdAt && !openKey) { ring.style.opacity = 0; return setTimeout(() => requestAnimationFrame(frame), 100) }
     // where the ring and the lens stand: on the pointer
     root.style.setProperty('--x', x + 'px'); root.style.setProperty('--y', y + 'px')
-    const resting = over && !openKey && now - restAt > DELAY && !document.getElementById('story')
-    const p = resting ? Math.min(1, (now - restAt - DELAY) / DWELL) : 0
+    const resting = fine ? over && !openKey && now - restAt > DELAY && !document.getElementById('story') : holdAt > 0 && !openKey
+    const p = !resting ? 0 : fine ? Math.min(1, (now - restAt - DELAY) / DWELL) : Math.min(1, (now - holdAt - 120) / 480)
     arc.style.strokeDashoffset = C * (1 - p)
     ring.style.opacity = resting && p > 0 && p < 1 ? 1 : 0
     if (p >= 1 && !openKey) {
-      const hit = find(document.elementFromPoint(x, y))
-      if (hit) show(...hit); else restAt = now + 1e9
+      const hit = find(document.elementFromPoint(fine ? x : hx, fine ? y : hy))
+      if (hit && !fine) { holdAt = 0; swallow = true; lensAt(hx, hy); navigator.vibrate?.(8) }
+      if (hit) show(...hit); else if (fine) restAt = now + 1e9; else holdAt = 0
     }
     if (openKey && !still) { scroll += 0.35; pre.style.transform = `translateY(${R * 0.55 - scroll}px)`; if (scroll > pre.scrollHeight) scroll = -R }
     requestAnimationFrame(frame)
